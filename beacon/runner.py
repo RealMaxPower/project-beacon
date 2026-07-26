@@ -17,9 +17,28 @@ from beacon.models import (
     canonical_digest,
     utc_now,
 )
+from beacon.secrets import REDACTION_NOTICE
 from beacon.services import MailService, ToolRouter
 from beacon.state import state_diff
 
+
+REDACTED_EVIDENCE_FIELDS = (
+    "scenario",
+    "subject",
+    "assertions",
+    "state",
+    "state_diff",
+    "events",
+    "artifacts",
+)
+"""
+Every field of the bundle that can carry text the subject influenced.
+
+Tool arguments and results, artifacts, the subject's stderr as it reaches
+`subject.execution.error`, and the command line itself have all reached
+evidence.json verbatim, so redaction runs over the whole document rather than
+at each capture point.
+"""
 
 DEFAULT_LIMITATIONS = [
     "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
@@ -199,6 +218,20 @@ def run_scenario(
         reset_verified=reset_verified,
         limitations=limitations,
     )
+
+    # Redact before finalize(), never inside write_evidence(): the digest must
+    # be taken over the document that is actually published, or it will not
+    # verify against the file on disk.
+    secrets = context.secrets
+    if secrets.active:
+        for name in REDACTED_EVIDENCE_FIELDS:
+            setattr(evidence, name, secrets.redact(getattr(evidence, name)))
+        evidence.limitations.append(REDACTION_NOTICE)
+        evidence.subject["secret_redaction"] = {
+            "names": list(secrets.names),
+            "replacements": secrets.redaction_count,
+        }
+
     evidence.finalize()
     json_path, markdown_path = write_evidence(evidence, run_dir)
 

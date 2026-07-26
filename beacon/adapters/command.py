@@ -31,7 +31,19 @@ def _reader(stream: TextIO, output: queue.Queue[str | None]) -> None:
         output.put(None)
 
 
-def _safe_environment(run_id: str) -> dict[str, str]:
+def _safe_environment(
+    run_id: str,
+    passthrough: Sequence[str] = (),
+    secrets: Sequence[str] = (),
+) -> dict[str, str]:
+    """
+    Build the subject's environment: deny by default, with named exceptions.
+
+    The allowlist alone makes a credentialed agent impossible to run, since it
+    carries no HOME and no API key. `passthrough` and `secrets` are explicit
+    operator escapes from that, not a relaxation of it: only the names asked
+    for are copied, and only from Beacon's own environment.
+    """
     allowed = (
         "PATH",
         "LANG",
@@ -43,8 +55,15 @@ def _safe_environment(run_id: str) -> dict[str, str]:
         "TMP",
     )
     environment = {key: os.environ[key] for key in allowed if key in os.environ}
+    for name in (*passthrough, *secrets):
+        if name in os.environ:
+            environment[name] = os.environ[name]
     environment["BEACON_RUN_ID"] = run_id
     environment["PYTHONUNBUFFERED"] = "1"
+    # Pipes default to the locale encoding, which on Windows is not UTF-8. The
+    # adapter reads and writes UTF-8, so without this a subject emitting any
+    # non-ASCII character produces a decode error rather than a verdict.
+    environment["PYTHONIOENCODING"] = "utf-8"
     return environment
 
 
@@ -82,6 +101,8 @@ class JSONLCommandAdapter:
         timeout_seconds: float | None = None,
         max_messages: int | None = None,
         teardown_seconds: float = DEFAULT_TEARDOWN_SECONDS,
+        env_passthrough: Sequence[str] = (),
+        env_secrets: Sequence[str] = (),
         source_dir: str | Path | None = None,
     ) -> None:
         if not command:
@@ -91,6 +112,8 @@ class JSONLCommandAdapter:
         self._timeout_seconds = timeout_seconds
         self._max_messages = max_messages
         self._teardown_seconds = teardown_seconds
+        self._env_passthrough = tuple(env_passthrough)
+        self._env_secrets = tuple(env_secrets)
         self._source_dir = (
             Path(source_dir).resolve() if source_dir else Path.cwd().resolve()
         )
@@ -158,9 +181,26 @@ class JSONLCommandAdapter:
         stream.write(json.dumps(value, separators=(",", ":")) + "\n")
         stream.flush()
 
+    def _register_secrets(self, context: ExecutionContext) -> list[str]:
+        """Teach the run's registry every secret value before it can leak."""
+        missing: list[str] = []
+        for name in self._env_secrets:
+            value = os.environ.get(name)
+            if value is None:
+                missing.append(name)
+                continue
+            context.secrets.register(name, value)
+        return missing
+
     def execute(self, context: ExecutionContext) -> SubjectResult:
         resolved_command = self._resolved_command()
         timeout_seconds, max_messages = self._limits(context)
+        missing_secrets = self._register_secrets(context)
+        if missing_secrets:
+            raise CommandAdapterError(
+                "environment variable(s) requested as secrets are not set: "
+                + ", ".join(missing_secrets)
+            )
         context.recorder.record(
             "subject_started",
             self.descriptor["id"],
@@ -168,6 +208,10 @@ class JSONLCommandAdapter:
                 "command": list(resolved_command),
                 "timeout_seconds": timeout_seconds,
                 "max_protocol_messages": max_messages,
+                "env_passthrough": list(self._env_passthrough),
+                # Names only. The values are registered for redaction, never
+                # recorded - this payload lands in evidence.json.
+                "env_secrets": list(self._env_secrets),
             },
         )
         process = subprocess.Popen(
@@ -177,8 +221,12 @@ class JSONLCommandAdapter:
             stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
-            cwd=context.run_dir,
-            env=_safe_environment(context.run_id),
+            cwd=context.workspace,
+            env=_safe_environment(
+                context.run_id,
+                self._env_passthrough,
+                self._env_secrets,
+            ),
         )
         if not process.stdin or not process.stdout or not process.stderr:
             process.kill()

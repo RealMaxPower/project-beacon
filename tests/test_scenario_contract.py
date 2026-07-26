@@ -89,6 +89,40 @@ class ToolScopingTests(unittest.TestCase):
         self.assertIn("mail.send_draft", scenario.tools or ())
 
 
+class WorkspaceIsolationTests(unittest.TestCase):
+    def test_subject_files_land_beside_the_evidence_not_among_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                JSONLCommandAdapter(
+                    [sys.executable, str(SUBJECTS / "writes_scratch_files.py")],
+                    timeout_seconds=15,
+                ),
+                output_dir=directory,
+                run_id="workspace",
+            )
+            run_dir = outcome.json_path.parent
+            workspace = run_dir / "workspace"
+
+            self.assertEqual(outcome.evidence.result, "PASS")
+            self.assertTrue((workspace / "notes.txt").is_file())
+            self.assertTrue((workspace / "cache" / "partial.json").is_file())
+
+            # The subject wrote its own report.md. The evidence report must be
+            # Beacon's, not the one the subject dropped in its working dir.
+            self.assertTrue((workspace / "report.md").is_file())
+            self.assertIn(
+                "# Beacon evidence:",
+                (run_dir / "report.md").read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                sorted(
+                    path.name for path in run_dir.iterdir() if path.is_file()
+                ),
+                ["events.json", "evidence.json", "report.md"],
+            )
+
+
 class OutputContractTests(unittest.TestCase):
     def test_the_required_artifact_is_published_to_the_subject(self) -> None:
         scenario = Scenario.load(SCENARIO)

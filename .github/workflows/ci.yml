@@ -58,8 +58,16 @@ jobs:
         run: python -m unittest tests.test_schema_conformance -v
 
   vertical-slice:
-    name: vertical slice (CLI entry point)
-    runs-on: ubuntu-latest
+    name: vertical slice (CLI, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows included deliberately: the unit tests launch subjects with
+        # sys.executable and absolute paths, so they never exercise the CLI's
+        # shlex-based --command parsing, where a backslash path would be eaten
+        # as an escape. Only this job covers that.
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -73,12 +81,9 @@ jobs:
       - name: Run the in-process reference subject
         run: python -m beacon run scenarios/inbox-briefing/scenario.json
 
+      # Single line, forward slashes: portable across bash and PowerShell.
       - name: Run the external JSONL subject
-        run: |
-          python -m beacon run \
-            scenarios/inbox-briefing/scenario.json \
-            --adapter command \
-            --command "python examples/reference_jsonl_agent.py"
+        run: python -m beacon run scenarios/inbox-briefing/scenario.json --adapter command --command "python examples/reference_jsonl_agent.py"
 
       # Guards the alpha metric "100% reset-state digest equality in CI".
       # Exits non-zero if any two runs disagree on state digests or on the

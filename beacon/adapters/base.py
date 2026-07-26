@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from beacon.models import EventRecorder, Scenario, SubjectResult
+from beacon.secrets import SecretRegistry
 from beacon.services.router import ToolRouter
 
 
@@ -16,6 +17,20 @@ class ExecutionContext:
     tools: ToolRouter
     recorder: EventRecorder
     artifacts: dict[str, Any] = field(default_factory=dict)
+    secrets: SecretRegistry = field(default_factory=SecretRegistry)
+
+    @property
+    def workspace(self) -> Path:
+        """
+        Scratch space for the subject, kept out of the evidence directory.
+
+        A subject given the evidence directory as its working directory can
+        litter it, and with the default output location can reach the evidence
+        of previous runs.
+        """
+        path = self.run_dir / "workspace"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     def add_artifact(self, name: str, content: Any) -> None:
         self.artifacts[name] = content

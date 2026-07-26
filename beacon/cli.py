@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import sys
 from pathlib import Path
@@ -12,7 +13,29 @@ from beacon.adapters import JSONLCommandAdapter, ReferenceInboxAdapter
 from beacon.determinism import compare_runs, repeat_run_ids
 from beacon.models import Scenario, ScenarioError
 from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
+from beacon.secrets import SecretError, looks_like_a_secret
 from beacon.runner import run_scenario
+
+
+def split_command(text: str) -> list[str]:
+    """
+    Split a `--command` string into argv, correctly on every platform.
+
+    `shlex.split` assumes POSIX quoting, where a backslash escapes the next
+    character — so on Windows `python examples\\subjects\\agent.py` silently
+    becomes `examplessubjectsagent.py` and the run fails with a confusing
+    "file not found". Windows uses non-POSIX rules, which keep the separators
+    but leave quotes attached to the tokens, so those are stripped back off.
+    """
+    if os.name != "nt":
+        return shlex.split(text)
+    tokens = shlex.split(text, posix=False)
+    return [
+        token[1:-1]
+        if len(token) >= 2 and token[0] == token[-1] and token[0] in "\"'"
+        else token
+        for token in tokens
+    ]
 
 
 def _json_object(value: str) -> dict:
@@ -66,6 +89,26 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--run-id",
         help="Fixed run identifier. Repeats are suffixed -001, -002, and so on.",
+    )
+    run.add_argument(
+        "--env-passthrough",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help=(
+            "Copy this environment variable to the subject. Names only; the "
+            "value is read from Beacon's own environment. Repeatable."
+        ),
+    )
+    run.add_argument(
+        "--env-secret",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help=(
+            "Like --env-passthrough, but the value is also removed from the "
+            "evidence bundle wherever it appears. Use for API keys. Repeatable."
+        ),
     )
     run.add_argument(
         "--repeat",
@@ -127,16 +170,30 @@ def _run(args: argparse.Namespace) -> int:
     scenario = Scenario.load(args.scenario)
     if args.repeat < 1:
         raise ScenarioError("--repeat must be at least 1")
+    unmarked = [name for name in args.env_passthrough if looks_like_a_secret(name)]
+    if unmarked:
+        raise ScenarioError(
+            f"{', '.join(unmarked)} looks like a credential. Use --env-secret "
+            f"so the value is redacted from the evidence bundle, which is the "
+            f"artifact people share."
+        )
     if args.adapter == "reference":
         if args.command:
             raise ScenarioError("--command can only be used with --adapter command")
+        if args.env_passthrough or args.env_secret:
+            raise ScenarioError(
+                "environment options apply to --adapter command only; the "
+                "reference subject runs in process"
+            )
         adapter = ReferenceInboxAdapter()
     else:
         if not args.command:
             raise ScenarioError("--adapter command requires --command")
         adapter = JSONLCommandAdapter(
-            shlex.split(args.command),
+            split_command(args.command),
             timeout_seconds=args.timeout,
+            env_passthrough=args.env_passthrough,
+            env_secrets=args.env_secret,
         )
 
     outcomes = [
@@ -198,7 +255,7 @@ def _adapters() -> int:
 
 
 def _mcp_inspect(args: argparse.Namespace) -> int:
-    command = shlex.split(args.command)
+    command = split_command(args.command)
     with MCPStdioClient(command, timeout_seconds=args.timeout) as client:
         tools = client.list_tools()
         output = {
@@ -245,7 +302,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command_name == "a2a-inspect":
             return _a2a_inspect(args)
         parser.error(f"unknown command: {args.command_name}")
-    except (ScenarioError, MCPError, A2AError, OSError, ValueError) as exc:
+    except (
+        ScenarioError,
+        SecretError,
+        MCPError,
+        A2AError,
+        OSError,
+        ValueError,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     return 2

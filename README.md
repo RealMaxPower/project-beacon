@@ -46,6 +46,8 @@ A2A protocol entry points without coupling the core to one agent runtime.
 
 - Python 3.11 or newer.
 - No runtime dependencies for the MVP.
+- Linux, macOS, or Windows. See [docs/windows.md](docs/windows.md) for
+  Windows-specific notes.
 
 ## Run the vertical slice
 
@@ -173,6 +175,53 @@ The subject may emit `artifact` and `log` messages, and must finish with:
 
 This contract can wrap a local CLI directly or a small bridge to a hosted API,
 framework SDK, container, or proprietary agent.
+
+## Run a real model as the subject
+
+The bridge in [examples/anthropic_jsonl_agent.py](examples/anthropic_jsonl_agent.py)
+is about 120 lines and hardcodes nothing about the scenario — the goal, the
+tool definitions, and the required artifact all arrive in the `start` message:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+pip install anthropic
+
+python3 -m beacon run scenarios/inbox-briefing/scenario.json \
+  --adapter command \
+  --command "python3 examples/anthropic_jsonl_agent.py" \
+  --env-secret ANTHROPIC_API_KEY \
+  --timeout 180 \
+  --repeat 5
+```
+
+It lives in `examples/` deliberately: `docs/architecture.md` requires the core
+to know nothing about any model provider, so a provider bridge is just another
+external subject. Beacon still has no runtime dependencies.
+
+### Passing credentials without leaking them
+
+The subject environment is deny-by-default, so a credentialed agent needs an
+explicit exception. Two flags provide one, and both take **names only** — the
+value is read from Beacon's own environment, never the command line, because
+the subject's command line is itself recorded in `evidence.json`.
+
+| Flag | Effect |
+|---|---|
+| `--env-passthrough NAME` | Copy the variable to the subject. |
+| `--env-secret NAME` | Copy it, and remove its value from the evidence bundle wherever it appears. |
+
+Redaction covers tool arguments, tool results, artifacts, the subject's stderr,
+and the recorded command, in raw, URL-encoded, and base64 forms — then the
+evidence digest is taken, so it verifies against the published document. Passing
+a credential-shaped name to `--env-passthrough` is refused with a pointer to
+`--env-secret`.
+
+This is exact-value matching, not a guarantee. A subject that transforms a
+secret before emitting it defeats it, and its network access is unrestricted.
+Every redacted bundle says so in its `limitations`.
+[examples/subjects/leaks_its_key.py](examples/subjects/leaks_its_key.py) is a
+canary that pushes its key through every one of those channels; the test suite
+asserts the value appears in none of the three output files.
 
 ## Inspect an MCP server
 

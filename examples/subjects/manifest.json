@@ -131,6 +131,14 @@
       "should_be": "FAIL",
       "currently": "FAIL",
       "defect": null
+    },
+    {
+      "id": "writes_scratch_files",
+      "script": "examples/subjects/writes_scratch_files.py",
+      "behavior": "Writes working files to its current directory, including a report.md.",
+      "should_be": "PASS",
+      "currently": "PASS",
+      "defect": null
     }
   ]
 }
