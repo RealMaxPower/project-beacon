@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The MVP has no runtime dependencies on purpose. Installing nothing here
+      # is the check: if this step ever needs a package, the zero-dependency
+      # property has been lost silently.
+      - name: Confirm the core imports with no dependencies installed
+        run: python -c "import beacon; print(beacon.__version__)"
+
+      - name: Run the test suite
+        run: python -W error::ResourceWarning -m unittest discover -s tests -v
+
+  vertical-slice:
+    name: vertical slice (CLI entry point)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate the starter scenario
+        run: python -m beacon validate scenarios/inbox-briefing/scenario.json
+
+      - name: Run the in-process reference subject
+        run: python -m beacon run scenarios/inbox-briefing/scenario.json
+
+      - name: Run the external JSONL subject
+        run: |
+          python -m beacon run \
+            scenarios/inbox-briefing/scenario.json \
+            --adapter command \
+            --command "python examples/reference_jsonl_agent.py"
+
+      # Guards the alpha metric "100% reset-state digest equality in CI".
+      # Exits non-zero if any two runs disagree on state digests or on the
+      # per-assertion result vector.
+      - name: Verify cross-run determinism
+        run: python -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
+
+      - name: Upload evidence bundles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beacon-evidence
+          path: .beacon/runs/
+          if-no-files-found: warn

@@ -1,0 +1,17 @@
+# Default owner for everything not matched below.
+*                       @RealMaxPower
+
+# Contracts. Changes here affect every scenario, subject, and evidence
+# consumer, so they need explicit review even when the diff looks small.
+/schemas/               @RealMaxPower
+/docs/                  @RealMaxPower
+/beacon/models.py       @RealMaxPower
+/beacon/evaluation.py   @RealMaxPower
+
+# Anything that decides a verdict or writes evidence.
+/beacon/runner.py       @RealMaxPower
+/beacon/evidence.py     @RealMaxPower
+
+# Isolation boundary.
+/beacon/adapters/       @RealMaxPower
+/SECURITY.md            @RealMaxPower
