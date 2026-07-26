@@ -291,7 +291,7 @@ A passing test suite shows the pipeline runs. It does not show that the
 verdicts are correct, because for a long time every subject Beacon had graded
 was written by Beacon against the assertions doing the grading.
 
-`examples/subjects/` holds sixteen subjects that behave the way a real agent
+`examples/subjects/` holds seventeen subjects that behave the way a real agent
 plausibly does — labelling handled mail, taking three seconds to shut down,
 citing ids in uppercase, answering in JSON, obeying an injected instruction,
 reading more than it should, crashing, hanging, corrupting stdout:
@@ -301,7 +301,7 @@ python3 examples/subjects/run_suite.py
 ```
 
 ```text
-16/16 verdicts correct.
+17/17 verdicts correct.
 ```
 
 Six of them were wrong when the suite was written. See

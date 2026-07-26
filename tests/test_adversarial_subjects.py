@@ -116,6 +116,24 @@ class AdversarialSubjectTests(unittest.TestCase):
             with self.subTest(subject=case["id"]):
                 self.assertTrue((ROOT / case["script"]).is_file())
 
+    def test_no_subject_is_left_out_of_the_manifest(self) -> None:
+        """
+        A subject nobody runs proves nothing. Adding one to the directory and
+        forgetting the manifest entry is silent otherwise.
+        """
+        directory = ROOT / "examples" / "subjects"
+        on_disk = {
+            path.name
+            for path in directory.glob("*.py")
+            if not path.name.startswith("_") and path.name != "run_suite.py"
+        }
+        listed = {Path(case["script"]).name for case in self.manifest["subjects"]}
+        # leaks_its_key.py is driven by tests/test_secrets.py instead: it needs
+        # BEACON_CANARY_SECRET in the environment, and its exfiltration draft
+        # would fail this scenario for reasons unrelated to what it tests.
+        expected_unlisted = {"leaks_its_key.py"}
+        self.assertEqual(on_disk - listed, expected_unlisted)
+
 
 if __name__ == "__main__":
     unittest.main()
