@@ -1,0 +1,150 @@
+from __future__ import annotations
+
+from typing import Any, Iterable
+
+from beacon.models import AssertionResult, AssertionSpec, Event
+
+
+class EvaluationError(ValueError):
+    """Raised when an assertion cannot be evaluated."""
+
+
+def get_path(root: Any, path: str) -> Any:
+    current = root
+    for segment in path.split("."):
+        if isinstance(current, dict):
+            if segment not in current:
+                raise EvaluationError(f"path does not exist: {path}")
+            current = current[segment]
+        elif isinstance(current, list) and segment.isdigit():
+            index = int(segment)
+            try:
+                current = current[index]
+            except IndexError as exc:
+                raise EvaluationError(f"list index is out of range: {path}") from exc
+        else:
+            raise EvaluationError(f"path cannot be traversed: {path}")
+    return current
+
+
+def _result(
+    spec: AssertionSpec,
+    passed: bool,
+    actual: Any,
+    expected: Any,
+    message: str,
+) -> AssertionResult:
+    return AssertionResult(
+        id=spec.id,
+        description=spec.description,
+        passed=passed,
+        actual=actual,
+        expected=expected,
+        message=message,
+    )
+
+
+def evaluate_assertion(
+    spec: AssertionSpec,
+    root: dict[str, Any],
+    events: Iterable[Event],
+) -> AssertionResult:
+    try:
+        if spec.type == "equals":
+            if not spec.path:
+                raise EvaluationError("equals requires path")
+            actual = get_path(root, spec.path)
+            return _result(
+                spec,
+                actual == spec.expected,
+                actual,
+                spec.expected,
+                "values match" if actual == spec.expected else "values differ",
+            )
+
+        if spec.type in {"count_gte", "count_lte"}:
+            if not spec.path:
+                raise EvaluationError(f"{spec.type} requires path")
+            value = get_path(root, spec.path)
+            if not hasattr(value, "__len__"):
+                raise EvaluationError(f"value at {spec.path} has no length")
+            actual = len(value)
+            expected = int(spec.expected)
+            passed = actual >= expected if spec.type == "count_gte" else actual <= expected
+            operator = ">=" if spec.type == "count_gte" else "<="
+            return _result(
+                spec,
+                passed,
+                actual,
+                expected,
+                f"{actual} {operator} {expected}" if passed else f"{actual} is not {operator} {expected}",
+            )
+
+        if spec.type == "contains":
+            if not spec.path:
+                raise EvaluationError("contains requires path")
+            actual = get_path(root, spec.path)
+            try:
+                passed = spec.expected in actual
+            except TypeError as exc:
+                raise EvaluationError(f"value at {spec.path} does not support contains") from exc
+            return _result(
+                spec,
+                passed,
+                actual,
+                spec.expected,
+                "expected value found" if passed else "expected value not found",
+            )
+
+        if spec.type == "unchanged":
+            if not spec.path:
+                raise EvaluationError("unchanged requires path")
+            before = get_path(root["before"], spec.path)
+            after = get_path(root["after"], spec.path)
+            return _result(
+                spec,
+                before == after,
+                after,
+                before,
+                "state is unchanged" if before == after else "state changed",
+            )
+
+        if spec.type in {"event_absent", "event_present"}:
+            if not spec.target:
+                raise EvaluationError(f"{spec.type} requires target")
+            matches = [event.to_dict() for event in events if event.target == spec.target]
+            passed = not matches if spec.type == "event_absent" else bool(matches)
+            expected = "absent" if spec.type == "event_absent" else "present"
+            return _result(
+                spec,
+                passed,
+                matches,
+                expected,
+                f"event {expected}" if passed else f"event should be {expected}",
+            )
+
+        raise EvaluationError(f"unsupported assertion type: {spec.type}")
+    except EvaluationError as exc:
+        return _result(spec, False, None, spec.expected, str(exc))
+
+
+def evaluate_all(
+    assertions: Iterable[AssertionSpec],
+    root: dict[str, Any],
+    events: Iterable[Event],
+) -> list[AssertionResult]:
+    event_list = tuple(events)
+    return [evaluate_assertion(spec, root, event_list) for spec in assertions]
+
+
+def resolve_result(
+    subject_status: str,
+    assertions: Iterable[AssertionResult],
+) -> str:
+    results = tuple(assertions)
+    if subject_status != "completed":
+        return "INCOMPLETE"
+    if not results:
+        return "INCOMPLETE"
+    return "PASS" if all(result.passed for result in results) else "FAIL"
+

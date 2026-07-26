@@ -1,0 +1,294 @@
+from __future__ import annotations
+
+import json
+import os
+import queue
+import subprocess
+import threading
+import time
+from pathlib import Path
+from typing import Any, Sequence, TextIO
+
+from beacon.adapters.base import ExecutionContext
+from beacon.models import SubjectResult
+
+
+class CommandAdapterError(RuntimeError):
+    """Raised when a JSONL command subject violates the adapter contract."""
+
+
+def _reader(stream: TextIO, output: queue.Queue[str | None]) -> None:
+    try:
+        for line in stream:
+            output.put(line)
+    finally:
+        output.put(None)
+
+
+def _safe_environment(run_id: str) -> dict[str, str]:
+    allowed = (
+        "PATH",
+        "LANG",
+        "LC_ALL",
+        "SYSTEMROOT",
+        "WINDIR",
+        "TMPDIR",
+        "TEMP",
+        "TMP",
+    )
+    environment = {key: os.environ[key] for key in allowed if key in os.environ}
+    environment["BEACON_RUN_ID"] = run_id
+    environment["PYTHONUNBUFFERED"] = "1"
+    return environment
+
+
+def _close_process_streams(process: subprocess.Popen[str]) -> None:
+    for stream in (process.stdin, process.stdout, process.stderr):
+        if stream and not stream.closed:
+            stream.close()
+
+
+class JSONLCommandAdapter:
+    """
+    A small bidirectional JSONL bridge for wrapping CLI, API, or SDK agents.
+
+    This is an interoperability harness, not a hardened sandbox.
+    """
+
+    def __init__(
+        self,
+        command: Sequence[str],
+        *,
+        name: str = "JSONL command subject",
+        timeout_seconds: float = 30,
+        max_messages: int = 100,
+        source_dir: str | Path | None = None,
+    ) -> None:
+        if not command:
+            raise ValueError("command cannot be empty")
+        self._command = tuple(command)
+        self._name = name
+        self._timeout_seconds = timeout_seconds
+        self._max_messages = max_messages
+        self._source_dir = (
+            Path(source_dir).resolve() if source_dir else Path.cwd().resolve()
+        )
+
+    def _resolved_command(self) -> tuple[str, ...]:
+        resolved: list[str] = []
+        for token in self._command:
+            candidate = self._source_dir / token
+            if (
+                not token.startswith("-")
+                and not Path(token).is_absolute()
+                and candidate.exists()
+            ):
+                resolved.append(str(candidate.resolve()))
+            else:
+                resolved.append(token)
+        return tuple(resolved)
+
+    @property
+    def descriptor(self) -> dict[str, Any]:
+        return {
+            "id": "jsonl-command",
+            "name": self._name,
+            "adapter": "jsonl-command",
+            "integration_level": 3,
+            "command": list(self._command),
+        }
+
+    def _send(self, stream: TextIO, value: dict[str, Any]) -> None:
+        stream.write(json.dumps(value, separators=(",", ":")) + "\n")
+        stream.flush()
+
+    def execute(self, context: ExecutionContext) -> SubjectResult:
+        resolved_command = self._resolved_command()
+        context.recorder.record(
+            "subject_started",
+            self.descriptor["id"],
+            {"command": list(resolved_command)},
+        )
+        process = subprocess.Popen(
+            resolved_command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            cwd=context.run_dir,
+            env=_safe_environment(context.run_id),
+        )
+        if not process.stdin or not process.stdout or not process.stderr:
+            process.kill()
+            raise CommandAdapterError("failed to open command protocol streams")
+
+        stdout_queue: queue.Queue[str | None] = queue.Queue()
+        stderr_queue: queue.Queue[str | None] = queue.Queue()
+        threading.Thread(
+            target=_reader,
+            args=(process.stdout, stdout_queue),
+            daemon=True,
+        ).start()
+        threading.Thread(
+            target=_reader,
+            args=(process.stderr, stderr_queue),
+            daemon=True,
+        ).start()
+
+        self._send(
+            process.stdin,
+            {
+                "type": "start",
+                "protocol_version": "0.1",
+                "run_id": context.run_id,
+                "scenario": context.scenario.public_dict(),
+                "tools": context.tools.definitions(),
+            },
+        )
+
+        deadline = time.monotonic() + self._timeout_seconds
+        handled = 0
+        result: SubjectResult | None = None
+        try:
+            while result is None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise CommandAdapterError(
+                        f"subject exceeded {self._timeout_seconds:g}s timeout"
+                    )
+                try:
+                    line = stdout_queue.get(timeout=min(remaining, 0.25))
+                except queue.Empty:
+                    if process.poll() is not None:
+                        raise CommandAdapterError(
+                            f"subject exited before completion with code {process.returncode}"
+                        )
+                    continue
+                if line is None:
+                    raise CommandAdapterError("subject closed stdout before completion")
+                handled += 1
+                if handled > self._max_messages:
+                    raise CommandAdapterError(
+                        f"subject exceeded {self._max_messages} protocol messages"
+                    )
+                try:
+                    message = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise CommandAdapterError(
+                        f"subject emitted invalid JSONL: {line.strip()}"
+                    ) from exc
+                message_type = message.get("type")
+
+                if message_type == "tool_call":
+                    call_id = str(message.get("id", f"call-{handled:03d}"))
+                    tool = str(message.get("tool", ""))
+                    arguments = message.get("arguments", {})
+                    if not isinstance(arguments, dict):
+                        raise CommandAdapterError("tool_call arguments must be an object")
+                    try:
+                        tool_result = context.tools.call(
+                            tool,
+                            arguments,
+                            call_id=call_id,
+                        )
+                    except Exception as exc:
+                        self._send(
+                            process.stdin,
+                            {
+                                "type": "tool_result",
+                                "id": call_id,
+                                "ok": False,
+                                "error": {
+                                    "type": type(exc).__name__,
+                                    "message": str(exc),
+                                },
+                            },
+                        )
+                    else:
+                        self._send(
+                            process.stdin,
+                            {
+                                "type": "tool_result",
+                                "id": call_id,
+                                "ok": True,
+                                "result": tool_result,
+                            },
+                        )
+                    continue
+
+                if message_type == "artifact":
+                    name = str(message.get("name", "artifact"))
+                    context.add_artifact(name, message.get("content"))
+                    continue
+
+                if message_type == "log":
+                    context.recorder.record(
+                        "subject_log",
+                        self.descriptor["id"],
+                        {
+                            "level": message.get("level", "info"),
+                            "message": message.get("message", ""),
+                        },
+                    )
+                    continue
+
+                if message_type == "complete":
+                    status = str(message.get("status", "completed"))
+                    result = SubjectResult(
+                        status=status,
+                        summary=str(message.get("summary", "")),
+                        metadata=dict(message.get("metadata", {})),
+                        error=message.get("error"),
+                    )
+                    continue
+
+                raise CommandAdapterError(
+                    f"unsupported command message type: {message_type!r}"
+                )
+        except Exception:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=2)
+            _close_process_streams(process)
+            raise
+        finally:
+            if process.stdin and not process.stdin.closed:
+                process.stdin.close()
+
+        try:
+            return_code = process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                return_code = process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return_code = process.wait(timeout=2)
+
+        stderr_lines: list[str] = []
+        while True:
+            try:
+                item = stderr_queue.get_nowait()
+            except queue.Empty:
+                break
+            if item is None:
+                break
+            stderr_lines.append(item.rstrip())
+        if return_code != 0:
+            _close_process_streams(process)
+            raise CommandAdapterError(
+                f"subject exited with code {return_code}: {' '.join(stderr_lines)}"
+            )
+
+        _close_process_streams(process)
+        context.recorder.record(
+            "subject_completed",
+            self.descriptor["id"],
+            {"status": result.status},
+        )
+        return result

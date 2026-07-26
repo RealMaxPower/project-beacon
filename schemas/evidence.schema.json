@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-beacon.dev/schemas/evidence-0.1.json",
+  "title": "Project Beacon Evidence",
+  "type": "object",
+  "required": [
+    "evidence_version",
+    "run_id",
+    "scenario",
+    "subject",
+    "result",
+    "assertions",
+    "state",
+    "state_diff",
+    "events",
+    "artifacts",
+    "reset_verified",
+    "limitations",
+    "digest"
+  ],
+  "properties": {
+    "evidence_version": {
+      "const": "0.1"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scenario": {
+      "type": "object"
+    },
+    "subject": {
+      "type": "object"
+    },
+    "result": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "INCOMPLETE"
+      ]
+    },
+    "assertions": {
+      "type": "array"
+    },
+    "state": {
+      "type": "object"
+    },
+    "state_diff": {
+      "type": "object"
+    },
+    "events": {
+      "type": "array"
+    },
+    "artifacts": {
+      "type": "object"
+    },
+    "reset_verified": {
+      "type": "boolean"
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false
+}
+
