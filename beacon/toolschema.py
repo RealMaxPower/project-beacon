@@ -1,10 +1,39 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
 class ToolArgumentError(ValueError):
     """Raised when tool arguments do not satisfy the tool's declared schema."""
+
+
+class ToolNameError(ValueError):
+    """Raised when a tool name cannot be published to a model."""
+
+
+TOOL_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+"""
+The character set a tool name must stay inside to reach a model.
+
+Beacon's job is to publish a tool surface to an agent, and every surface that
+does so — the Claude API's `tools` parameter, and MCP tool names as they are
+re-published to a model — constrains names to this pattern. A dotted name like
+`mail.list_messages` is rejected at the provider boundary, so the run fails on
+its first tool call rather than producing a verdict.
+
+Underscore namespacing (`mail_list_messages`) is what the API's own guidance
+recommends, and it is valid everywhere.
+"""
+
+
+def validate_tool_name(name: str) -> None:
+    if not TOOL_NAME_PATTERN.match(name):
+        raise ToolNameError(
+            f"tool name is not publishable to a model: {name!r}. "
+            f"Names must match {TOOL_NAME_PATTERN.pattern} — use underscores "
+            f"for namespacing, as in 'mail_list_messages'."
+        )
 
 
 JSON_TYPES: dict[str, type | tuple[type, ...]] = {

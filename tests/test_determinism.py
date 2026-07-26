@@ -29,7 +29,7 @@ def _evidence(
     after_digest: str = "digest-after",
     assertions: list[dict[str, Any]] | None = None,
     artifacts: dict[str, Any] | None = None,
-    tool_targets: tuple[str, ...] = ("mail.list_messages",),
+    tool_targets: tuple[str, ...] = ("mail_list_messages",),
 ) -> Evidence:
     evidence = Evidence(
         evidence_version="0.1",
@@ -106,8 +106,8 @@ class CompareRunsTests(unittest.TestCase):
     def test_tool_order_is_reported_but_does_not_break_stability(self) -> None:
         report = compare_runs(
             [
-                _evidence(tool_targets=("mail.list_messages", "mail.read_message")),
-                _evidence(tool_targets=("mail.read_message", "mail.list_messages")),
+                _evidence(tool_targets=("mail_list_messages", "mail_read_message")),
+                _evidence(tool_targets=("mail_read_message", "mail_list_messages")),
             ]
         )
         self.assertTrue(report.stable)
@@ -119,11 +119,11 @@ class CompareRunsTests(unittest.TestCase):
             compare_runs([])
 
     def test_tool_sequence_ignores_non_tool_events(self) -> None:
-        evidence = _evidence(tool_targets=("mail.list_messages",))
+        evidence = _evidence(tool_targets=("mail_list_messages",))
         evidence.events.append(
             {"sequence": 99, "kind": "subject_log", "target": "noise"}
         )
-        self.assertEqual(tool_sequence(evidence), ("mail.list_messages",))
+        self.assertEqual(tool_sequence(evidence), ("mail_list_messages",))
 
 
 class RepeatRunIdTests(unittest.TestCase):

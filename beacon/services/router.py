@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from beacon.models import EventRecorder
-from beacon.toolschema import validate_arguments
+from beacon.toolschema import validate_arguments, validate_tool_name
 
 
 class ToolRouter:
@@ -26,6 +26,11 @@ class ToolRouter:
         self._allowed = None if allowed is None else frozenset(allowed)
 
     def register(self, service: Any) -> None:
+        # Checked here rather than at publish time: a name that cannot reach a
+        # model is a defect in the service, and the run should fail while
+        # wiring up rather than on the subject's first tool call.
+        for definition in service.definitions():
+            validate_tool_name(definition["name"])
         self._services.append(service)
 
     def is_allowed(self, tool: str) -> bool:

@@ -33,32 +33,32 @@ class ToolScopingTests(unittest.TestCase):
     def test_only_scoped_tools_are_advertised(self) -> None:
         router = ToolRouter(
             EventRecorder(),
-            allowed=["mail.list_messages", "mail.read_message"],
+            allowed=["mail_list_messages", "mail_read_message"],
         )
         router.register(MailService({}, EventRecorder()))
         names = {definition["name"] for definition in router.definitions()}
-        self.assertEqual(names, {"mail.list_messages", "mail.read_message"})
+        self.assertEqual(names, {"mail_list_messages", "mail_read_message"})
 
     def test_an_unscoped_tool_is_refused_but_still_recorded(self) -> None:
         recorder = EventRecorder()
-        router = ToolRouter(recorder, allowed=["mail.list_messages"])
+        router = ToolRouter(recorder, allowed=["mail_list_messages"])
         router.register(MailService({"messages": []}, recorder))
         with self.assertRaises(KeyError):
-            router.call("mail.send_draft", {"draft_id": "d-001"}, call_id="c1")
+            router.call("mail_send_draft", {"draft_id": "d-001"}, call_id="c1")
         kinds = [(event.kind, event.target) for event in recorder.events]
         # Recorded before the scope check, so a forbidden attempt is evidence.
-        self.assertIn(("tool_call", "mail.send_draft"), kinds)
-        self.assertIn(("tool_error", "mail.send_draft"), kinds)
+        self.assertIn(("tool_call", "mail_send_draft"), kinds)
+        self.assertIn(("tool_error", "mail_send_draft"), kinds)
 
     def test_omitting_the_scope_exposes_everything(self) -> None:
         router = ToolRouter(EventRecorder())
         router.register(MailService({}, EventRecorder()))
         self.assertEqual(len(router.definitions()), len(MailService.TOOL_DEFINITIONS))
-        self.assertTrue(router.is_allowed("mail.add_label"))
+        self.assertTrue(router.is_allowed("mail_add_label"))
 
     def test_scoping_a_tool_no_service_provides_is_rejected(self) -> None:
         scenario = Scenario.from_dict(
-            _scenario_dict(tools=["mail.list_messages", "calendar.create_event"])
+            _scenario_dict(tools=["mail_list_messages", "calendar_create_event"])
         )
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaises(ValueError) as caught:
@@ -68,25 +68,25 @@ class ToolScopingTests(unittest.TestCase):
                     output_dir=directory,
                     run_id="bad-scope",
                 )
-        self.assertIn("calendar.create_event", str(caught.exception))
+        self.assertIn("calendar_create_event", str(caught.exception))
 
     def test_tools_must_be_a_list_of_names(self) -> None:
         with self.assertRaises(ScenarioError):
-            Scenario.from_dict(_scenario_dict(tools="mail.list_messages"))
+            Scenario.from_dict(_scenario_dict(tools="mail_list_messages"))
         with self.assertRaises(ScenarioError):
-            Scenario.from_dict(_scenario_dict(tools=[{"name": "mail.read_message"}]))
+            Scenario.from_dict(_scenario_dict(tools=[{"name": "mail_read_message"}]))
 
     def test_the_starter_scenario_does_not_offer_a_punished_tool(self) -> None:
         """
-        mail.add_label mutates messages, and the scenario asserts they are
+        mail_add_label mutates messages, and the scenario asserts they are
         unchanged. Offering it would make correct triage a failure.
         """
         scenario = Scenario.load(SCENARIO)
         self.assertIsNotNone(scenario.tools)
-        self.assertNotIn("mail.add_label", scenario.tools or ())
+        self.assertNotIn("mail_add_label", scenario.tools or ())
         # Send stays in scope: the forbidden-action assertion is only
         # meaningful if the subject is able to attempt it.
-        self.assertIn("mail.send_draft", scenario.tools or ())
+        self.assertIn("mail_send_draft", scenario.tools or ())
 
 
 class WorkspaceIsolationTests(unittest.TestCase):

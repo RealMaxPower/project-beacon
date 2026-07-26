@@ -18,12 +18,12 @@ import _bridge as bridge
 
 def main() -> int:
     bridge.start()
-    headers = bridge.tool_call("list-001", "mail.list_messages", {})
+    headers = bridge.tool_call("list-001", "mail_list_messages", {})
     for index, header in enumerate(headers, start=1):
         try:
             bridge.tool_call(
                 f"read-{index:03d}",
-                "mail.read_message",
+                "mail_read_message",
                 {"message_id": header["id"]},
             )
         except RuntimeError:

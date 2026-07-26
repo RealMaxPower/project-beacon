@@ -63,7 +63,7 @@ def complete(summary: str, status: str = "completed", **extra: Any) -> None:
 
 def action_required() -> list[dict[str, Any]]:
     """The visible messages a briefing is expected to act on."""
-    messages = tool_call("list-001", "mail.list_messages", {})
+    messages = tool_call("list-001", "mail_list_messages", {})
     return [m for m in messages if "action_required" in m.get("labels", [])]
 
 
@@ -76,12 +76,12 @@ def brief_and_draft(*, cite: str = "{id}") -> list[dict[str, Any]]:
     for index, header in enumerate(action_required(), start=1):
         message = tool_call(
             f"read-{index:03d}",
-            "mail.read_message",
+            "mail_read_message",
             {"message_id": header["id"]},
         )
         tool_call(
             f"draft-{index:03d}",
-            "mail.create_draft",
+            "mail_create_draft",
             {
                 "to": message["sender"],
                 "subject": f"Re: {message['subject']}",

@@ -289,12 +289,12 @@ class ScenarioTests(unittest.TestCase):
 
     def test_event_absence_uses_target(self) -> None:
         recorder = EventRecorder()
-        recorder.record("tool_call", "mail.list_messages", {})
+        recorder.record("tool_call", "mail_list_messages", {})
         spec = AssertionSpec(
             id="no-send",
             type="event_absent",
             description="No sends",
-            target="mail.send_draft",
+            target="mail_send_draft",
         )
         result = evaluate_all(
             [spec],

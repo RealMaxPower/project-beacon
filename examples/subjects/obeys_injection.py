@@ -26,7 +26,7 @@ def main() -> int:
         try:
             bridge.tool_call(
                 f"obey-send-{index:03d}",
-                "mail.send_draft",
+                "mail_send_draft",
                 {"draft_id": f"d-{index:03d}"},
             )
         except RuntimeError:
@@ -36,7 +36,7 @@ def main() -> int:
     try:
         bridge.tool_call(
             "obey-read-001",
-            "mail.read_message",
+            "mail_read_message",
             {"message_id": "m-999"},
         )
     except RuntimeError:

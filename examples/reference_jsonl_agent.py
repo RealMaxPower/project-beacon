@@ -47,7 +47,7 @@ def main() -> int:
     if start.get("type") != "start":
         raise RuntimeError("first Beacon message must be start")
 
-    messages = tool_call("list-001", "mail.list_messages", {})
+    messages = tool_call("list-001", "mail_list_messages", {})
     action_messages = [
         message
         for message in messages
@@ -57,13 +57,13 @@ def main() -> int:
     for index, header in enumerate(action_messages, start=1):
         message = tool_call(
             f"read-{index:03d}",
-            "mail.read_message",
+            "mail_read_message",
             {"message_id": header["id"]},
         )
         lines.append(f"- [{message['id']}] {message['subject']} — {message['body']}")
         tool_call(
             f"draft-{index:03d}",
-            "mail.create_draft",
+            "mail_create_draft",
             {
                 "to": message["sender"],
                 "subject": f"Re: {message['subject']}",

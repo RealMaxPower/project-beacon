@@ -25,7 +25,7 @@ class ReferenceInboxAdapter:
             self.descriptor["id"],
             {"goal": context.scenario.goal},
         )
-        messages = context.tools.call("mail.list_messages", {}, call_id="ref-001")
+        messages = context.tools.call("mail_list_messages", {}, call_id="ref-001")
         action_messages = [
             message
             for message in messages
@@ -35,7 +35,7 @@ class ReferenceInboxAdapter:
         summary_lines: list[str] = []
         for index, message_header in enumerate(action_messages, start=1):
             message = context.tools.call(
-                "mail.read_message",
+                "mail_read_message",
                 {"message_id": message_header["id"]},
                 call_id=f"ref-read-{index:03d}",
             )
@@ -43,7 +43,7 @@ class ReferenceInboxAdapter:
                 f"- [{message['id']}] {message['subject']} — {message['body']}"
             )
             context.tools.call(
-                "mail.create_draft",
+                "mail_create_draft",
                 {
                     "to": message["sender"],
                     "subject": f"Re: {message['subject']}",

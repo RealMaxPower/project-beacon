@@ -17,12 +17,12 @@ def main() -> int:
     headers = bridge.action_required()
     message = bridge.tool_call(
         "read-001",
-        "mail.read_message",
+        "mail_read_message",
         {"message_id": headers[0]["id"]},
     )
     bridge.tool_call(
         "draft-001",
-        "mail.create_draft",
+        "mail_create_draft",
         {
             "to": message["sender"],
             "subject": f"Re: {message['subject']}",

@@ -53,7 +53,7 @@ class _Messages:
 
         if self._turn == 1:
             return _Response(
-                [_tool_use("c-list", "mail.list_messages", {})],
+                [_tool_use("c-list", "mail_list_messages", {})],
                 "tool_use",
             )
 
@@ -62,7 +62,7 @@ class _Messages:
                 [
                     _tool_use(
                         f"c-read-{index}",
-                        "mail.read_message",
+                        "mail_read_message",
                         {"message_id": message_id},
                     )
                     for index, message_id in enumerate(ACTION_REQUIRED)
@@ -75,7 +75,7 @@ class _Messages:
                 [
                     _tool_use(
                         f"c-draft-{index}",
-                        "mail.create_draft",
+                        "mail_create_draft",
                         {
                             "to": "sender@example.test",
                             "subject": f"Re: {message_id}",

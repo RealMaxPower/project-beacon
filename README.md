@@ -131,7 +131,7 @@ The child process receives one `start` message:
     "limits": { "timeout_seconds": 30, "max_protocol_messages": 500 }
   },
   "tools": [
-    { "name": "mail.list_messages", "description": "...", "inputSchema": {} }
+    { "name": "mail_list_messages", "description": "...", "inputSchema": {} }
   ]
 }
 ```
@@ -147,7 +147,7 @@ It may then write tool requests:
 {
   "type": "tool_call",
   "id": "call-001",
-  "tool": "mail.list_messages",
+  "tool": "mail_list_messages",
   "arguments": {}
 }
 ```

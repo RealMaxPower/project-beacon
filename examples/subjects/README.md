@@ -56,7 +56,7 @@ without an evidence bundle is a bug in Beacon, whatever the subject did.
 into ones that cannot fail.
 
 `triage_labeller` labels handled mail whenever the start message offers
-`mail.add_label`. The scenario asserts messages are unchanged, so re-admitting
+`mail_add_label`. The scenario asserts messages are unchanged, so re-admitting
 that tool to the surface without dropping the assertion turns this subject red.
 
 `reads_everything` reads every message the listing returns. While protected

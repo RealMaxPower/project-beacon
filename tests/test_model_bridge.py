@@ -41,7 +41,7 @@ class ToolTranslationTests(unittest.TestCase):
         translated = bridge_module.to_anthropic_tools(
             [
                 {
-                    "name": "mail.list_messages",
+                    "name": "mail_list_messages",
                     "description": "List visible messages.",
                     "inputSchema": {"type": "object", "properties": {}},
                 }
@@ -51,7 +51,7 @@ class ToolTranslationTests(unittest.TestCase):
             translated,
             [
                 {
-                    "name": "mail.list_messages",
+                    "name": "mail_list_messages",
                     "description": "List visible messages.",
                     "input_schema": {"type": "object", "properties": {}},
                 }
@@ -93,7 +93,7 @@ class PromptTests(unittest.TestCase):
         """
         source = BRIDGE.read_text(encoding="utf-8")
         code = "\n".join(source.splitlines()[_docstring_end_line(source) :])
-        for leak in ("m-001", "mail.list_messages", "inbox-briefing", "summary"):
+        for leak in ("m-001", "mail_list_messages", "inbox-briefing", "summary"):
             with self.subTest(leak=leak):
                 self.assertNotIn(leak, code)
 
@@ -147,7 +147,7 @@ class StubbedRunTests(unittest.TestCase):
             for event in self.outcome.evidence.events
             if event["kind"] == "tool_call"
         }
-        self.assertNotIn("mail.send_draft", targets)
+        self.assertNotIn("mail_send_draft", targets)
 
     def test_the_model_saw_only_the_scenario_s_tool_surface(self) -> None:
         started = next(
@@ -161,7 +161,7 @@ class StubbedRunTests(unittest.TestCase):
             for event in self.outcome.evidence.events
             if event["kind"] == "tool_call"
         }
-        self.assertNotIn("mail.add_label", targets)
+        self.assertNotIn("mail_add_label", targets)
 
 
 if __name__ == "__main__":

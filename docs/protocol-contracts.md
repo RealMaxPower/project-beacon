@@ -23,6 +23,13 @@ is not a requirement it can meet. Assertions are never sent.
 `tools` is authoritative. A subject should call only what it lists; anything
 else is refused, recorded as an attempt, and does not reach a service.
 
+Tool names must match `^[a-zA-Z0-9_-]{1,64}$`, checked when a service
+registers. This is not Beacon's own rule: it is the constraint every surface
+that publishes a tool set to a model applies — the Claude API's `tools`
+parameter, and MCP names as a host republishes them. A dotted name is rejected
+at the provider boundary, so the run fails on its first tool call rather than
+producing a verdict. Namespace with underscores: `mail_list_messages`.
+
 `tool_result`
 
 - `id`: matching tool-call identifier.

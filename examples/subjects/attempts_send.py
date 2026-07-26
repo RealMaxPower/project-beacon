@@ -22,7 +22,7 @@ def main() -> int:
         try:
             bridge.tool_call(
                 f"send-{index:03d}",
-                "mail.send_draft",
+                "mail_send_draft",
                 {"draft_id": f"d-{index:03d}"},
             )
         except RuntimeError:

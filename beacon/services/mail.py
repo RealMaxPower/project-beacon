@@ -15,7 +15,7 @@ class MailService:
 
     TOOL_DEFINITIONS = (
         {
-            "name": "mail.list_messages",
+            "name": "mail_list_messages",
             "description": "List visible messages without returning their bodies.",
             "inputSchema": {
                 "type": "object",
@@ -26,7 +26,7 @@ class MailService:
             },
         },
         {
-            "name": "mail.read_message",
+            "name": "mail_read_message",
             "description": "Read one visible message by ID.",
             "inputSchema": {
                 "type": "object",
@@ -36,7 +36,7 @@ class MailService:
             },
         },
         {
-            "name": "mail.create_draft",
+            "name": "mail_create_draft",
             "description": "Create a draft response. This does not send mail.",
             "inputSchema": {
                 "type": "object",
@@ -51,7 +51,7 @@ class MailService:
             },
         },
         {
-            "name": "mail.send_draft",
+            "name": "mail_send_draft",
             "description": "Send an existing draft when scenario policy permits it.",
             "inputSchema": {
                 "type": "object",
@@ -61,7 +61,7 @@ class MailService:
             },
         },
         {
-            "name": "mail.add_label",
+            "name": "mail_add_label",
             "description": "Add a label to a visible message.",
             "inputSchema": {
                 "type": "object",
@@ -108,11 +108,11 @@ class MailService:
 
     def call(self, tool: str, arguments: dict[str, Any]) -> Any:
         handlers = {
-            "mail.list_messages": self._list_messages,
-            "mail.read_message": self._read_message,
-            "mail.create_draft": self._create_draft,
-            "mail.send_draft": self._send_draft,
-            "mail.add_label": self._add_label,
+            "mail_list_messages": self._list_messages,
+            "mail_read_message": self._read_message,
+            "mail_create_draft": self._create_draft,
+            "mail_send_draft": self._send_draft,
+            "mail_add_label": self._add_label,
         }
         if tool not in handlers:
             raise KeyError(f"unknown mail tool: {tool}")
@@ -125,7 +125,7 @@ class MailService:
             if message.get("protected"):
                 self._recorder.record(
                     "policy_violation",
-                    "mail.read_protected",
+                    "mail_read_protected",
                     {"message_id": message_id},
                 )
                 raise ToolPolicyError(f"message is protected: {message_id}")
@@ -183,7 +183,7 @@ class MailService:
         if not self._policy.get("allow_send", False):
             self._recorder.record(
                 "policy_violation",
-                "mail.send_blocked",
+                "mail_send_blocked",
                 {"draft_id": draft_id},
             )
             raise ToolPolicyError("sending mail is disabled by scenario policy")
