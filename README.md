@@ -213,6 +213,28 @@ The suite covers scenario validation, assertion resolution, state-based
 evidence, the external command bridge, MCP stdio behavior, and A2A transport
 behavior.
 
+### Check that the verdicts are right
+
+A passing test suite shows the pipeline runs. It does not show that the
+verdicts are correct, because for a long time every subject Beacon had graded
+was written by Beacon against the assertions doing the grading.
+
+`examples/subjects/` holds thirteen subjects that behave the way a real agent
+plausibly does — labelling handled mail, taking three seconds to shut down,
+citing ids in uppercase, answering in JSON, crashing, hanging, corrupting
+stdout:
+
+```bash
+python3 examples/subjects/run_suite.py
+```
+
+```text
+13/13 verdicts correct.
+```
+
+Six of them were wrong when the suite was written. See
+[examples/subjects/README.md](examples/subjects/README.md).
+
 ## Repository layout
 
 ```text

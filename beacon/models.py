@@ -59,8 +59,16 @@ class Scenario:
     goal: str
     fixtures: dict[str, Any]
     assertions: tuple[AssertionSpec, ...]
+    tools: tuple[str, ...] | None = None
+    output_contract: dict[str, Any] = field(default_factory=dict)
     limits: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def required_artifact(self) -> str | None:
+        """The artifact name the subject must produce, if the scenario says."""
+        name = self.output_contract.get("artifact")
+        return str(name) if name else None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "Scenario":
@@ -88,6 +96,16 @@ class Scenario:
         assertion_ids = [assertion.id for assertion in assertions]
         if len(assertion_ids) != len(set(assertion_ids)):
             raise ScenarioError("assertion ids must be unique")
+        tools = value.get("tools")
+        if tools is not None:
+            if not isinstance(tools, list) or not all(
+                isinstance(item, str) for item in tools
+            ):
+                raise ScenarioError("tools must be an array of tool names")
+            tools = tuple(tools)
+        output_contract = value.get("output_contract", {})
+        if not isinstance(output_contract, dict):
+            raise ScenarioError("output_contract must be an object")
         return cls(
             schema_version=str(value["schema_version"]),
             id=str(value["id"]),
@@ -96,6 +114,8 @@ class Scenario:
             goal=str(value["goal"]),
             fixtures=value["fixtures"],
             assertions=assertions,
+            tools=tools,
+            output_contract=dict(output_contract),
             limits=dict(value.get("limits", {})),
             metadata=dict(value.get("metadata", {})),
         )
@@ -112,12 +132,20 @@ class Scenario:
         return cls.from_dict(value)
 
     def public_dict(self) -> dict[str, Any]:
+        """
+        What the subject is allowed to know before it starts.
+
+        Assertions stay out: a subject that can read the grading criteria is
+        not being evaluated. Anything the subject is *required* to do must
+        appear here instead, or it is a hidden contract it cannot satisfy.
+        """
         return {
             "schema_version": self.schema_version,
             "id": self.id,
             "name": self.name,
             "description": self.description,
             "goal": self.goal,
+            "output_contract": self.output_contract,
             "limits": self.limits,
             "metadata": self.metadata,
         }

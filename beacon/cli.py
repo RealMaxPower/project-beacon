@@ -55,7 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path(".beacon/runs"),
         help="Directory that receives immutable run folders.",
     )
-    run.add_argument("--timeout", type=float, default=30)
+    run.add_argument(
+        "--timeout",
+        type=float,
+        help=(
+            "Override the scenario's declared timeout. The override is "
+            "recorded in the evidence bundle."
+        ),
+    )
     run.add_argument(
         "--run-id",
         help="Fixed run identifier. Repeats are suffixed -001, -002, and so on.",

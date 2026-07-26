@@ -17,6 +17,12 @@ class CommandAdapterError(RuntimeError):
     """Raised when a JSONL command subject violates the adapter contract."""
 
 
+DEFAULT_TIMEOUT_SECONDS = 30.0
+DEFAULT_MAX_PROTOCOL_MESSAGES = 500
+DEFAULT_TEARDOWN_SECONDS = 10.0
+STDERR_TAIL_LINES = 20
+
+
 def _reader(stream: TextIO, output: queue.Queue[str | None]) -> None:
     try:
         for line in stream:
@@ -42,6 +48,19 @@ def _safe_environment(run_id: str) -> dict[str, str]:
     return environment
 
 
+def _drain(output: queue.Queue[str | None]) -> list[str]:
+    lines: list[str] = []
+    while True:
+        try:
+            item = output.get_nowait()
+        except queue.Empty:
+            break
+        if item is None:
+            break
+        lines.append(item.rstrip())
+    return lines
+
+
 def _close_process_streams(process: subprocess.Popen[str]) -> None:
     for stream in (process.stdin, process.stdout, process.stderr):
         if stream and not stream.closed:
@@ -60,8 +79,9 @@ class JSONLCommandAdapter:
         command: Sequence[str],
         *,
         name: str = "JSONL command subject",
-        timeout_seconds: float = 30,
-        max_messages: int = 100,
+        timeout_seconds: float | None = None,
+        max_messages: int | None = None,
+        teardown_seconds: float = DEFAULT_TEARDOWN_SECONDS,
         source_dir: str | Path | None = None,
     ) -> None:
         if not command:
@@ -70,9 +90,45 @@ class JSONLCommandAdapter:
         self._name = name
         self._timeout_seconds = timeout_seconds
         self._max_messages = max_messages
+        self._teardown_seconds = teardown_seconds
         self._source_dir = (
             Path(source_dir).resolve() if source_dir else Path.cwd().resolve()
         )
+
+    def _limits(self, context: ExecutionContext) -> tuple[float, int]:
+        """
+        Resolve the run's budgets, preferring the scenario's declared limits.
+
+        Constructor arguments are explicit operator overrides, so when one
+        differs from what the scenario declared the difference is recorded.
+        A scenario that publishes a limit into its evidence and then runs under
+        a different one is misleading about the conditions of the run.
+        """
+        declared = context.scenario.limits
+        timeout = float(declared.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS))
+        messages = int(
+            declared.get("max_protocol_messages", DEFAULT_MAX_PROTOCOL_MESSAGES)
+        )
+        overrides: dict[str, Any] = {}
+        if self._timeout_seconds is not None and self._timeout_seconds != timeout:
+            overrides["timeout_seconds"] = {
+                "declared": timeout,
+                "applied": self._timeout_seconds,
+            }
+            timeout = self._timeout_seconds
+        if self._max_messages is not None and self._max_messages != messages:
+            overrides["max_protocol_messages"] = {
+                "declared": messages,
+                "applied": self._max_messages,
+            }
+            messages = self._max_messages
+        if overrides:
+            context.recorder.record(
+                "limits_overridden",
+                self.descriptor["id"],
+                overrides,
+            )
+        return timeout, messages
 
     def _resolved_command(self) -> tuple[str, ...]:
         resolved: list[str] = []
@@ -104,10 +160,15 @@ class JSONLCommandAdapter:
 
     def execute(self, context: ExecutionContext) -> SubjectResult:
         resolved_command = self._resolved_command()
+        timeout_seconds, max_messages = self._limits(context)
         context.recorder.record(
             "subject_started",
             self.descriptor["id"],
-            {"command": list(resolved_command)},
+            {
+                "command": list(resolved_command),
+                "timeout_seconds": timeout_seconds,
+                "max_protocol_messages": max_messages,
+            },
         )
         process = subprocess.Popen(
             resolved_command,
@@ -147,7 +208,7 @@ class JSONLCommandAdapter:
             },
         )
 
-        deadline = time.monotonic() + self._timeout_seconds
+        deadline = time.monotonic() + timeout_seconds
         handled = 0
         result: SubjectResult | None = None
         try:
@@ -155,7 +216,7 @@ class JSONLCommandAdapter:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise CommandAdapterError(
-                        f"subject exceeded {self._timeout_seconds:g}s timeout"
+                        f"subject exceeded {timeout_seconds:g}s timeout"
                     )
                 try:
                     line = stdout_queue.get(timeout=min(remaining, 0.25))
@@ -168,9 +229,9 @@ class JSONLCommandAdapter:
                 if line is None:
                     raise CommandAdapterError("subject closed stdout before completion")
                 handled += 1
-                if handled > self._max_messages:
+                if handled > max_messages:
                     raise CommandAdapterError(
-                        f"subject exceeded {self._max_messages} protocol messages"
+                        f"subject exceeded {max_messages} protocol messages"
                     )
                 try:
                     message = json.loads(line)
@@ -260,9 +321,16 @@ class JSONLCommandAdapter:
             if process.stdin and not process.stdin.closed:
                 process.stdin.close()
 
+        # The subject has already reported `complete`; the protocol work is
+        # done. What follows is teardown, and nothing it reveals can retract a
+        # completion that was validly sent. Closing an HTTP pool, joining a
+        # thread, or a failing atexit handler are all normal, and treating them
+        # as subject errors reports INCOMPLETE for work that finished.
+        terminated = False
         try:
-            return_code = process.wait(timeout=2)
+            return_code = process.wait(timeout=self._teardown_seconds)
         except subprocess.TimeoutExpired:
+            terminated = True
             process.terminate()
             try:
                 return_code = process.wait(timeout=2)
@@ -270,25 +338,29 @@ class JSONLCommandAdapter:
                 process.kill()
                 return_code = process.wait(timeout=2)
 
-        stderr_lines: list[str] = []
-        while True:
-            try:
-                item = stderr_queue.get_nowait()
-            except queue.Empty:
-                break
-            if item is None:
-                break
-            stderr_lines.append(item.rstrip())
-        if return_code != 0:
-            _close_process_streams(process)
-            raise CommandAdapterError(
-                f"subject exited with code {return_code}: {' '.join(stderr_lines)}"
+        stderr_tail = _drain(stderr_queue)[-STDERR_TAIL_LINES:]
+        _close_process_streams(process)
+
+        if terminated or return_code != 0:
+            context.recorder.record(
+                "subject_teardown",
+                self.descriptor["id"],
+                {
+                    "exit_code": return_code,
+                    "terminated_after_complete": terminated,
+                    "teardown_seconds": self._teardown_seconds,
+                    "stderr_tail": stderr_tail,
+                },
             )
 
-        _close_process_streams(process)
+        result.metadata = {
+            **result.metadata,
+            "exit_code": return_code,
+            "terminated_after_complete": terminated,
+        }
         context.recorder.record(
             "subject_completed",
             self.descriptor["id"],
-            {"status": result.status},
+            {"status": result.status, "exit_code": return_code},
         )
         return result

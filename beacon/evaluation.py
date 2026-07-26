@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Iterable
 
 from beacon.models import AssertionResult, AssertionSpec, Event
@@ -7,6 +8,36 @@ from beacon.models import AssertionResult, AssertionSpec, Event
 
 class EvaluationError(ValueError):
     """Raised when an assertion cannot be evaluated."""
+
+
+def _searchable_text(value: Any) -> str:
+    """
+    Render a value so a text search reads its content.
+
+    A subject may answer with prose or with structured JSON, and both are
+    legitimate. Python's `in` on a dict tests keys, so a structured briefing
+    that cites every message id would fail a citation check that a prose one
+    passes. Serialising first makes the assertion about what the subject said
+    rather than how it chose to shape it.
+    """
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+
+
+def _contains(actual: Any, expected: Any) -> bool:
+    """
+    Substring search for text, membership for everything else.
+
+    Text comparison is case-insensitive: models routinely normalise
+    identifiers when writing prose, and "M-001" is the same citation as
+    "m-001".
+    """
+    if not isinstance(expected, str):
+        if isinstance(actual, (list, tuple, set, dict)):
+            return expected in actual
+        raise EvaluationError("contains needs a container or a string")
+    return expected.casefold() in _searchable_text(actual).casefold()
 
 
 def get_path(root: Any, path: str) -> Any:
@@ -85,9 +116,11 @@ def evaluate_assertion(
                 raise EvaluationError("contains requires path")
             actual = get_path(root, spec.path)
             try:
-                passed = spec.expected in actual
+                passed = _contains(actual, spec.expected)
             except TypeError as exc:
-                raise EvaluationError(f"value at {spec.path} does not support contains") from exc
+                raise EvaluationError(
+                    f"value at {spec.path} does not support contains"
+                ) from exc
             return _result(
                 spec,
                 passed,

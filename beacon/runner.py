@@ -44,7 +44,7 @@ def _build_services(
     scenario: Scenario,
     recorder: EventRecorder,
 ) -> tuple[ToolRouter, dict[str, Any], dict[str, Any]]:
-    router = ToolRouter(recorder)
+    router = ToolRouter(recorder, allowed=scenario.tools)
     snapshots: dict[str, Any] = {}
     services: dict[str, Any] = {}
     if "mail" in scenario.fixtures:
@@ -54,6 +54,11 @@ def _build_services(
         snapshots["mail"] = mail.snapshot()
     if not services:
         raise ValueError("scenario must define at least one supported service fixture")
+    unknown = router.unknown_tools()
+    if unknown:
+        raise ValueError(
+            "scenario scopes tools no service provides: " + ", ".join(unknown)
+        )
     return router, services, snapshots
 
 
@@ -94,6 +99,29 @@ def run_scenario(
             status="error",
             error=f"{type(exc).__name__}: {exc}",
             metadata={"traceback": traceback.format_exc()},
+        )
+
+    # A declared artifact that never arrived means Beacon has nothing to grade,
+    # not that the subject behaved badly. Assertions reading that artifact
+    # would report FAIL, which reads as a verdict on the subject; the honest
+    # answer is that evidence collection did not succeed.
+    required_artifact = scenario.required_artifact
+    if (
+        subject_result.status == "completed"
+        and required_artifact
+        and required_artifact not in context.artifacts
+    ):
+        recorder.record(
+            "output_contract_unmet",
+            adapter.descriptor.get("id", "unknown-subject"),
+            {
+                "required_artifact": required_artifact,
+                "artifacts_received": sorted(context.artifacts),
+            },
+        )
+        subject_result.status = "evidence_missing"
+        subject_result.error = (
+            f"subject completed without the required artifact: {required_artifact}"
         )
 
     after = {name: service.snapshot() for name, service in services.items()}

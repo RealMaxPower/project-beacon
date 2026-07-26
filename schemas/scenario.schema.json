@@ -36,6 +36,30 @@
       "type": "object",
       "minProperties": 1
     },
+    "tools": {
+      "description": "Tool names this scenario exposes. Omit to expose everything the registered services provide. A tool that is offered must not be punished by an assertion.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "output_contract": {
+      "description": "What the subject must return. Published to the subject in the start message, because a requirement it is never told is not a requirement it can meet.",
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": ["artifact"],
+      "additionalProperties": false
+    },
     "assertions": {
       "type": "array",
       "minItems": 1,

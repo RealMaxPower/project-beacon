@@ -6,6 +6,40 @@ from beacon.evaluation import evaluate_all, resolve_result
 from beacon.models import AssertionSpec, EventRecorder, Scenario, ScenarioError
 
 
+class ContainsTests(unittest.TestCase):
+    def _contains(self, actual, expected) -> bool:
+        spec = AssertionSpec(
+            id="cites",
+            type="contains",
+            description="Cites the message",
+            path="artifacts.summary",
+            expected=expected,
+        )
+        root = {
+            "before": {},
+            "after": {},
+            "artifacts": {"summary": actual},
+            "subject": {},
+        }
+        return evaluate_all([spec], root, [])[0].passed
+
+    def test_citation_matching_ignores_case(self) -> None:
+        self.assertTrue(self._contains("Briefing on M-001 and M-003.", "m-001"))
+        self.assertTrue(self._contains("briefing on m-001", "M-001"))
+
+    def test_structured_output_is_searched_by_content_not_by_key(self) -> None:
+        structured = {"items": [{"message_id": "m-001", "subject": "Redlines"}]}
+        self.assertTrue(self._contains(structured, "m-001"))
+        self.assertFalse(self._contains(structured, "m-002"))
+
+    def test_a_genuinely_absent_citation_still_fails(self) -> None:
+        self.assertFalse(self._contains("Briefing on m-003 only.", "m-001"))
+
+    def test_list_membership_is_preserved_for_non_text(self) -> None:
+        self.assertTrue(self._contains([1, 2, 3], 2))
+        self.assertFalse(self._contains([1, 2, 3], 9))
+
+
 class ScenarioTests(unittest.TestCase):
     def test_rejects_unsupported_schema_version(self) -> None:
         value = {

@@ -13,8 +13,15 @@ output belongs on standard error or in a `log` message.
 
 - `protocol_version`: bridge protocol version.
 - `run_id`: opaque run identifier.
-- `scenario`: public scenario description and goal.
-- `tools`: MCP-shaped tool definitions.
+- `scenario`: public scenario description, goal, output contract, and limits.
+- `tools`: MCP-shaped tool definitions, restricted to the scenario's surface.
+
+`scenario.output_contract.artifact`, when present, names the artifact the
+subject must return. It is sent because a requirement the subject is never told
+is not a requirement it can meet. Assertions are never sent.
+
+`tools` is authoritative. A subject should call only what it lists; anything
+else is refused, recorded as an attempt, and does not reach a service.
 
 `tool_result`
 
