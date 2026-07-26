@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,6 +11,46 @@ from typing import Any
 
 class ScenarioError(ValueError):
     """Raised when a scenario is invalid."""
+
+
+SCENARIO_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+SCENARIO_KEYS = frozenset(
+    {
+        "schema_version",
+        "id",
+        "name",
+        "description",
+        "goal",
+        "fixtures",
+        "assertions",
+        "tools",
+        "output_contract",
+        "limits",
+        "metadata",
+    }
+)
+
+ASSERTION_KEYS = frozenset({"id", "type", "description", "path", "expected", "target"})
+
+ASSERTION_TYPES: dict[str, dict[str, Any]] = {
+    "equals": {"requires": ("path", "expected")},
+    "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
+    "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
+    "contains": {"requires": ("path", "expected")},
+    "unchanged": {"requires": ("path",)},
+    "event_absent": {"requires": ("target",)},
+    "event_present": {"requires": ("target",)},
+}
+"""
+Every assertion type and what it needs to be evaluable.
+
+Checked when the scenario loads rather than when it runs. An assertion that
+cannot be evaluated is an authoring mistake, and discovering it mid-run means
+discovering it after the subject has already done the work - reported either as
+a failure the subject did not earn, or as a crash that discards the evidence
+for a run someone has already paid for.
+"""
 
 
 def utc_now() -> str:
@@ -40,6 +81,37 @@ class AssertionSpec:
         for required in ("id", "type", "description"):
             if not value.get(required):
                 raise ScenarioError(f"assertion is missing required field: {required}")
+        identifier = str(value["id"])
+        unknown = sorted(set(value) - ASSERTION_KEYS)
+        if unknown:
+            raise ScenarioError(
+                f"assertion '{identifier}' has unknown fields: {', '.join(unknown)}"
+            )
+        kind = str(value["type"])
+        rule = ASSERTION_TYPES.get(kind)
+        if rule is None:
+            supported = ", ".join(sorted(ASSERTION_TYPES))
+            raise ScenarioError(
+                f"assertion '{identifier}' has unsupported type '{kind}'. "
+                f"Supported types: {supported}"
+            )
+        for name in rule["requires"]:
+            if name not in value:
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' requires '{name}'"
+                )
+        for name in ("path", "target"):
+            if name in rule["requires"] and not str(value[name] or "").strip():
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' needs a non-empty '{name}'"
+                )
+        if rule.get("numeric_expected"):
+            expected = value["expected"]
+            if isinstance(expected, bool) or not isinstance(expected, (int, float)):
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' needs a numeric 'expected', "
+                    f"got {type(expected).__name__}"
+                )
         return cls(
             id=str(value["id"]),
             type=str(value["type"]),
@@ -87,6 +159,16 @@ class Scenario:
         if value["schema_version"] != "0.1":
             raise ScenarioError(
                 f"unsupported scenario schema_version: {value['schema_version']}"
+            )
+        unknown = sorted(set(value) - SCENARIO_KEYS)
+        if unknown:
+            raise ScenarioError(
+                f"scenario has unknown fields: {', '.join(unknown)}"
+            )
+        if not SCENARIO_ID_PATTERN.match(str(value["id"])):
+            raise ScenarioError(
+                f"scenario id must match {SCENARIO_ID_PATTERN.pattern}: "
+                f"{value['id']!r}"
             )
         if not isinstance(value["fixtures"], dict):
             raise ScenarioError("fixtures must be an object")

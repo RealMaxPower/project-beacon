@@ -38,6 +38,25 @@ jobs:
       - name: Run the test suite
         run: python -W error::ResourceWarning -m unittest discover -s tests -v
 
+  schema-conformance:
+    name: schema conformance (jsonschema installed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # The suite skips full JSON Schema validation when the extra is absent,
+      # so without this job the schemas would only ever be checked by the
+      # lighter structural comparison.
+      - name: Install the validate extra
+        run: python -m pip install --upgrade pip && python -m pip install ".[validate]"
+
+      - name: Validate scenarios and emitted evidence against the schemas
+        run: python -m unittest tests.test_schema_conformance -v
+
   vertical-slice:
     name: vertical slice (CLI entry point)
     runs-on: ubuntu-latest
@@ -66,6 +85,10 @@ jobs:
       # per-assertion result vector.
       - name: Verify cross-run determinism
         run: python -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
+
+      # Asserts Beacon reaches the right verdict for subjects it did not write.
+      - name: Run the adversarial subject suite
+        run: python examples/subjects/run_suite.py
 
       - name: Upload evidence bundles
         if: always()

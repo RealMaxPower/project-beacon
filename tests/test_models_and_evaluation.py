@@ -64,13 +64,28 @@ class ScenarioTests(unittest.TestCase):
             "description": "Test scenario",
             "goal": "Do the thing",
             "fixtures": {"mail": {}},
+            # Both assertions are individually valid, so a duplicate id is the
+            # only thing left to reject.
             "assertions": [
-                {"id": "same", "type": "equals", "description": "one"},
-                {"id": "same", "type": "equals", "description": "two"},
+                {
+                    "id": "same",
+                    "type": "equals",
+                    "description": "one",
+                    "path": "after.mail.sent",
+                    "expected": [],
+                },
+                {
+                    "id": "same",
+                    "type": "equals",
+                    "description": "two",
+                    "path": "after.mail.drafts",
+                    "expected": [],
+                },
             ],
         }
-        with self.assertRaises(ScenarioError):
+        with self.assertRaises(ScenarioError) as caught:
             Scenario.from_dict(value)
+        self.assertIn("unique", str(caught.exception))
 
     def test_failed_path_is_a_failed_assertion(self) -> None:
         spec = AssertionSpec(

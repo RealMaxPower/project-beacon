@@ -159,6 +159,17 @@ def evaluate_assertion(
         raise EvaluationError(f"unsupported assertion type: {spec.type}")
     except EvaluationError as exc:
         return _result(spec, False, None, spec.expected, str(exc))
+    except (TypeError, ValueError, KeyError, AttributeError, IndexError) as exc:
+        # A malformed spec should have been caught at load time. If one gets
+        # this far it becomes one failed assertion, not a crash that takes the
+        # whole run - and the evidence - down with it.
+        return _result(
+            spec,
+            False,
+            None,
+            spec.expected,
+            f"assertion could not be evaluated: {type(exc).__name__}: {exc}",
+        )
 
 
 def evaluate_all(

@@ -131,11 +131,35 @@ def run_scenario(
         "artifacts": context.artifacts,
         "subject": subject_result.to_dict(),
     }
-    assertion_results = evaluate_all(
-        scenario.assertions,
-        evaluation_root,
-        recorder.events,
-    )
+    # Load-time validation should make this unreachable, but a run that dies
+    # here dies after the subject has already done the work, discarding the
+    # evidence for it. A Beacon-side failure is an INCOMPLETE to be recorded,
+    # never an exception that loses the run.
+    limitations = list(DEFAULT_LIMITATIONS)
+    try:
+        assertion_results = evaluate_all(
+            scenario.assertions,
+            evaluation_root,
+            recorder.events,
+        )
+    except Exception as exc:
+        recorder.record(
+            "evaluator_error",
+            scenario.id,
+            {
+                "error_type": type(exc).__name__,
+                "message": str(exc),
+                "traceback": traceback.format_exc(),
+            },
+        )
+        assertion_results = []
+        limitations.append(
+            "Beacon's evaluator failed on this run, so no assertion result is "
+            f"available: {type(exc).__name__}: {exc}"
+        )
+
+    # An empty assertion set resolves to INCOMPLETE, which is the correct
+    # answer whether the scenario declared none or the evaluator produced none.
     result = resolve_result(subject_result.status, assertion_results)
 
     reset_verified = True
@@ -173,7 +197,7 @@ def run_scenario(
         events=[event.to_dict() for event in recorder.events],
         artifacts=context.artifacts,
         reset_verified=reset_verified,
-        limitations=list(DEFAULT_LIMITATIONS),
+        limitations=limitations,
     )
     evidence.finalize()
     json_path, markdown_path = write_evidence(evidence, run_dir)

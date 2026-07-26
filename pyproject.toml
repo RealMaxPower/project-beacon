@@ -23,6 +23,13 @@ classifiers = [
 ]
 dependencies = []
 
+# The core stays stdlib-only so `python3 -m beacon run` works in an empty
+# environment. Extras add depth, never a requirement: with jsonschema absent
+# the loader still enforces the scenario contract in code, and the
+# schema-conformance tests skip rather than fail.
+[project.optional-dependencies]
+validate = ["jsonschema>=4.21"]
+
 [project.scripts]
 beacon = "beacon.cli:main"
 
