@@ -2,8 +2,90 @@ from __future__ import annotations
 
 import unittest
 
-from beacon.evaluation import evaluate_all, resolve_result
-from beacon.models import AssertionSpec, EventRecorder, Scenario, ScenarioError
+from beacon.evaluation import EvaluationError, evaluate_all, get_path, resolve_result
+from beacon.models import (
+    AssertionResult,
+    AssertionSpec,
+    EventRecorder,
+    Scenario,
+    ScenarioError,
+)
+
+
+class PathProjectionTests(unittest.TestCase):
+    ROOT = {
+        "after": {
+            "mail": {
+                "drafts": [
+                    {"id": "d-001", "in_reply_to": "m-001"},
+                    {"id": "d-002", "in_reply_to": "m-003"},
+                ]
+            }
+        }
+    }
+
+    def test_a_wildcard_collects_a_field_across_a_list(self) -> None:
+        self.assertEqual(
+            get_path(self.ROOT, "after.mail.drafts.*.in_reply_to"),
+            ["m-001", "m-003"],
+        )
+
+    def test_a_trailing_wildcard_returns_the_list(self) -> None:
+        self.assertEqual(len(get_path(self.ROOT, "after.mail.drafts.*")), 2)
+
+    def test_a_wildcard_on_a_non_list_is_an_error(self) -> None:
+        with self.assertRaises(EvaluationError):
+            get_path(self.ROOT, "after.mail.*.id")
+
+    def test_indexing_still_works(self) -> None:
+        self.assertEqual(
+            get_path(self.ROOT, "after.mail.drafts.0.id"),
+            "d-001",
+        )
+
+
+class SetEqualsTests(unittest.TestCase):
+    def _evaluate(self, actual, expected) -> AssertionResult:
+        spec = AssertionSpec(
+            id="targets",
+            type="set_equals",
+            description="Drafts answer the requests",
+            path="after.items",
+            expected=expected,
+        )
+        root = {
+            "before": {},
+            "after": {"items": actual},
+            "artifacts": {},
+            "subject": {},
+        }
+        return evaluate_all([spec], root, [])[0]
+
+    def test_order_does_not_matter(self) -> None:
+        self.assertTrue(self._evaluate(["m-003", "m-001"], ["m-001", "m-003"]).passed)
+
+    def test_a_missing_member_fails_and_is_named(self) -> None:
+        result = self._evaluate(["m-001"], ["m-001", "m-003"])
+        self.assertFalse(result.passed)
+        self.assertIn("m-003", result.message)
+
+    def test_an_extra_member_fails_and_is_named(self) -> None:
+        result = self._evaluate(["m-001", "m-003", "m-002"], ["m-001", "m-003"])
+        self.assertFalse(result.passed)
+        self.assertIn("m-002", result.message)
+
+    def test_duplicates_do_not_change_membership(self) -> None:
+        self.assertTrue(
+            self._evaluate(["m-001", "m-001", "m-003"], ["m-001", "m-003"]).passed
+        )
+
+    def test_unhashable_members_are_compared_by_value(self) -> None:
+        self.assertTrue(
+            self._evaluate([{"a": 1}, {"b": 2}], [{"b": 2}, {"a": 1}]).passed
+        )
+
+    def test_a_non_list_value_is_a_failed_assertion_not_a_crash(self) -> None:
+        self.assertFalse(self._evaluate("m-001", ["m-001"]).passed)
 
 
 class ContainsTests(unittest.TestCase):

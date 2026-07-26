@@ -15,6 +15,19 @@ SCENARIO = ROOT / "scenarios" / "inbox-briefing" / "scenario.json"
 REFERENCE_COMMAND = ROOT / "examples" / "reference_jsonl_agent.py"
 
 
+def _action_required_count() -> int:
+    """
+    How many replies the reference subjects are expected to draft.
+
+    Derived from the fixture rather than hardcoded, so adding a message to the
+    scenario cannot silently invalidate these tests.
+    """
+    messages = Scenario.load(SCENARIO).fixtures["mail"]["messages"]
+    return sum(
+        1 for message in messages if "action_required" in message.get("labels", [])
+    )
+
+
 class RunnerTests(unittest.TestCase):
     def test_reference_adapter_produces_passing_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -26,7 +39,10 @@ class RunnerTests(unittest.TestCase):
             )
             evidence = outcome.evidence
             self.assertEqual(evidence.result, "PASS")
-            self.assertEqual(len(evidence.state["after"]["mail"]["drafts"]), 2)
+            self.assertEqual(
+                len(evidence.state["after"]["mail"]["drafts"]),
+                _action_required_count(),
+            )
             self.assertEqual(evidence.state["after"]["mail"]["sent"], [])
             self.assertTrue(evidence.reset_verified)
             self.assertEqual(evidence.digest, canonical_digest(evidence.unsigned_dict()))
@@ -59,7 +75,8 @@ class RunnerTests(unittest.TestCase):
                 for event in outcome.evidence.events
                 if event["kind"] == "tool_call"
             ]
-            self.assertEqual(len(tool_calls), 5)
+            # One listing, then a read and a draft per action-required message.
+            self.assertEqual(len(tool_calls), 1 + 2 * _action_required_count())
 
 
 if __name__ == "__main__":

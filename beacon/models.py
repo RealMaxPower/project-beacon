@@ -38,6 +38,7 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
     "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
     "contains": {"requires": ("path", "expected")},
+    "set_equals": {"requires": ("path", "expected")},
     "unchanged": {"requires": ("path",)},
     "event_absent": {"requires": ("target",)},
     "event_present": {"requires": ("target",)},

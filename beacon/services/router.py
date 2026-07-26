@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from beacon.models import EventRecorder
+from beacon.toolschema import validate_arguments
 
 
 class ToolRouter:
@@ -77,10 +78,14 @@ class ToolRouter:
             )
             raise KeyError(f"tool is not available: {tool}")
         for service in self._services:
-            known = {definition["name"] for definition in service.definitions()}
-            if tool not in known:
+            schemas = {
+                definition["name"]: definition.get("inputSchema", {})
+                for definition in service.definitions()
+            }
+            if tool not in schemas:
                 continue
             try:
+                validate_arguments(tool, schemas[tool], arguments)
                 result = service.call(tool, arguments)
             except Exception as exc:
                 self._recorder.record(

@@ -25,6 +25,13 @@ def _searchable_text(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
 
 
+def _hashable(value: Any) -> Any:
+    """Make a JSON value usable in a set, preserving equality semantics."""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+    return value
+
+
 def _contains(actual: Any, expected: Any) -> bool:
     """
     Substring search for text, membership for everything else.
@@ -41,16 +48,32 @@ def _contains(actual: Any, expected: Any) -> bool:
 
 
 def get_path(root: Any, path: str) -> Any:
+    """
+    Resolve a dotted path, where `*` projects a field across a list.
+
+    `after.mail.drafts.*.in_reply_to` collects `in_reply_to` from every draft,
+    which is what lets a scenario assert *which* messages a subject replied to
+    rather than only how many replies it wrote.
+    """
     current = root
-    for segment in path.split("."):
+    segments = path.split(".")
+    for index, segment in enumerate(segments):
+        if segment == "*":
+            if not isinstance(current, list):
+                raise EvaluationError(
+                    f"'*' needs a list at this point in the path: {path}"
+                )
+            remainder = ".".join(segments[index + 1 :])
+            if not remainder:
+                return list(current)
+            return [get_path(item, remainder) for item in current]
         if isinstance(current, dict):
             if segment not in current:
                 raise EvaluationError(f"path does not exist: {path}")
             current = current[segment]
         elif isinstance(current, list) and segment.isdigit():
-            index = int(segment)
             try:
-                current = current[index]
+                current = current[int(segment)]
             except IndexError as exc:
                 raise EvaluationError(f"list index is out of range: {path}") from exc
         else:
@@ -127,6 +150,28 @@ def evaluate_assertion(
                 actual,
                 spec.expected,
                 "expected value found" if passed else "expected value not found",
+            )
+
+        if spec.type == "set_equals":
+            if not spec.path:
+                raise EvaluationError("set_equals requires path")
+            value = get_path(root, spec.path)
+            if not isinstance(value, list):
+                raise EvaluationError(f"set_equals needs a list at {spec.path}")
+            if not isinstance(spec.expected, list):
+                raise EvaluationError("set_equals expects a list")
+            actual_set = set(map(_hashable, value))
+            expected_set = set(map(_hashable, spec.expected))
+            passed = actual_set == expected_set
+            return _result(
+                spec,
+                passed,
+                sorted(value, key=repr),
+                sorted(spec.expected, key=repr),
+                "sets match"
+                if passed
+                else f"missing {sorted(expected_set - actual_set, key=repr)}, "
+                f"unexpected {sorted(actual_set - expected_set, key=repr)}",
             )
 
         if spec.type == "unchanged":
