@@ -80,6 +80,7 @@
               "count_gte",
               "count_lte",
               "contains",
+              "cites",
               "set_equals",
               "unchanged",
               "event_absent",

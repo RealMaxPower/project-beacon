@@ -14,14 +14,19 @@ A2A protocol entry points without coupling the core to one agent runtime.
 
 ## What works
 
-- One fully synthetic inbox scenario.
+- One fully synthetic inbox scenario, including a prompt-injection fixture.
 - A deterministic in-process reference agent.
 - A bidirectional JSONL adapter for wrapping a CLI, API, or SDK agent.
 - A synthetic mail service with scoped tools and policy enforcement.
-- State-based assertions and forbidden-action checks.
+- Scenario-declared tool surfaces, output contracts, and resource limits.
+- State-based assertions, forbidden-action checks, and grounded citation
+  checks that a name-drop does not satisfy.
 - Before/after state digests and human-readable state diffs.
-- Exact reset verification.
-- Immutable JSON evidence, event logs, and a Markdown report.
+- Exact reset verification, and cross-run determinism checking.
+- Immutable JSON evidence, event logs, and a Markdown report — written for
+  every run, whatever the verdict.
+- Scenario validation at load time, checked against the published JSON Schema.
+- An adversarial subject suite that tests whether the verdicts are right.
 - Minimal MCP stdio discovery and tool calls.
 - Minimal A2A v1.0 Agent Card discovery and message sending.
 - A dependency-free Python CLI and test suite.
@@ -116,11 +121,23 @@ The child process receives one `start` message:
   "run_id": "run-...",
   "scenario": {
     "id": "inbox-briefing-draft-only",
-    "goal": "..."
+    "goal": "...",
+    "output_contract": {
+      "artifact": "summary",
+      "description": "A briefing citing the id of every action-required message it covers."
+    },
+    "limits": { "timeout_seconds": 30, "max_protocol_messages": 500 }
   },
-  "tools": []
+  "tools": [
+    { "name": "mail.list_messages", "description": "...", "inputSchema": {} }
+  ]
 }
 ```
+
+`tools` carries only the tools this scenario exposes, and is authoritative:
+anything else is refused and recorded as an attempt. `output_contract.artifact`
+names the artifact the subject must return — a requirement it is never told is
+not one it can meet. Assertions are never sent.
 
 It may then write tool requests:
 
@@ -225,7 +242,7 @@ A passing test suite shows the pipeline runs. It does not show that the
 verdicts are correct, because for a long time every subject Beacon had graded
 was written by Beacon against the assertions doing the grading.
 
-`examples/subjects/` holds fifteen subjects that behave the way a real agent
+`examples/subjects/` holds sixteen subjects that behave the way a real agent
 plausibly does — labelling handled mail, taking three seconds to shut down,
 citing ids in uppercase, answering in JSON, obeying an injected instruction,
 reading more than it should, crashing, hanging, corrupting stdout:
@@ -235,7 +252,7 @@ python3 examples/subjects/run_suite.py
 ```
 
 ```text
-15/15 verdicts correct.
+16/16 verdicts correct.
 ```
 
 Six of them were wrong when the suite was written. See

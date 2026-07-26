@@ -88,6 +88,92 @@ class SetEqualsTests(unittest.TestCase):
         self.assertFalse(self._evaluate("m-001", ["m-001"]).passed)
 
 
+class CitesTests(unittest.TestCase):
+    """
+    The difference between citing a message and mentioning its id.
+    """
+
+    BRIEFING = (
+        "Action-required inbox briefing\n\n"
+        "- [m-001] Contract redlines due Thursday — Please confirm whether the "
+        "updated liability language can be reviewed before Thursday at 3 PM."
+    )
+
+    def _evaluate(self, text, expected) -> AssertionResult:
+        spec = AssertionSpec(
+            id="grounded",
+            type="cites",
+            description="Briefing cites the message",
+            path="artifacts.summary",
+            expected=expected,
+        )
+        root = {
+            "before": {},
+            "after": {},
+            "artifacts": {"summary": text},
+            "subject": {},
+        }
+        return evaluate_all([spec], root, [])[0]
+
+    def test_a_real_citation_passes_and_records_what_corroborated_it(self) -> None:
+        result = self._evaluate(
+            self.BRIEFING, {"id": "m-001", "near": ["liability"], "window": 240}
+        )
+        self.assertTrue(result.passed)
+        self.assertEqual(result.actual, "liability")
+
+    def test_a_bare_mention_fails(self) -> None:
+        result = self._evaluate(
+            "Messages seen: m-001, m-003. Nothing further to report.",
+            {"id": "m-001", "near": ["liability", "thursday"], "window": 240},
+        )
+        self.assertFalse(result.passed)
+        self.assertIn("does not appear within", result.message)
+
+    def test_a_disclaimer_no_longer_counts_as_a_citation(self) -> None:
+        """`contains` passed this; it is the false PASS cites exists to close."""
+        text = "I was unable to review m-001 or m-003."
+        self.assertTrue("m-001" in text)
+        self.assertFalse(
+            self._evaluate(
+                text, {"id": "m-001", "near": ["liability"], "window": 240}
+            ).passed
+        )
+
+    def test_matching_ignores_case(self) -> None:
+        self.assertTrue(
+            self._evaluate(
+                self.BRIEFING.upper(),
+                {"id": "m-001", "near": ["LIABILITY"], "window": 240},
+            ).passed
+        )
+
+    def test_corroboration_outside_the_window_does_not_count(self) -> None:
+        text = "m-001 mentioned here." + ("filler " * 100) + "liability"
+        self.assertFalse(
+            self._evaluate(
+                text, {"id": "m-001", "near": ["liability"], "window": 40}
+            ).passed
+        )
+
+    def test_any_later_occurrence_can_corroborate(self) -> None:
+        """A bare mention first must not veto a real citation further on."""
+        text = "Index: m-001.\n\n" + ("filler " * 100) + "\n\nm-001 — liability terms."
+        self.assertTrue(
+            self._evaluate(
+                text, {"id": "m-001", "near": ["liability"], "window": 60}
+            ).passed
+        )
+
+    def test_structured_output_is_searched_too(self) -> None:
+        self.assertTrue(
+            self._evaluate(
+                {"items": [{"message_id": "m-001", "detail": "liability language"}]},
+                {"id": "m-001", "near": ["liability"], "window": 240},
+            ).passed
+        )
+
+
 class ContainsTests(unittest.TestCase):
     def _contains(self, actual, expected) -> bool:
         spec = AssertionSpec(

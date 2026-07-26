@@ -213,6 +213,48 @@ class LoadTimeValidationTests(unittest.TestCase):
         )
         self.assertIn("numeric", message)
 
+    def test_a_cites_assertion_with_a_bare_string_expected(self) -> None:
+        message = self._reject(
+            assertions=[
+                {
+                    "id": "a",
+                    "type": "cites",
+                    "description": "x",
+                    "path": "artifacts.summary",
+                    "expected": "m-001",
+                }
+            ]
+        )
+        self.assertIn("object 'expected'", message)
+
+    def test_a_cites_assertion_without_corroborating_tokens(self) -> None:
+        message = self._reject(
+            assertions=[
+                {
+                    "id": "a",
+                    "type": "cites",
+                    "description": "x",
+                    "path": "artifacts.summary",
+                    "expected": {"id": "m-001"},
+                }
+            ]
+        )
+        self.assertIn("expected.near", message)
+
+    def test_a_cites_assertion_with_a_nonsense_window(self) -> None:
+        message = self._reject(
+            assertions=[
+                {
+                    "id": "a",
+                    "type": "cites",
+                    "description": "x",
+                    "path": "artifacts.summary",
+                    "expected": {"id": "m-001", "near": ["x"], "window": 0},
+                }
+            ]
+        )
+        self.assertIn("positive integer", message)
+
     def test_an_event_assertion_without_a_target(self) -> None:
         message = self._reject(
             assertions=[

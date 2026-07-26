@@ -38,6 +38,7 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
     "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
     "contains": {"requires": ("path", "expected")},
+    "cites": {"requires": ("path", "expected"), "citation_expected": True},
     "set_equals": {"requires": ("path", "expected")},
     "unchanged": {"requires": ("path",)},
     "event_absent": {"requires": ("target",)},
@@ -105,6 +106,30 @@ class AssertionSpec:
             if name in rule["requires"] and not str(value[name] or "").strip():
                 raise ScenarioError(
                     f"{kind} assertion '{identifier}' needs a non-empty '{name}'"
+                )
+        if rule.get("citation_expected"):
+            expected = value["expected"]
+            if not isinstance(expected, dict):
+                raise ScenarioError(
+                    f"cites assertion '{identifier}' needs an object 'expected' "
+                    f"with 'id' and 'near'"
+                )
+            for key in ("id", "near"):
+                if not expected.get(key):
+                    raise ScenarioError(
+                        f"cites assertion '{identifier}' needs a non-empty "
+                        f"'expected.{key}'"
+                    )
+            if not isinstance(expected["near"], list):
+                raise ScenarioError(
+                    f"cites assertion '{identifier}' needs 'expected.near' "
+                    f"to be an array of corroborating tokens"
+                )
+            window = expected.get("window", 240)
+            if isinstance(window, bool) or not isinstance(window, int) or window < 1:
+                raise ScenarioError(
+                    f"cites assertion '{identifier}' needs a positive integer "
+                    f"'expected.window'"
                 )
         if rule.get("numeric_expected"):
             expected = value["expected"]

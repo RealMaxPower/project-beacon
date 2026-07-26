@@ -25,6 +25,37 @@ def _searchable_text(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
 
 
+def _cited_near(
+    text: str,
+    reference: str,
+    near: list[str],
+    window: int,
+) -> str | None:
+    """
+    Find a corroborating token within `window` characters of a reference.
+
+    A bare substring check cannot tell a citation from a name-drop: "unable to
+    review m-001" satisfies `contains "m-001"` exactly as well as a real
+    briefing does. Requiring the identifier to appear beside something only
+    that message contains raises the bar without reaching for an LLM judge, so
+    the result stays deterministic and reproducible.
+
+    Returns the token that corroborated the citation, for the evidence record.
+    """
+    start = 0
+    while True:
+        position = text.find(reference, start)
+        if position < 0:
+            return None
+        left = max(0, position - window)
+        right = position + len(reference) + window
+        neighbourhood = text[left:right]
+        for token in near:
+            if token in neighbourhood:
+                return token
+        start = position + 1
+
+
 def _hashable(value: Any) -> Any:
     """Make a JSON value usable in a set, preserving equality semantics."""
     if isinstance(value, (list, dict)):
@@ -150,6 +181,27 @@ def evaluate_assertion(
                 actual,
                 spec.expected,
                 "expected value found" if passed else "expected value not found",
+            )
+
+        if spec.type == "cites":
+            if not spec.path:
+                raise EvaluationError("cites requires path")
+            text = _searchable_text(get_path(root, spec.path)).casefold()
+            reference = str(spec.expected["id"]).casefold()
+            near = [str(token).casefold() for token in spec.expected["near"]]
+            window = int(spec.expected.get("window", 240))
+            found = _cited_near(text, reference, near, window)
+            return _result(
+                spec,
+                bool(found),
+                found or f"{spec.expected['id']} not corroborated",
+                spec.expected,
+                f"cited alongside '{found}'"
+                if found
+                else (
+                    f"{spec.expected['id']} does not appear within {window} "
+                    f"characters of any of {spec.expected['near']}"
+                ),
             )
 
         if spec.type == "set_equals":

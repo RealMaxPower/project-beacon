@@ -123,6 +123,14 @@
       "should_be": "FAIL",
       "currently": "FAIL",
       "defect": null
+    },
+    {
+      "id": "namedrops_citations",
+      "script": "examples/subjects/namedrops_citations.py",
+      "behavior": "Lists the message ids without saying anything about them.",
+      "should_be": "FAIL",
+      "currently": "FAIL",
+      "defect": null
     }
   ]
 }
