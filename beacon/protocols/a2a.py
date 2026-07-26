@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -10,6 +11,37 @@ from typing import Any
 
 class A2AError(RuntimeError):
     """Raised when an A2A endpoint cannot complete an operation."""
+
+
+USER_AGENT = "project-beacon/0.1"
+
+JSONRPC_METHODS = {
+    # A2A 0.x, which is what deployed agents actually speak.
+    "0": "message/send",
+    # A2A 1.x renamed the JSON-RPC methods.
+    "1": "SendMessage",
+}
+
+
+def _ssl_context() -> ssl.SSLContext | None:
+    """
+    Build a verifying SSL context, falling back to certifi when the interpreter
+    has no CA store.
+
+    A python.org install on macOS ships with an empty OpenSSL cert directory
+    until `Install Certificates.command` is run, so every https request fails
+    with CERTIFICATE_VERIFY_FAILED and looks like the remote agent is broken.
+    Verification is never disabled — if there is no usable store, the error is
+    allowed through so it can be read and fixed.
+    """
+    paths = ssl.get_default_verify_paths()
+    if paths.cafile or paths.capath:
+        return None
+    try:
+        import certifi
+    except ImportError:
+        return None
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 class A2AClient:
@@ -52,6 +84,10 @@ class A2AClient:
         headers = {
             "Accept": "application/a2a+json, application/json",
             "A2A-Version": self.protocol_version,
+            # Agents behind a WAF reject the default Python-urllib agent with
+            # a 403, which reads as "the agent refused" rather than "we were
+            # filtered". Identify ourselves.
+            "User-Agent": USER_AGENT,
         }
         data = None
         if body is not None:
@@ -69,6 +105,7 @@ class A2AClient:
             with urllib.request.urlopen(
                 request,
                 timeout=self.timeout_seconds,
+                context=_ssl_context(),
             ) as response:
                 payload = response.read().decode("utf-8")
         except (urllib.error.URLError, urllib.error.HTTPError) as exc:
@@ -87,42 +124,91 @@ class A2AClient:
         return card
 
     def _interface(self) -> dict[str, Any]:
+        """
+        Pick the interface to talk to, across both card generations.
+
+        1.x cards list `supportedInterfaces`. 0.x cards put the primary
+        endpoint in `url` with a `preferredTransport`, and alternatives in
+        `additionalInterfaces`. Reading only the 1.x field makes a 0.x card
+        look like it declares nothing, and the client silently falls back to
+        the REST binding — which is how a JSON-RPC agent ends up being sent a
+        POST to `/message:send` that it has never heard of.
+        """
         card = self.agent_card or self.discover()
-        interfaces = card.get("supportedInterfaces", [])
+
+        interfaces = card.get("supportedInterfaces")
         if isinstance(interfaces, list) and interfaces:
             interface = interfaces[0]
             if isinstance(interface, dict) and interface.get("url"):
                 return interface
+
         if card.get("url"):
             return {
                 "url": card["url"],
-                "protocolBinding": "HTTP+JSON",
-                "protocolVersion": self.protocol_version,
+                "transport": card.get("preferredTransport", "HTTP+JSON"),
+                "protocolVersion": self._card_protocol_version(),
             }
+
+        additional = card.get("additionalInterfaces")
+        if isinstance(additional, list) and additional:
+            interface = additional[0]
+            if isinstance(interface, dict) and interface.get("url"):
+                return interface
+
         raise A2AError("Agent Card does not declare a supported interface URL")
+
+    def _card_protocol_version(self) -> str:
+        card = self.agent_card or {}
+        return str(card.get("protocolVersion") or self.protocol_version)
+
+    def _message(self, text: str) -> dict[str, Any]:
+        """
+        Build a message in the shape the target's protocol version expects.
+
+        0.x uses lowercase roles and tags each part with `kind`; 1.x uses the
+        enum-style `ROLE_USER` and untagged parts. Sending 1.x shapes to a 0.x
+        agent is how a live agent comes back "method not found".
+        """
+        major = self._card_protocol_version().split(".")[0]
+        if major == "1":
+            return {
+                "messageId": f"msg-{uuid.uuid4()}",
+                "role": "ROLE_USER",
+                "parts": [{"text": text}],
+            }
+        return {
+            "messageId": f"msg-{uuid.uuid4()}",
+            "role": "user",
+            "parts": [{"kind": "text", "text": text}],
+        }
 
     def send_message(self, text: str) -> dict[str, Any]:
         interface = self._interface()
-        binding = str(interface.get("protocolBinding", "HTTP+JSON")).lower()
+        binding = str(
+            interface.get("protocolBinding") or interface.get("transport") or "HTTP+JSON"
+        ).lower()
         service_url = str(interface["url"]).rstrip("/")
-        message = {
-            "messageId": f"msg-{uuid.uuid4()}",
-            "role": "ROLE_USER",
-            "parts": [{"text": text}],
-        }
+        message = self._message(text)
 
         if "jsonrpc" in binding:
-            return self._request(
+            major = self._card_protocol_version().split(".")[0]
+            method = JSONRPC_METHODS.get(major, JSONRPC_METHODS["0"])
+            response = self._request(
                 service_url,
                 method="POST",
                 body={
                     "jsonrpc": "2.0",
                     "id": str(uuid.uuid4()),
-                    "method": "SendMessage",
+                    "method": method,
                     "params": {"message": message},
                 },
                 content_type="application/json",
             )
+            if "error" in response:
+                raise A2AError(
+                    f"A2A error from {service_url} for {method}: {response['error']}"
+                )
+            return response
 
         endpoint = f"{service_url}/message:send"
         return self._request(

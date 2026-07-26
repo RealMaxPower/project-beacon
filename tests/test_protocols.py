@@ -4,9 +4,10 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
-from beacon.protocols import A2AClient, MCPStdioClient
+from beacon.protocols import A2AClient, A2AError, MCPStdioClient
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,12 +41,126 @@ class _FakeResponse:
         return self._payload
 
 
+class A2AProtocolVersionTests(unittest.TestCase):
+    """
+    Deployed A2A agents speak 0.x. Beacon spoke only 1.x, so every live agent
+    answered "method not found" — and the interface fallback compounded it by
+    sending a REST POST to a JSON-RPC endpoint.
+    """
+
+    CARD_0X = {
+        "name": "Fixture 0.x agent",
+        "protocolVersion": "0.3.0",
+        "url": "https://fixture.invalid/a2a/jsonrpc",
+        "preferredTransport": "JSONRPC",
+        "additionalInterfaces": [
+            {"transport": "JSONRPC", "url": "https://fixture.invalid/a2a/jsonrpc"}
+        ],
+        "capabilities": {"streaming": True},
+        "skills": [],
+    }
+
+    def _client(self, card: dict) -> tuple[A2AClient, list[dict]]:
+        sent: list[dict] = []
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith("/.well-known/agent-card.json"):
+                return _FakeResponse(card)
+            sent.append(json.loads(request.data))
+            return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {"ok": True}})
+
+        patcher = mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return A2AClient("https://fixture.invalid", timeout_seconds=3), sent
+
+    def test_a_0x_card_gets_the_0x_method_and_message_shape(self) -> None:
+        client, sent = self._client(self.CARD_0X)
+        client.discover()
+        client.send_message("hello")
+        body = sent[0]
+        self.assertEqual(body["method"], "message/send")
+        message = body["params"]["message"]
+        self.assertEqual(message["role"], "user")
+        self.assertEqual(message["parts"][0]["kind"], "text")
+
+    def test_a_0x_card_routes_to_its_jsonrpc_endpoint(self) -> None:
+        client, _ = self._client(self.CARD_0X)
+        client.discover()
+        interface = client._interface()
+        self.assertEqual(interface["transport"], "JSONRPC")
+        self.assertTrue(interface["url"].endswith("/a2a/jsonrpc"))
+
+    def test_a_1x_card_keeps_the_1x_method_and_message_shape(self) -> None:
+        card = {
+            "name": "Fixture 1.x agent",
+            "protocolVersion": "1.0",
+            "supportedInterfaces": [
+                {
+                    "url": "https://fixture.invalid/rpc",
+                    "protocolBinding": "JSONRPC",
+                    "protocolVersion": "1.0",
+                }
+            ],
+        }
+        client, sent = self._client(card)
+        client.discover()
+        client.send_message("hello")
+        body = sent[0]
+        self.assertEqual(body["method"], "SendMessage")
+        self.assertEqual(body["params"]["message"]["role"], "ROLE_USER")
+
+    def test_a_jsonrpc_error_is_raised_not_returned_as_a_result(self) -> None:
+        """A live agent's "method not found" must not read as a successful call."""
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith("/.well-known/agent-card.json"):
+                return _FakeResponse(self.CARD_0X)
+            return _FakeResponse(
+                {
+                    "jsonrpc": "2.0",
+                    "id": "1",
+                    "error": {"code": -32601, "message": "Method not found"},
+                }
+            )
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            client = A2AClient("https://fixture.invalid", timeout_seconds=3)
+            client.discover()
+            with self.assertRaises(A2AError) as caught:
+                client.send_message("hello")
+        self.assertIn("Method not found", str(caught.exception))
+
+    def test_requests_identify_themselves(self) -> None:
+        """A WAF answers the default Python user agent with 403."""
+        captured: list[Any] = []
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            captured.append(request)
+            return _FakeResponse(self.CARD_0X)
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            A2AClient("https://fixture.invalid").discover()
+        self.assertIn("project-beacon", captured[0].get_header("User-agent", ""))
+
+
 class A2ATests(unittest.TestCase):
     def test_discovery_and_message(self) -> None:
         base_url = "https://fixture.invalid"
 
-        def fake_urlopen(request: object, timeout: float) -> _FakeResponse:
-            del timeout
+        def fake_urlopen(
+            request: object, timeout: float = 0, context: object = None
+        ) -> _FakeResponse:
+            del timeout, context
             url = request.full_url
             if url.endswith("/.well-known/agent-card.json"):
                 return _FakeResponse(
