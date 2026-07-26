@@ -63,6 +63,32 @@ report.md       Human-readable result report
 The expected result is `PASS` with seven passing assertions, two draft
 responses, no sent messages, no protected-message access, and an exact reset.
 
+## Check that a result is repeatable
+
+A single passing run says little if the next one disagrees. `--repeat` runs the
+same scenario against the same subject several times and compares the verdict,
+the before/after state digests, and the per-assertion result vector:
+
+```bash
+python3 -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
+```
+
+```text
+Determinism: STABLE across 5 runs (state digests, verdict, and assertion
+results identical).
+```
+
+The command exits non-zero if any two runs disagree, and names the fields that
+diverged. Run identifiers, timestamps, and the evidence digest are excluded
+from the comparison because they differ by construction; artifact wording is
+excluded too, so a model-backed subject that rephrases its output is not
+reported as non-deterministic, while a subject that sometimes fails to produce
+that artifact at all still is. Tool-call ordering is reported but does not
+count as divergence.
+
+Use `--run-id` to give a run a stable directory name; repeats are suffixed
+`-001`, `-002`, and so on.
+
 ## Run an external command subject
 
 The JSONL bridge lets Beacon exercise an agent wrapper without importing its

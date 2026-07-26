@@ -9,6 +9,7 @@ from typing import Sequence
 
 from beacon import __version__
 from beacon.adapters import JSONLCommandAdapter, ReferenceInboxAdapter
+from beacon.determinism import compare_runs, repeat_run_ids
 from beacon.models import Scenario, ScenarioError
 from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
 from beacon.runner import run_scenario
@@ -55,6 +56,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory that receives immutable run folders.",
     )
     run.add_argument("--timeout", type=float, default=30)
+    run.add_argument(
+        "--run-id",
+        help="Fixed run identifier. Repeats are suffixed -001, -002, and so on.",
+    )
+    run.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Run the scenario N times and report whether the verdict, state "
+            "digests, and assertion results are identical across runs."
+        ),
+    )
 
     adapters = subparsers.add_parser(
         "adapters",
@@ -103,6 +118,8 @@ def _validate(path: Path) -> int:
 
 def _run(args: argparse.Namespace) -> int:
     scenario = Scenario.load(args.scenario)
+    if args.repeat < 1:
+        raise ScenarioError("--repeat must be at least 1")
     if args.adapter == "reference":
         if args.command:
             raise ScenarioError("--command can only be used with --adapter command")
@@ -114,15 +131,28 @@ def _run(args: argparse.Namespace) -> int:
             shlex.split(args.command),
             timeout_seconds=args.timeout,
         )
-    outcome = run_scenario(
-        scenario,
-        adapter,
-        output_dir=args.output,
-    )
-    print(f"{outcome.evidence.result}: {scenario.name}")
-    print(f"Evidence: {outcome.json_path}")
-    print(f"Report:   {outcome.markdown_path}")
-    return 0 if outcome.evidence.result == "PASS" else 1
+
+    outcomes = [
+        run_scenario(scenario, adapter, output_dir=args.output, run_id=run_id)
+        for run_id in repeat_run_ids(args.run_id, args.repeat)
+    ]
+
+    if args.repeat == 1:
+        outcome = outcomes[0]
+        print(f"{outcome.evidence.result}: {scenario.name}")
+        print(f"Evidence: {outcome.json_path}")
+        print(f"Report:   {outcome.markdown_path}")
+        return 0 if outcome.evidence.result == "PASS" else 1
+
+    for index, outcome in enumerate(outcomes, start=1):
+        print(
+            f"[{index}/{args.repeat}] {outcome.evidence.result}: "
+            f"{outcome.evidence.run_id}"
+        )
+    report = compare_runs([outcome.evidence for outcome in outcomes])
+    print(report.summary())
+    passed = all(outcome.evidence.result == "PASS" for outcome in outcomes)
+    return 0 if passed and report.stable else 1
 
 
 def _adapters() -> int:
