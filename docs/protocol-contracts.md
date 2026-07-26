@@ -62,7 +62,39 @@ producing a verdict. Namespace with underscores: `mail_list_messages`.
 - `metadata`: optional non-secret structured metadata.
 - `error`: optional error summary.
 
-## MCP support
+## Beacon as an MCP server
+
+`ScenarioMCPServer` serves a scenario's tool surface so any MCP host can be the
+subject. Streamable HTTP on loopback, single endpoint `/mcp`, JSON-RPC over
+POST, `application/json` responses. GET returns 405 — there is no
+server-initiated stream. `Mcp-Session-Id` is returned on every response.
+
+Implemented: `initialize`, `notifications/initialized`, `ping`, `tools/list`,
+`tools/call`. Not implemented: resources, prompts, sampling, elicitation,
+SSE streaming, resumability, OAuth. As with the client, use a complete MCP SDK
+when those are needed; this exists to keep the core dependency-free and to
+prove the boundary.
+
+Every request must carry `Authorization: Bearer <token>` with the run's
+ephemeral token, or the server answers 401.
+
+`tools/list` returns the scenario's scoped tools plus one Beacon-provided tool:
+
+`beacon_submit`
+
+- `status`: `completed` or `failed`.
+- `summary`: what the subject did.
+- `artifact`: required when the scenario declares an output contract; recorded
+  under the contracted artifact name.
+
+This is the completion signal MCP does not otherwise have. A session that ends
+without it resolves to `INCOMPLETE`.
+
+A failing tool call returns a normal `tools/call` result with `isError: true`,
+never a JSON-RPC error — a refusal is information the subject can act on, and a
+transport error is not. The attempt is recorded either way.
+
+## MCP client support
 
 The MVP client implements these MCP stdio methods:
 

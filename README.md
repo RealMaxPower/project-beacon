@@ -27,15 +27,17 @@ A2A protocol entry points without coupling the core to one agent runtime.
   every run, whatever the verdict.
 - Scenario validation at load time, checked against the published JSON Schema.
 - An adversarial subject suite that tests whether the verdicts are right.
-- Minimal MCP stdio discovery and tool calls.
+- An MCP server façade: any MCP host can be the subject, over HTTP with a
+  per-run bearer token.
+- Minimal MCP stdio client for discovery and tool calls.
 - Minimal A2A v1.0 Agent Card discovery and message sending.
 - A dependency-free Python CLI and test suite.
 
 ## What does not work yet
 
 - The process runner is not a hardened container or VM sandbox.
-- MCP and A2A targets can be inspected and called, but they are not yet wired
-  into the full scenario/evidence lifecycle.
+- A2A targets can be inspected and called, but are not yet wired into the
+  full scenario/evidence lifecycle.
 - There is no OpenClaw, Hermes, Codex, or other native runtime adapter yet.
 - There is no web UI, approval interface, service virtualization proxy, model
   cost accounting, signing, or hosted service.
@@ -223,6 +225,51 @@ Every redacted bundle says so in its `limitations`.
 canary that pushes its key through every one of those channels; the test suite
 asserts the value appears in none of the three output files.
 
+## Run an MCP host as the subject
+
+Beacon serves the scenario's synthetic tools over MCP, so an MCP-speaking agent
+host becomes the subject with no bridge code:
+
+```bash
+python3 -m beacon run scenarios/inbox-briefing/scenario.json \
+  --adapter mcp-host \
+  --command "python3 examples/mcp_host_agent.py"
+```
+
+The host learns where to connect from `BEACON_MCP_URL` / `BEACON_MCP_TOKEN` and
+a generated `mcp-config.json`. Calls route through the same tool router as every
+other adapter, so scoping, argument validation, policy enforcement, event
+recording and state snapshots are unchanged — the evidence has the same shape.
+
+To point a host you run yourself — a desktop client, an IDE, another runtime —
+at a scenario:
+
+```bash
+python3 -m beacon serve-mcp scenarios/inbox-briefing/scenario.json
+```
+
+```text
+MCP server: http://127.0.0.1:62826/mcp
+Config:     .beacon/runs/run-.../workspace/mcp-config.json
+Waiting up to 30s. Ctrl-C stops and still writes evidence.
+```
+
+Loopback only, with a per-run bearer token that is redacted from the evidence
+like any other secret.
+
+### How Beacon knows the run finished
+
+MCP has no completion signal — a client that disconnects looks exactly like one
+that crashed, and Beacon will not call that a pass. The façade therefore offers
+one extra tool, `beacon_submit`, carrying the status, the summary, and the
+artifact the output contract asks for. A session that ends without it resolves
+to `INCOMPLETE`, which is the honest answer when Beacon cannot tell whether the
+work was done.
+
+That is also why `--adapter mcp-host` launches the host rather than only
+serving: the façade is the tool channel, and the adapter is the lifecycle
+channel that owns start, timeout and termination.
+
 ## Inspect an MCP server
 
 The MVP MCP client supports `initialize`, `tools/list`, and `tools/call` over
@@ -238,9 +285,10 @@ python3 -m beacon mcp-inspect \
   --arguments '{"text":"hello"}'
 ```
 
-The next integration step is to convert MCP calls and responses into Beacon's
-normalized event model and allow a scenario to declare an MCP server as its
-subject.
+This is the opposite direction from the façade above, and it answers a
+different question: the façade grades an *agent* against synthetic services,
+while this client would grade a *server* — someone else's tool provider. Making
+an MCP server a graded subject in its own right is still to do.
 
 ## Inspect an A2A agent
 
@@ -267,7 +315,7 @@ written into evidence by the protocol inspector.
 | Level | Interface | Evidence available |
 |---|---|---|
 | 0 | Black-box prompt/API | Output and simulated final state |
-| 1 | MCP | Tool discovery, calls, responses, and resulting state |
+| 1 | MCP | Tool discovery, calls, responses, and resulting state (`--adapter mcp-host`, `serve-mcp`) |
 | 2 | A2A | Agent discovery, tasks, messages, statuses, and artifacts |
 | 3 | CLI/API/SDK/container bridge | Lifecycle, events, budgets, and termination |
 | 4 | Native runtime adapter | Runtime configuration, approvals, cost, and richer traces |

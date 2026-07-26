@@ -91,6 +91,10 @@ jobs:
       - name: Verify cross-run determinism
         run: python -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
 
+      # Beacon serves its tool surface over MCP and an MCP host drives it.
+      - name: Run an MCP host as the subject
+        run: python -m beacon run scenarios/inbox-briefing/scenario.json --adapter mcp-host --command "python examples/mcp_host_agent.py"
+
       # Asserts Beacon reaches the right verdict for subjects it did not write.
       - name: Run the adversarial subject suite
         run: python examples/subjects/run_suite.py

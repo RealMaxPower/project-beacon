@@ -67,6 +67,31 @@ def _safe_environment(
     return environment
 
 
+def resolve_command_paths(
+    command: Sequence[str],
+    source_dir: Path,
+) -> tuple[str, ...]:
+    """
+    Make relative paths in a command absolute, against the invocation directory.
+
+    Subjects run in `<run>/workspace/`, not where the user typed the command,
+    so `python3 examples/agent.py` would otherwise resolve against the wrong
+    directory and fail with a file-not-found naming a path nobody wrote.
+    """
+    resolved: list[str] = []
+    for token in command:
+        candidate = source_dir / token
+        if (
+            not token.startswith("-")
+            and not Path(token).is_absolute()
+            and candidate.exists()
+        ):
+            resolved.append(str(candidate.resolve()))
+        else:
+            resolved.append(token)
+    return tuple(resolved)
+
+
 def _drain(output: queue.Queue[str | None]) -> list[str]:
     lines: list[str] = []
     while True:
@@ -154,18 +179,7 @@ class JSONLCommandAdapter:
         return timeout, messages
 
     def _resolved_command(self) -> tuple[str, ...]:
-        resolved: list[str] = []
-        for token in self._command:
-            candidate = self._source_dir / token
-            if (
-                not token.startswith("-")
-                and not Path(token).is_absolute()
-                and candidate.exists()
-            ):
-                resolved.append(str(candidate.resolve()))
-            else:
-                resolved.append(token)
-        return tuple(resolved)
+        return resolve_command_paths(self._command, self._source_dir)
 
     @property
     def descriptor(self) -> dict[str, Any]:

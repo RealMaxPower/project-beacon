@@ -143,18 +143,44 @@ available to the current user. Hardened container/VM isolation, per-run network
 policy, filesystem mounts, cgroups/resource limits, and secret scanning remain
 required before running untrusted subjects.
 
-## Planned adapter convergence
+## MCP: two channels, not one
 
-MCP and A2A currently have protocol-inspection clients. The next architecture
-increment should make both implement the `SubjectAdapter` contract:
+Beacon both consumes and serves MCP, and the two do different jobs.
+
+The **client** (`beacon mcp-inspect`) connects to someone else's server. It
+grades a tool provider, not an agent.
+
+The **façade** (`ScenarioMCPServer`) serves the scenario's own tool surface, so
+an MCP-speaking agent host becomes the subject. Calls route through the same
+`ToolRouter` as every other adapter, which is what keeps the evidence identical
+in shape: the same events, the same scoping, the same argument validation, the
+same policy enforcement, the same state snapshots.
+
+The façade alone cannot produce a verdict. MCP has no completion signal, so a
+client that disconnects is indistinguishable from one that crashed, and
+`subject_status` is the only input to the result. Two things resolve that:
+
+- **`beacon_submit`**, an ordinary tool on the façade that the goal tells the
+  subject to call last. It carries the status, the summary, and the artifact
+  the output contract asks for. A session that ends without it is INCOMPLETE —
+  the honest answer when Beacon cannot tell whether the work finished.
+- **A lifecycle owner.** `MCPHostAdapter` starts the façade, launches the host,
+  and owns start, timeout and termination. `MCPServeAdapter` skips the launch
+  and waits for a host you connect yourself, at the cost of not being able to
+  see it start.
+
+The transport is HTTP on loopback with a per-run bearer token, not stdio. Over
+stdio the host spawns the server as its own child, so Beacon would neither own
+the service state nor outlive the connection.
+
+Tool names must match `^[a-zA-Z0-9_-]{1,64}$`, checked when a service
+registers. Every surface that publishes a tool set to a model applies that
+constraint, so a name that violates it fails at the provider boundary rather
+than producing a verdict.
+
+## Still planned
 
 ```text
-MCPScenarioAdapter
-  → start/connect server
-  → discover capabilities
-  → execute scenario-declared tool calls or connect an agent host
-  → normalize MCP requests, results, logging, and elicitation
-
 A2AScenarioAdapter
   → discover Agent Card
   → submit scenario goal

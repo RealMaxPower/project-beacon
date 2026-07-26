@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Sequence
 
 from beacon import __version__
-from beacon.adapters import JSONLCommandAdapter, ReferenceInboxAdapter
+from beacon.adapters import (
+    JSONLCommandAdapter,
+    MCPHostAdapter,
+    MCPServeAdapter,
+    ReferenceInboxAdapter,
+)
 from beacon.determinism import compare_runs, repeat_run_ids
 from beacon.models import Scenario, ScenarioError
 from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
@@ -65,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("scenario", type=Path)
     run.add_argument(
         "--adapter",
-        choices=("reference", "command"),
+        choices=("reference", "command", "mcp-host"),
         default="reference",
     )
     run.add_argument(
@@ -124,6 +129,24 @@ def build_parser() -> argparse.ArgumentParser:
     adapters = subparsers.add_parser(
         "adapters",
         help="List built-in subject and protocol adapters.",
+    )
+
+    serve = subparsers.add_parser(
+        "serve-mcp",
+        help="Serve a scenario's tools over MCP and wait for a host to connect.",
+    )
+    serve.add_argument("scenario", type=Path)
+    serve.add_argument(
+        "--output",
+        type=Path,
+        default=Path(".beacon/runs"),
+        help="Directory that receives immutable run folders.",
+    )
+    serve.add_argument("--run-id")
+    serve.add_argument(
+        "--timeout",
+        type=float,
+        help="How long to wait for a submission. Defaults to the scenario's limit.",
     )
 
     mcp = subparsers.add_parser(
@@ -186,6 +209,15 @@ def _run(args: argparse.Namespace) -> int:
                 "reference subject runs in process"
             )
         adapter = ReferenceInboxAdapter()
+    elif args.adapter == "mcp-host":
+        if not args.command:
+            raise ScenarioError("--adapter mcp-host requires --command")
+        adapter = MCPHostAdapter(
+            split_command(args.command),
+            timeout_seconds=args.timeout,
+            env_passthrough=args.env_passthrough,
+            env_secrets=args.env_secret,
+        )
     else:
         if not args.command:
             raise ScenarioError("--adapter command requires --command")
@@ -219,6 +251,21 @@ def _run(args: argparse.Namespace) -> int:
     return 0 if passed and report.stable else 1
 
 
+def _serve_mcp(args: argparse.Namespace) -> int:
+    scenario = Scenario.load(args.scenario)
+    outcome = run_scenario(
+        scenario,
+        MCPServeAdapter(timeout_seconds=args.timeout),
+        output_dir=args.output,
+        run_id=args.run_id,
+    )
+    print()
+    print(f"{outcome.evidence.result}: {scenario.name}")
+    print(f"Evidence: {outcome.json_path}")
+    print(f"Report:   {outcome.markdown_path}")
+    return 0 if outcome.evidence.result == "PASS" else 1
+
+
 def _adapters() -> int:
     rows = [
         {
@@ -236,9 +283,23 @@ def _adapters() -> int:
             "status": "MVP",
         },
         {
+            "id": "mcp-host",
+            "subject": "Any MCP-speaking agent host",
+            "interface": "Beacon serves MCP over HTTP; adapter owns lifecycle",
+            "level": 1,
+            "status": "MVP",
+        },
+        {
+            "id": "mcp-serve",
+            "subject": "An MCP host you connect yourself",
+            "interface": "Beacon serves MCP over HTTP and waits",
+            "level": 1,
+            "status": "MVP",
+        },
+        {
             "id": "mcp-stdio",
             "subject": "MCP server",
-            "interface": "MCP stdio",
+            "interface": "MCP stdio client",
             "level": 1,
             "status": "inspect/call",
         },
@@ -295,6 +356,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _validate(args.scenario)
         if args.command_name == "run":
             return _run(args)
+        if args.command_name == "serve-mcp":
+            return _serve_mcp(args)
         if args.command_name == "adapters":
             return _adapters()
         if args.command_name == "mcp-inspect":
