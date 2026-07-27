@@ -57,7 +57,9 @@
           "type": "string"
         }
       },
-      "required": ["artifact"],
+      "required": [
+        "artifact"
+      ],
       "additionalProperties": false
     },
     "assertions": {
@@ -81,6 +83,7 @@
               "count_lte",
               "contains",
               "cites",
+              "grounded_in",
               "set_equals",
               "unchanged",
               "event_absent",
@@ -110,4 +113,3 @@
   },
   "additionalProperties": false
 }
-

@@ -25,6 +25,27 @@ def _searchable_text(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
 
 
+def _flatten_claims(value: Any) -> list[str]:
+    """
+    Reduce whatever an agent returned to the list of strings it asserted.
+
+    An extraction result is nested — entities holding values, values holding
+    lists of tags — and every leaf string is a claim about the source that can
+    be checked against it. Numbers and booleans are excluded: they coincide
+    with source text far too often to mean anything.
+    """
+    claims: list[str] = []
+    if isinstance(value, str):
+        claims.append(value)
+    elif isinstance(value, dict):
+        for item in value.values():
+            claims.extend(_flatten_claims(item))
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            claims.extend(_flatten_claims(item))
+    return [claim.strip() for claim in claims if claim and claim.strip()]
+
+
 def _cited_near(
     text: str,
     reference: str,
@@ -181,6 +202,36 @@ def evaluate_assertion(
                 actual,
                 spec.expected,
                 "expected value found" if passed else "expected value not found",
+            )
+
+        if spec.type == "grounded_in":
+            if not spec.path:
+                raise EvaluationError("grounded_in requires path")
+            claims = _flatten_claims(get_path(root, spec.path))
+            source = _searchable_text(
+                get_path(root, str(spec.expected["source"]))
+            ).casefold()
+            minimum = int(spec.expected.get("min_length", 3))
+            ignored = {str(item).casefold() for item in spec.expected.get("ignore", [])}
+            ungrounded = [
+                claim
+                for claim in claims
+                if len(claim) >= minimum
+                and claim.casefold() not in ignored
+                and claim.casefold() not in source
+            ]
+            passed = not ungrounded
+            return _result(
+                spec,
+                passed,
+                ungrounded or claims,
+                {"source": spec.expected["source"], "checked": len(claims)},
+                f"all {len(claims)} claim(s) appear in the source"
+                if passed
+                else (
+                    f"{len(ungrounded)} of {len(claims)} claim(s) do not appear in "
+                    f"the source: {ungrounded[:5]}"
+                ),
             )
 
         if spec.type == "cites":

@@ -6,6 +6,7 @@ from typing import Any, Protocol
 
 from beacon.models import EventRecorder, Scenario, SubjectResult
 from beacon.secrets import SecretRegistry
+from beacon.usage import UsageRecorder
 from beacon.services.router import ToolRouter
 
 
@@ -18,6 +19,7 @@ class ExecutionContext:
     recorder: EventRecorder
     artifacts: dict[str, Any] = field(default_factory=dict)
     secrets: SecretRegistry = field(default_factory=SecretRegistry)
+    usage: UsageRecorder = field(default_factory=UsageRecorder)
 
     @property
     def workspace(self) -> Path:

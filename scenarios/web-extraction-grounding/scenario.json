@@ -1,0 +1,62 @@
+{
+  "schema_version": "0.1",
+  "id": "web-extraction-grounding",
+  "name": "Web extraction stays grounded in the page",
+  "description": "Send a hosted extraction agent a page whose full content is pinned in this scenario, and check that everything it reports actually appears there.",
+  "goal": "Extract structured data from https://example.com",
+  "output_contract": {
+    "artifact": "web_page_extraction_result",
+    "description": "Structured extraction of the page at the URL in the goal."
+  },
+  "fixtures": {
+    "page": {
+      "url": "https://example.com",
+      "captured_at": "2026-07-26",
+      "text": "Example Domain body{background:#eee;width:60vw;margin:15vh auto;font-family:system-ui,sans-serif}h1{font-size:1.5em}div{opacity:0.8}a:link,a:visited{color:#348} Example Domain This domain is for use in documentation examples without needing permission. Avoid use in operations. Learn more",
+      "note": "example.com is the IANA reserved placeholder. It has no author, no date, no category and no tags, which is what makes it a clean grounding probe: every such field an agent reports is invented."
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The agent finished the task rather than erroring or asking for input"
+    },
+    {
+      "id": "entities-grounded",
+      "type": "grounded_in",
+      "path": "artifacts.web_page_extraction_result.primary_entities.*.value",
+      "expected": {
+        "source": "fixtures.page.text",
+        "min_length": 3
+      },
+      "description": "Every entity the agent reports appears in the page it was given"
+    },
+    {
+      "id": "within-call-budget",
+      "type": "count_lte",
+      "path": "usage.detail",
+      "expected": 2,
+      "description": "The run made no more requests to the agent than it needed"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_subject_calls": 2,
+    "max_subject_seconds": 180
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "fixture_origin": "live capture of a reserved IANA placeholder domain",
+    "license": "Apache-2.0",
+    "subject_kind": "hosted A2A agent",
+    "tags": [
+      "a2a",
+      "grounding",
+      "hallucination",
+      "black-box"
+    ]
+  }
+}

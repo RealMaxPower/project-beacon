@@ -20,6 +20,7 @@ from beacon.models import (
 from beacon.secrets import REDACTION_NOTICE
 from beacon.services import MailService, ToolRouter
 from beacon.state import state_diff
+from beacon.usage import UsageRecorder
 
 
 REDACTED_EVIDENCE_FIELDS = (
@@ -71,8 +72,14 @@ def _build_services(
         router.register(mail)
         services["mail"] = mail
         snapshots["mail"] = mail.snapshot()
-    if not services:
-        raise ValueError("scenario must define at least one supported service fixture")
+    # A black-box subject (an A2A agent, say) calls its own tools against the
+    # real world and never touches Beacon's services, so a scenario for one
+    # legitimately declares none. Its evidence is the response, not a state
+    # diff; requiring a service here would only force a decorative fixture.
+    if not services and scenario.tools:
+        raise ValueError(
+            "scenario scopes tools but defines no supported service fixture"
+        )
     unknown = router.unknown_tools()
     if unknown:
         raise ValueError(
@@ -100,6 +107,10 @@ def run_scenario(
         scenario=scenario,
         tools=router,
         recorder=recorder,
+        usage=UsageRecorder(
+            max_calls=scenario.limits.get("max_subject_calls"),
+            max_seconds=scenario.limits.get("max_subject_seconds"),
+        ),
     )
     started_at = utc_now()
     subject_result: SubjectResult
@@ -149,6 +160,10 @@ def run_scenario(
         "after": after,
         "artifacts": context.artifacts,
         "subject": subject_result.to_dict(),
+        # Reachable so an assertion can compare what the subject claimed
+        # against the source the scenario pinned for it.
+        "fixtures": scenario.fixtures,
+        "usage": context.usage.summary(),
     }
     # Load-time validation should make this unreachable, but a run that dies
     # here dies after the subject has already done the work, discarding the
@@ -215,6 +230,7 @@ def run_scenario(
         state_diff=diff_payload,
         events=[event.to_dict() for event in recorder.events],
         artifacts=context.artifacts,
+        usage=context.usage.summary(),
         reset_verified=reset_verified,
         limitations=limitations,
     )

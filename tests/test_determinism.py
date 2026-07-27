@@ -49,6 +49,7 @@ def _evidence(
             for index, target in enumerate(tool_targets, start=1)
         ],
         artifacts=artifacts if artifacts is not None else {"summary": "text"},
+        usage={"calls": 0, "total_seconds": 0.0},
         reset_verified=True,
         limitations=[],
     )

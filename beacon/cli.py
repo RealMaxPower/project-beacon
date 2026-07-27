@@ -10,6 +10,7 @@ from typing import Sequence
 
 from beacon import __version__
 from beacon.adapters import (
+    A2ASubjectAdapter,
     JSONLCommandAdapter,
     MCPHostAdapter,
     MCPServeAdapter,
@@ -70,12 +71,20 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("scenario", type=Path)
     run.add_argument(
         "--adapter",
-        choices=("reference", "command", "mcp-host"),
+        choices=("reference", "command", "mcp-host", "a2a"),
         default="reference",
     )
     run.add_argument(
         "--command",
         help="JSONL subject command, parsed with shell-like quoting.",
+    )
+    run.add_argument(
+        "--agent-url",
+        help="Base URL of a hosted A2A agent, for --adapter a2a.",
+    )
+    run.add_argument(
+        "--authorization",
+        help="Complete Authorization header value for --adapter a2a.",
     )
     run.add_argument(
         "--output",
@@ -209,6 +218,14 @@ def _run(args: argparse.Namespace) -> int:
                 "reference subject runs in process"
             )
         adapter = ReferenceInboxAdapter()
+    elif args.adapter == "a2a":
+        if not args.agent_url:
+            raise ScenarioError("--adapter a2a requires --agent-url")
+        adapter = A2ASubjectAdapter(
+            args.agent_url,
+            timeout_seconds=args.timeout,
+            authorization=args.authorization,
+        )
     elif args.adapter == "mcp-host":
         if not args.command:
             raise ScenarioError("--adapter mcp-host requires --command")

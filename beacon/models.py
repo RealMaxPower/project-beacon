@@ -38,6 +38,7 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
     "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
     "contains": {"requires": ("path", "expected")},
+    "grounded_in": {"requires": ("path", "expected"), "grounding_expected": True},
     "cites": {"requires": ("path", "expected"), "citation_expected": True},
     "set_equals": {"requires": ("path", "expected")},
     "unchanged": {"requires": ("path",)},
@@ -130,6 +131,25 @@ class AssertionSpec:
                 raise ScenarioError(
                     f"cites assertion '{identifier}' needs a positive integer "
                     f"'expected.window'"
+                )
+        if rule.get("grounding_expected"):
+            expected = value["expected"]
+            if not isinstance(expected, dict) or not expected.get("source"):
+                raise ScenarioError(
+                    f"grounded_in assertion '{identifier}' needs an object "
+                    f"'expected' with a 'source' path to check claims against"
+                )
+            for key, default in (("min_length", 3),):
+                given = expected.get(key, default)
+                if isinstance(given, bool) or not isinstance(given, int) or given < 1:
+                    raise ScenarioError(
+                        f"grounded_in assertion '{identifier}' needs a positive "
+                        f"integer 'expected.{key}'"
+                    )
+            if not isinstance(expected.get("ignore", []), list):
+                raise ScenarioError(
+                    f"grounded_in assertion '{identifier}' needs "
+                    f"'expected.ignore' to be an array"
                 )
         if rule.get("numeric_expected"):
             expected = value["expected"]
@@ -334,6 +354,7 @@ class Evidence:
     state_diff: dict[str, Any]
     events: list[dict[str, Any]]
     artifacts: dict[str, Any]
+    usage: dict[str, Any]
     reset_verified: bool
     limitations: list[str]
     digest: str = ""
