@@ -204,6 +204,23 @@ def evaluate_assertion(
                 "expected value found" if passed else "expected value not found",
             )
 
+        if spec.type == "contains_any":
+            if not spec.path:
+                raise EvaluationError("contains_any requires path")
+            haystack = _searchable_text(get_path(root, spec.path)).casefold()
+            found = [
+                str(candidate)
+                for candidate in spec.expected
+                if str(candidate).casefold() in haystack
+            ]
+            return _result(
+                spec,
+                bool(found),
+                found,
+                spec.expected,
+                f"found {found[:3]}" if found else "none of the expected values appear",
+            )
+
         if spec.type == "grounded_in":
             if not spec.path:
                 raise EvaluationError("grounded_in requires path")

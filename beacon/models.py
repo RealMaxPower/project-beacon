@@ -38,6 +38,7 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
     "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
     "contains": {"requires": ("path", "expected")},
+    "contains_any": {"requires": ("path", "expected"), "list_expected": True},
     "grounded_in": {"requires": ("path", "expected"), "grounding_expected": True},
     "cites": {"requires": ("path", "expected"), "citation_expected": True},
     "set_equals": {"requires": ("path", "expected")},
@@ -131,6 +132,13 @@ class AssertionSpec:
                 raise ScenarioError(
                     f"cites assertion '{identifier}' needs a positive integer "
                     f"'expected.window'"
+                )
+        if rule.get("list_expected"):
+            expected = value["expected"]
+            if not isinstance(expected, list) or not expected:
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' needs a non-empty array "
+                    f"'expected'"
                 )
         if rule.get("grounding_expected"):
             expected = value["expected"]

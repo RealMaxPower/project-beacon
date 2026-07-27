@@ -82,6 +82,7 @@
               "count_gte",
               "count_lte",
               "contains",
+              "contains_any",
               "cites",
               "grounded_in",
               "set_equals",
