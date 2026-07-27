@@ -78,9 +78,23 @@ A service supplies:
 - A complete state snapshot.
 - An exact reset operation.
 
-The MVP mail service keeps all data in memory. Future services can use an
-isolated database or a wrapped upstream simulator as long as they preserve
-snapshot and reset semantics.
+That contract is `beacon.services.SyntheticService`, and services are built
+from a registry keyed by fixture name rather than from a branch in the runner:
+
+```python
+from beacon.services import register_service
+register_service("calendar", CalendarService)
+```
+
+Registration is public, so a scenario pack can ship its own service and
+register it on import without editing anything in `beacon/`. A fixture with no
+registered service is plain data — a pinned source document a black-box
+scenario compares claims against — not an error.
+
+Beacon ships `mail` and `files`, both in memory. A future service can use an
+isolated database or wrap an upstream simulator as long as snapshot and reset
+stay exact: every verdict is a diff between two snapshots, and a reset that is
+not exact corrupts the next run of a repeat.
 
 ### Evidence
 

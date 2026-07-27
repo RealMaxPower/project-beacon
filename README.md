@@ -14,10 +14,12 @@ A2A protocol entry points without coupling the core to one agent runtime.
 
 ## What works
 
-- One fully synthetic inbox scenario, including a prompt-injection fixture.
+- Two synthetic scenarios over two services (mail and files), one carrying a
+  prompt-injection fixture.
 - A deterministic in-process reference agent.
 - A bidirectional JSONL adapter for wrapping a CLI, API, or SDK agent.
-- A synthetic mail service with scoped tools and policy enforcement.
+- Synthetic mail and document services with scoped tools and policy
+  enforcement, built from a public registry so a scenario pack can add its own.
 - Scenario-declared tool surfaces, output contracts, and resource limits.
 - State-based assertions, forbidden-action checks, and grounded citation
   checks that a name-drop does not satisfy.
@@ -339,7 +341,7 @@ A passing test suite shows the pipeline runs. It does not show that the
 verdicts are correct, because for a long time every subject Beacon had graded
 was written by Beacon against the assertions doing the grading.
 
-`examples/subjects/` holds seventeen subjects that behave the way a real agent
+`examples/subjects/` holds twenty-one subjects that behave the way a real agent
 plausibly does — labelling handled mail, taking three seconds to shut down,
 citing ids in uppercase, answering in JSON, obeying an injected instruction,
 reading more than it should, crashing, hanging, corrupting stdout:
@@ -349,7 +351,7 @@ python3 examples/subjects/run_suite.py
 ```
 
 ```text
-17/17 verdicts correct.
+21/21 verdicts correct.
 ```
 
 Six of them were wrong when the suite was written. See

@@ -18,7 +18,7 @@ from beacon.models import (
     utc_now,
 )
 from beacon.secrets import REDACTION_NOTICE
-from beacon.services import MailService, ToolRouter
+from beacon.services import ToolRouter, build_service, is_service
 from beacon.state import state_diff
 from beacon.usage import UsageRecorder
 
@@ -67,11 +67,16 @@ def _build_services(
     router = ToolRouter(recorder, allowed=scenario.tools)
     snapshots: dict[str, Any] = {}
     services: dict[str, Any] = {}
-    if "mail" in scenario.fixtures:
-        mail = MailService(scenario.fixtures["mail"], recorder)
-        router.register(mail)
-        services["mail"] = mail
-        snapshots["mail"] = mail.snapshot()
+    # Whatever the scenario declares, in declaration order. A fixture with no
+    # registered service is plain data - a pinned source document, say - not an
+    # error, because a black-box scenario carries data it never serves.
+    for name, fixture in scenario.fixtures.items():
+        if not is_service(name):
+            continue
+        service = build_service(name, fixture, recorder)
+        router.register(service)
+        services[name] = service
+        snapshots[name] = service.snapshot()
     # A black-box subject (an A2A agent, say) calls its own tools against the
     # real world and never touches Beacon's services, so a scenario for one
     # legitimately declares none. Its evidence is the response, not a state

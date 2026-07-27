@@ -36,8 +36,9 @@ def _run(case: dict[str, Any], scenario_path: Path, output_dir: str) -> Any:
         [sys.executable, str(ROOT / case["script"])],
         timeout_seconds=float(case.get("timeout_seconds", DEFAULT_TIMEOUT)),
     )
+    scenario = ROOT / case.get("scenario", str(scenario_path))
     return run_scenario(
-        Scenario.load(scenario_path),
+        Scenario.load(scenario),
         adapter,
         output_dir=output_dir,
         run_id=case["id"],

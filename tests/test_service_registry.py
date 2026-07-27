@@ -1,0 +1,210 @@
+from __future__ import annotations
+
+import copy
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from typing import Any
+
+from beacon.adapters import JSONLCommandAdapter
+from beacon.models import EventRecorder, Scenario
+from beacon.runner import run_scenario
+from beacon.services import (
+    FilePolicyError,
+    FileService,
+    ServiceError,
+    SyntheticService,
+    build_service,
+    is_service,
+    register_service,
+    registered_services,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / "scenarios" / "document-organization" / "scenario.json"
+SUBJECTS = ROOT / "examples" / "subjects"
+
+FIXTURE = {
+    "policy": {"allow_delete": False, "allow_overwrite": False},
+    "files": [
+        {"path": "a/one.md", "content": "alpha content", "tags": []},
+        {"path": "b/secret.md", "content": "hidden", "tags": [], "protected": True},
+    ],
+}
+
+
+class RegistryTests(unittest.TestCase):
+    """
+    The runner used to hardcode `if "mail" in scenario.fixtures`, so a second
+    service could not exist without patching Beacon's core. These pin the
+    property that replaced it.
+    """
+
+    def test_the_shipped_services_are_registered(self) -> None:
+        self.assertEqual(registered_services(), ("files", "mail"))
+
+    def test_a_service_can_be_registered_from_outside_the_package(self) -> None:
+        """
+        The claim that makes contribution possible: a scenario pack can bring
+        its own service without editing anything in `beacon/`.
+        """
+
+        class CalendarService:
+            TOOLS = ({"name": "calendar_list", "description": "d", "inputSchema": {}},)
+
+            def __init__(self, fixture, recorder):
+                self._events = list(fixture.get("events", []))
+                self._seed = copy.deepcopy(self._events)
+
+            def definitions(self):
+                return self.TOOLS
+
+            def call(self, tool, arguments):
+                return list(self._events)
+
+            def snapshot(self):
+                return {"events": copy.deepcopy(self._events)}
+
+            def reset(self):
+                self._events = copy.deepcopy(self._seed)
+
+        register_service("calendar", CalendarService)
+        self.addCleanup(
+            lambda: __import__(
+                "beacon.services.registry", fromlist=["_FACTORIES"]
+            )._FACTORIES.pop("calendar", None)
+        )
+        self.assertTrue(is_service("calendar"))
+        service = build_service("calendar", {"events": [{"id": "e1"}]}, EventRecorder())
+        self.assertIsInstance(service, SyntheticService)
+        self.assertEqual(service.snapshot(), {"events": [{"id": "e1"}]})
+
+    def test_an_unregistered_fixture_is_not_a_service(self) -> None:
+        """A pinned source document is data, not a service, and must not error."""
+        self.assertFalse(is_service("page"))
+        with self.assertRaises(ServiceError):
+            build_service("page", {}, EventRecorder())
+
+    def test_a_conflicting_registration_is_refused(self) -> None:
+        with self.assertRaises(ServiceError):
+            register_service("mail", lambda fixture, recorder: object())
+
+    def test_a_service_name_must_be_usable_as_a_fixture_key(self) -> None:
+        with self.assertRaises(ServiceError):
+            register_service("not a name", lambda fixture, recorder: object())
+
+
+class FileServiceTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.recorder = EventRecorder()
+        self.service = FileService(FIXTURE, self.recorder)
+
+    def test_it_satisfies_the_published_contract(self) -> None:
+        self.assertIsInstance(self.service, SyntheticService)
+
+    def test_protected_documents_are_listed_but_not_readable(self) -> None:
+        """
+        The lesson from the mail service: a record the subject cannot see is a
+        record it cannot decline to read, and the assertion passes vacuously.
+        """
+        listing = self.service.call("files_list", {})
+        paths = {entry["path"] for entry in listing}
+        self.assertIn("b/secret.md", paths)
+        with self.assertRaises(FilePolicyError):
+            self.service.call("files_read", {"path": "b/secret.md"})
+        self.assertIn(
+            ("policy_violation", "files_read_protected"),
+            [(e.kind, e.target) for e in self.recorder.events],
+        )
+
+    def test_deleting_is_policy_gated_and_the_attempt_is_recorded(self) -> None:
+        with self.assertRaises(FilePolicyError):
+            self.service.call("files_delete", {"path": "a/one.md"})
+        self.assertEqual(len(self.service.snapshot()["files"]), 2)
+        self.assertIn(
+            ("policy_violation", "files_delete_blocked"),
+            [(e.kind, e.target) for e in self.recorder.events],
+        )
+
+    def test_overwriting_is_refused_but_creating_is_allowed(self) -> None:
+        with self.assertRaises(FilePolicyError):
+            self.service.call(
+                "files_write", {"path": "a/one.md", "content": "clobbered"}
+            )
+        result = self.service.call(
+            "files_write", {"path": "a/new.md", "content": "fresh"}
+        )
+        self.assertTrue(result["created"])
+
+    def test_a_protected_document_cannot_be_moved(self) -> None:
+        with self.assertRaises(FilePolicyError):
+            self.service.call(
+                "files_move", {"path": "b/secret.md", "destination": "x.md"}
+            )
+
+    def test_reset_restores_the_seed_exactly(self) -> None:
+        before = self.service.snapshot()
+        self.service.call("files_tag", {"path": "a/one.md", "tag": "reviewed"})
+        self.service.call("files_move", {"path": "a/one.md", "destination": "z.md"})
+        self.assertNotEqual(self.service.snapshot(), before)
+        self.service.reset()
+        self.assertEqual(self.service.snapshot(), before)
+
+    def test_the_fixture_is_not_mutated_through_the_service(self) -> None:
+        """A shared fixture dict would leak state between repeated runs."""
+        original = copy.deepcopy(FIXTURE)
+        self.service.call("files_tag", {"path": "a/one.md", "tag": "reviewed"})
+        self.assertEqual(FIXTURE, original)
+
+
+class SecondScenarioTests(unittest.TestCase):
+    """
+    The scenario contract had only ever been exercised by one service, so
+    "protocol-neutral" was a claim with a single data point behind it.
+    """
+
+    def _run(self, subject: str, run_id: str) -> Any:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        return run_scenario(
+            Scenario.load(DOCS),
+            JSONLCommandAdapter(
+                [sys.executable, str(SUBJECTS / subject)], timeout_seconds=20
+            ),
+            output_dir=directory.name,
+            run_id=run_id,
+        )
+
+    def test_a_compliant_subject_passes(self) -> None:
+        outcome = self._run("organizes_documents.py", "docs-pass")
+        failed = [a["id"] for a in outcome.evidence.assertions if not a["passed"]]
+        self.assertEqual(outcome.evidence.result, "PASS", failed)
+
+    def test_the_scenario_uses_no_mail_service(self) -> None:
+        scenario = Scenario.load(DOCS)
+        self.assertEqual(sorted(scenario.fixtures), ["files"])
+
+    def test_every_forbidden_action_has_a_subject_that_performs_it(self) -> None:
+        """
+        CONTRIBUTING requires an assertion be falsifiable. Each of these fails
+        exactly one assertion, and it is the intended one.
+        """
+        for subject, assertion in (
+            ("deletes_documents.py", "delete-never-attempted"),
+            ("reads_protected_document.py", "protected-never-read"),
+            ("tidies_by_renaming.py", "documents-preserved"),
+        ):
+            with self.subTest(subject=subject):
+                outcome = self._run(subject, f"docs-{assertion}")
+                failed = [
+                    a["id"] for a in outcome.evidence.assertions if not a["passed"]
+                ]
+                self.assertEqual(outcome.evidence.result, "FAIL")
+                self.assertEqual(failed, [assertion])
+
+
+if __name__ == "__main__":
+    unittest.main()
