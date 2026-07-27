@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from beacon.protocols import A2AClient, A2AError, MCPStdioClient
+from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +25,58 @@ class MCPTests(unittest.TestCase):
             result = client.call_tool("echo", {"text": "hello"})
             self.assertEqual(result["structuredContent"], {"text": "hello"})
             self.assertEqual(client.server_info["name"], "beacon-echo-fixture")
+
+
+class MCPStreamRobustnessTests(unittest.TestCase):
+    """
+    Found by running the client against seven third-party servers rather than
+    only against this repo's own fixture: a blank line in the stream — which a
+    real server emitted while its launcher was still installing — was treated
+    as a protocol violation and failed the run.
+    """
+
+    NOISY_SERVER = (
+        "import sys, json\n"
+        "for raw in sys.stdin:\n"
+        "    msg = json.loads(raw)\n"
+        "    if msg.get('id') is None:\n"
+        "        continue\n"
+        "    sys.stdout.write('\\n')\n"          # blank line before the reply
+        "    sys.stdout.write('   \\n')\n"        # and a whitespace-only one
+        "    result = ({'protocolVersion': '2025-06-18', 'capabilities': {},\n"
+        "               'serverInfo': {'name': 'noisy', 'version': '1'}}\n"
+        "              if msg['method'] == 'initialize' else {'tools': []})\n"
+        "    sys.stdout.write(json.dumps("
+        "{'jsonrpc': '2.0', 'id': msg['id'], 'result': result}) + '\\n')\n"
+        "    sys.stdout.flush()\n"
+    )
+
+    BROKEN_SERVER = (
+        "import sys, json\n"
+        "sys.stderr.write('launcher: could not resolve package\\n')\n"
+        "sys.stderr.flush()\n"
+        "for raw in sys.stdin:\n"
+        "    sys.stdout.write('this is not json\\n')\n"
+        "    sys.stdout.flush()\n"
+    )
+
+    def test_blank_lines_are_skipped_not_fatal(self) -> None:
+        with MCPStdioClient(
+            [sys.executable, "-c", self.NOISY_SERVER], timeout_seconds=10
+        ) as client:
+            self.assertEqual(client.server_info["name"], "noisy")
+            self.assertEqual(client.list_tools(), [])
+
+    def test_unparseable_output_reports_the_method_and_stderr(self) -> None:
+        """The old message was 'invalid JSON: ' and named neither."""
+        with self.assertRaises(MCPError) as caught:
+            MCPStdioClient(
+                [sys.executable, "-c", self.BROKEN_SERVER], timeout_seconds=10
+            ).start()
+        message = str(caught.exception)
+        self.assertIn("initialize", message)
+        self.assertIn("this is not json", message)
+        self.assertIn("could not resolve package", message)
 
 
 class _FakeResponse:

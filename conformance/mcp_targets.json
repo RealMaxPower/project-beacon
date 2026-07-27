@@ -1,0 +1,117 @@
+{
+  "description": "Real, freely available MCP servers Beacon is tested against. These are third-party implementations nobody here wrote, which is the point: a client that only works against its own fixture proves nothing.",
+  "targets": [
+    {
+      "id": "everything",
+      "package": "@modelcontextprotocol/server-everything",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-everything"
+      ],
+      "why": "The reference server. Deliberately exercises every MCP feature, so it is the strictest single check of the client.",
+      "safe_call": {
+        "tool": "echo",
+        "arguments": {
+          "message": "beacon"
+        }
+      }
+    },
+    {
+      "id": "memory",
+      "package": "@modelcontextprotocol/server-memory",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "why": "Stateful knowledge graph. Exercises tools that mutate server state.",
+      "safe_call": {
+        "tool": "read_graph",
+        "arguments": {}
+      }
+    },
+    {
+      "id": "filesystem",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "{workspace}"
+      ],
+      "why": "Widely deployed, and takes a required argument, so it also tests command construction.",
+      "safe_call": {
+        "tool": "list_allowed_directories",
+        "arguments": {}
+      }
+    },
+    {
+      "id": "sequential-thinking",
+      "package": "@modelcontextprotocol/server-sequential-thinking",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "why": "Single-tool server with a large input schema.",
+      "safe_call": {
+        "tool": "sequentialthinking",
+        "arguments": {
+          "thought": "probe",
+          "nextThoughtNeeded": false,
+          "thoughtNumber": 1,
+          "totalThoughts": 1
+        }
+      }
+    },
+    {
+      "id": "fetch",
+      "package": "mcp-server-fetch",
+      "command": [
+        "uvx",
+        "mcp-server-fetch"
+      ],
+      "why": "Python rather than Node, so it tests the client against a different SDK implementation.",
+      "safe_call": {
+        "tool": "fetch",
+        "arguments": {
+          "url": "https://example.com",
+          "max_length": 500
+        }
+      }
+    },
+    {
+      "id": "time",
+      "package": "mcp-server-time",
+      "command": [
+        "uvx",
+        "mcp-server-time"
+      ],
+      "why": "Python, small surface, deterministic output.",
+      "safe_call": {
+        "tool": "get_current_time",
+        "arguments": {
+          "timezone": "UTC"
+        }
+      }
+    },
+    {
+      "id": "git",
+      "package": "mcp-server-git",
+      "command": [
+        "uvx",
+        "mcp-server-git",
+        "--repository",
+        "{repo}"
+      ],
+      "why": "Python, takes a repository argument, and reads real local state.",
+      "safe_call": {
+        "tool": "git_status",
+        "arguments": {
+          "repo_path": "{repo}"
+        }
+      }
+    }
+  ]
+}

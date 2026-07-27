@@ -1,0 +1,66 @@
+name: Conformance (external targets)
+
+# Separate from CI on purpose. This workflow downloads and runs servers other
+# people wrote, so it is slower, needs the network, and can break for reasons
+# that have nothing to do with a pull request. Keeping it out of the PR gate
+# means an upstream package moving does not block unrelated work — but it still
+# runs on a schedule, because "works against real implementations" is a claim
+# that decays silently if nobody checks it.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "beacon/protocols/**"
+      - "conformance/**"
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-servers:
+    name: Beacon's MCP client vs third-party servers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install uv (for the Python MCP servers)
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Sweep
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          python conformance/run_mcp_sweep.py --timeout 180 --json-out sweep.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcp-conformance
+          path: sweep.json
+
+  official-sdk:
+    name: Official MCP SDK vs Beacon's facade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # The reference implementation of the protocol, driving Beacon's server.
+      # Without this the facade is only ever exercised by a client this repo
+      # also wrote, which proves that Beacon agrees with Beacon.
+      - name: Install the official MCP SDK
+        run: python -m pip install --upgrade pip && python -m pip install mcp
+
+      - name: Run the scenario through the official SDK
+        run: |
+          python -m beacon run scenarios/inbox-briefing/scenario.json \
+            --adapter mcp-host \
+            --command "python conformance/official_sdk_client.py"

@@ -182,10 +182,21 @@ class MCPStdioClient:
                 continue
             if line is None:
                 raise MCPError(f"MCP server closed stdout: {self._stderr()}")
+            if not line.strip():
+                # Blank lines are legal framing in a newline-delimited stream
+                # and real servers emit them, especially while a launcher is
+                # still installing. Treating one as a protocol violation turned
+                # an intermittent hiccup into a failed run.
+                continue
             try:
                 response = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise MCPError(f"MCP server emitted invalid JSON: {line.strip()}") from exc
+                # Without the server's stderr this reads as "invalid JSON: "
+                # and says nothing about what went wrong.
+                raise MCPError(
+                    f"MCP server emitted invalid JSON on {method}: "
+                    f"{line.strip()[:200]!r}. Server stderr: {self._stderr()[:400]!r}"
+                ) from exc
             if response.get("id") != request_id:
                 continue
             if "error" in response:
