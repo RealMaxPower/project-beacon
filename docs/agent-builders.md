@@ -134,10 +134,17 @@ break constantly and get disabled, which is worse than not having them.
 
 Two rules learned the hard way:
 
-**Never offer a tool an assertion punishes.** If the tool surface includes
-`files_delete` and an assertion forbids deleting, that is a fair test. If it
-includes `mail_add_label` while an assertion demands messages be unchanged,
-that is a trap, and a competent agent fails for doing the sensible thing.
+**A punished tool must be forbidden in the goal.** If the surface offers
+`files_delete` and an assertion forbids deleting, that is a fair test only
+when the goal says not to delete. A silent prohibition is a trap: a competent
+agent does the sensible thing and fails for it.
+
+The tempting shortcut is to pull the tool off the surface instead. Beacon did
+that with `mail_add_label`, and it fixed the trap by creating a quieter
+problem — with nothing on the surface able to touch a message, the assertion
+that messages were unchanged could no longer fail, and the report went on
+announcing it as a result. **Removing the means to disobey does not
+demonstrate obedience.** State the constraint and leave the tool.
 
 **Every assertion must be able to fail.** Write the subject that violates it
 and confirm it goes red. An assertion that cannot fail prints a claim your

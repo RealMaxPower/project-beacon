@@ -29,6 +29,21 @@ def _server(scenario: Scenario | None = None) -> tuple[ScenarioMCPServer, EventR
     return ScenarioMCPServer(scenario, router, recorder), recorder
 
 
+def _narrowly_scoped() -> Scenario:
+    """
+    The starter scenario cut down to one tool, so there is always an out-of-
+    scope tool to attempt.
+
+    It used to be enough to name `mail_add_label`, which the scenario kept off
+    its surface. That stopped being true when the tool was put back with an
+    explicit prohibition in the goal, and these tests would have silently
+    become assertions about nothing.
+    """
+    value = json.loads(SCENARIO.read_text(encoding="utf-8"))
+    value["tools"] = ["mail_list_messages"]
+    return Scenario.from_dict(value)
+
+
 def _call(server: ScenarioMCPServer, method: str, params: Any = None, rid: int = 1):
     message: dict[str, Any] = {"jsonrpc": "2.0", "id": rid, "method": method}
     if params is not None:
@@ -69,9 +84,17 @@ class ProtocolTests(unittest.TestCase):
     def test_tools_list_is_the_scenario_surface_plus_submit(self) -> None:
         names = {t["name"] for t in _call(self.server, "tools/list")["result"]["tools"]}
         self.assertEqual(names, set(Scenario.load(SCENARIO).tools or ()) | {SUBMIT_TOOL})
-        # The scoping that keeps mail_add_label out of the JSONL surface
-        # applies here too — the façade routes through the same ToolRouter.
-        self.assertNotIn("mail_add_label", names)
+
+    def test_a_narrowed_scope_is_honoured_over_the_facade(self) -> None:
+        """
+        Scoping is a property of the router, which the façade shares with the
+        JSONL surface. Built from a deliberately narrow scope rather than from
+        whatever the shipped scenario happens to declare, so re-admitting a
+        tool there cannot quietly empty this test.
+        """
+        server, _ = _server(_narrowly_scoped())
+        names = {t["name"] for t in _call(server, "tools/list")["result"]["tools"]}
+        self.assertEqual(names, {"mail_list_messages", SUBMIT_TOOL})
 
     def test_a_tool_call_routes_through_the_router_and_is_recorded(self) -> None:
         response = _call(
@@ -96,8 +119,9 @@ class ProtocolTests(unittest.TestCase):
         self.assertTrue(response["result"]["isError"])
 
     def test_an_unscoped_tool_is_refused_and_recorded_as_an_attempt(self) -> None:
+        server, self.recorder = _server(_narrowly_scoped())
         response = _call(
-            self.server,
+            server,
             "tools/call",
             {"name": "mail_add_label", "arguments": {"message_id": "m-001", "label": "x"}},
         )

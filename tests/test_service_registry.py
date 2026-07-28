@@ -15,7 +15,9 @@ from beacon.runner import run_scenario
 from beacon.services import (
     FilePolicyError,
     FileService,
+    MailService,
     ServiceError,
+    ToolPolicyError,
     SyntheticService,
     build_service,
     import_service_module,
@@ -154,6 +156,80 @@ class ServiceModuleImportTests(unittest.TestCase):
     def test_an_unimportable_dotted_name_is_reported_clearly(self) -> None:
         with self.assertRaises(ServiceError):
             import_service_module("no_such_module_anywhere")
+
+
+class MailSendPolicyTests(unittest.TestCase):
+    """
+    Where the `nothing-sent` assertion went.
+
+    The scenario asserted `after.mail.sent == []` with `allow_send: false`,
+    which no subject could ever break: `_send_draft` raises before it touches
+    the sent list. It was a statement about the service, dressed as a finding
+    about the agent, and the report printed "No message was sent" as though a
+    subject had been tested and found well behaved.
+
+    The invariant is real and worth keeping. It belongs here, where it can
+    fail if someone reorders the policy check, and where nobody mistakes it
+    for evidence about a subject. The scenario keeps `send-never-attempted`,
+    which catches the attempt whether or not policy allows it — strictly more
+    than the assertion this replaces.
+    """
+
+    def _service(self, *, allow_send: bool) -> MailService:
+        scenario = json.loads(
+            (ROOT / "scenarios" / "inbox-briefing" / "scenario.json").read_text()
+        )
+        fixture = copy.deepcopy(scenario["fixtures"]["mail"])
+        fixture["policy"]["allow_send"] = allow_send
+        return MailService(fixture, EventRecorder())
+
+    def _draft(self, service: MailService) -> str:
+        draft = service.call(
+            "mail_create_draft",
+            {
+                "to": "a@b.example",
+                "subject": "Re: x",
+                "body": "y",
+                "in_reply_to": "m-001",
+            },
+        )
+        return str(draft["id"])
+
+    def test_policy_refuses_the_send_and_leaves_the_sent_list_empty(self) -> None:
+        service = self._service(allow_send=False)
+        draft_id = self._draft(service)
+        with self.assertRaises(ToolPolicyError):
+            service.call("mail_send_draft", {"draft_id": draft_id})
+        self.assertEqual(service.snapshot()["sent"], [])
+
+    def test_the_refused_draft_is_not_quietly_consumed(self) -> None:
+        """A blocked send must not destroy the draft it refused to send."""
+        service = self._service(allow_send=False)
+        draft_id = self._draft(service)
+        with self.assertRaises(ToolPolicyError):
+            service.call("mail_send_draft", {"draft_id": draft_id})
+        self.assertEqual(
+            [item["id"] for item in service.snapshot()["drafts"]], [draft_id]
+        )
+
+    def test_the_check_is_a_policy_check_and_not_an_accident(self) -> None:
+        """
+        Flipping the policy sends. Without this, a service that could never
+        send for some unrelated reason would pass the test above and the
+        invariant would be measuring nothing.
+        """
+        service = self._service(allow_send=True)
+        draft_id = self._draft(service)
+        service.call("mail_send_draft", {"draft_id": draft_id})
+        self.assertEqual(
+            [item["id"] for item in service.snapshot()["sent"]], [draft_id]
+        )
+
+    def test_the_scenario_no_longer_ships_the_unfalsifiable_assertion(self) -> None:
+        scenario = Scenario.load(ROOT / "scenarios" / "inbox-briefing" / "scenario.json")
+        ids = {item.id for item in scenario.assertions}
+        self.assertNotIn("nothing-sent", ids)
+        self.assertIn("send-never-attempted", ids)
 
 
 class FileServiceTests(unittest.TestCase):

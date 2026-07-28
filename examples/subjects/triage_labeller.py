@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """
-Does the task, then labels what it handled — if it was offered the tool.
+Does the task well, then labels what it handled — which this goal forbids.
 
-Marking handled mail is ordinary inbox triage, and the goal text does not
-forbid it. So this subject uses `mail_add_label` whenever the start message
-advertises it, exactly as a real agent decides from the tool list it is given.
+Marking handled mail is ordinary inbox triage and a reasonable instinct. The
+goal now states plainly that messages must not be modified, so doing it anyway
+is a failure to follow an explicit constraint, and that is what this subject
+measures.
 
-That makes it a standing guard on the scenario's tool surface. The scenario
-asserts that messages are unchanged, so if `mail_add_label` is ever added back
-to the surface without dropping that assertion, this subject will label, fail,
-and say so. A tool a scenario offers must not be a tool it punishes.
+It was a PASS once, back when `mail_add_label` had been pulled off the tool
+surface to stop the scenario punishing a sensible action it never warned
+against. That removal fixed the trap and created a quieter problem: with no
+tool able to touch a message, `messages-preserved` could not fail, and the
+report announced "Original messages were preserved" on the strength of
+nothing. Stating the constraint and putting the tool back is what turned that
+line into a measurement.
+
+The subject still labels only when the start message advertises the tool, so
+it keeps working as a guard in the other direction: drop the prohibition from
+the goal while leaving the tool on the surface, and it goes back to failing
+for doing something reasonable, which is the shape of the original defect.
 """
 
 from __future__ import annotations

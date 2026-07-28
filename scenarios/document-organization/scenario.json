@@ -86,12 +86,11 @@
       "expected": {
         "id": "contracts/msa-northstar.md",
         "near": [
-          "liability",
-          "Northstar"
+          "liability"
         ],
         "window": 240
       },
-      "description": "The index names the contract alongside something only that document says"
+      "description": "The index names the contract alongside something only that document says (corroborating tokens must come from inside the document; a token that also appears in the path would be satisfied by naming the path)"
     },
     {
       "id": "index-cites-the-invoice",
@@ -100,13 +99,12 @@
       "expected": {
         "id": "invoices/2026-q2-acme.md",
         "near": [
-          "Acme",
           "48,200",
           "AC-2291"
         ],
         "window": 240
       },
-      "description": "The index names the invoice alongside something only that document says"
+      "description": "The index names the invoice alongside something only that document says (corroborating tokens must come from inside the document; a token that also appears in the path would be satisfied by naming the path)"
     },
     {
       "id": "readable-documents-tagged",

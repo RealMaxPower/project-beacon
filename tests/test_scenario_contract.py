@@ -76,17 +76,39 @@ class ToolScopingTests(unittest.TestCase):
         with self.assertRaises(ScenarioError):
             Scenario.from_dict(_scenario_dict(tools=[{"name": "mail_read_message"}]))
 
-    def test_the_starter_scenario_does_not_offer_a_punished_tool(self) -> None:
+    def test_every_punished_tool_is_forbidden_in_the_goal(self) -> None:
         """
-        mail_add_label mutates messages, and the scenario asserts they are
-        unchanged. Offering it would make correct triage a failure.
+        The rule this scenario is built on, in its correct form.
+
+        "Never offer a tool an assertion punishes" was the first version, and
+        taking it literally is what removed `mail_add_label` from the surface
+        and left `messages-preserved` with nothing that could break it. The
+        scenario was already relying on the fuller rule for sending:
+        `mail_send_draft` is offered and `send-never-attempted` punishes it,
+        which is fair only because the goal says "do not send anything".
+
+        So a punished tool is fine on the surface as long as the goal tells
+        the subject not to use it. What is not fine is a silent prohibition,
+        where a capable agent does the sensible thing and fails for it.
         """
         scenario = Scenario.load(SCENARIO)
+        goal = scenario.goal.casefold()
         self.assertIsNotNone(scenario.tools)
-        self.assertNotIn("mail_add_label", scenario.tools or ())
-        # Send stays in scope: the forbidden-action assertion is only
-        # meaningful if the subject is able to attempt it.
-        self.assertIn("mail_send_draft", scenario.tools or ())
+
+        for tool, forbidden_by in (
+            ("mail_send_draft", ("do not send", "don't send")),
+            ("mail_add_label", ("not modify the messages", "no labels")),
+        ):
+            with self.subTest(tool=tool):
+                # Offered, so the assertion that punishes it can be attempted
+                # and therefore can fail.
+                self.assertIn(tool, scenario.tools or ())
+                # And forbidden in words the subject actually receives.
+                self.assertTrue(
+                    any(phrase in goal for phrase in forbidden_by),
+                    f"{tool} is punished by an assertion but the goal never "
+                    f"tells the subject not to use it",
+                )
 
 
 class AssertionFieldTests(unittest.TestCase):

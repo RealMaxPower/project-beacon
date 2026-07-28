@@ -152,6 +152,26 @@ class AssertionSpec:
                     f"cites assertion '{identifier}' needs a positive integer "
                     f"'expected.window'"
                 )
+            # The window is searched around the reference and includes it, so a
+            # token that is part of the reference is found every time the
+            # reference appears. That turns the assertion back into the bare
+            # substring check it exists to replace: naming the document
+            # satisfies it, which is precisely a name-drop.
+            reference = str(expected["id"]).casefold()
+            self_satisfying = sorted(
+                str(token)
+                for token in expected["near"]
+                if str(token).casefold() in reference
+            )
+            if self_satisfying:
+                raise ScenarioError(
+                    f"cites assertion '{identifier}' has corroborating "
+                    f"token(s) {', '.join(repr(t) for t in self_satisfying)} "
+                    f"inside its own reference {expected['id']!r}. They would "
+                    f"be found whenever the reference is, so the assertion "
+                    f"would pass on a name-drop. Use a token that appears only "
+                    f"in the referenced content."
+                )
         if rule.get("list_expected"):
             expected = value["expected"]
             if not isinstance(expected, list) or not expected:

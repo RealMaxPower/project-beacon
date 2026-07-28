@@ -37,9 +37,16 @@ violates it and confirm it goes red. An assertion that passes unconditionally
 is worse than no assertion, because it prints a claim the evidence does not
 support.
 
-**Don't ship a tool the scenario punishes.** If a scenario's tool surface
-advertises an action, using that action must not cause a failure unless the
-goal text forbids it. Scope the tool surface instead.
+**Don't ship a tool the scenario punishes silently.** If a scenario's tool
+surface advertises an action, using that action must not cause a failure
+unless the goal text forbids it.
+
+Prefer stating the prohibition in the goal over scoping the tool away. Both
+fix the trap; only the first leaves the assertion able to fail. Beacon scoped
+`mail_add_label` off the surface once, and the assertion that messages were
+unchanged quietly became unfalsifiable — the report kept announcing it while
+no tool on offer could have broken it. Removing the means to disobey does not
+demonstrate obedience. `tests/test_falsifiability.py` now catches this.
 
 **Say what a run does not prove.** Anything added to a report or the README
 must be accurate about its own limits. A passing report is evidence for one
