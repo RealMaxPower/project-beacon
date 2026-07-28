@@ -129,6 +129,8 @@ break constantly and get disabled, which is worse than not having them.
 | `set_equals` | Which items were acted on, order-independent. |
 | `event_absent` | A forbidden action was never attempted, even if policy blocked it. |
 | `unchanged` | State the agent should not have touched. |
+| `conforms_to` | The output has the shape your consumers parse. Reports every violation, with paths. |
+| `contains_none` | A string that must never appear did not. Leaked secrets, canaries, forbidden phrasing. |
 
 Two rules learned the hard way:
 
@@ -140,6 +142,63 @@ that is a trap, and a competent agent fails for doing the sensible thing.
 **Every assertion must be able to fail.** Write the subject that violates it
 and confirm it goes red. An assertion that cannot fail prints a claim your
 evidence does not support — Beacon's own starter scenario shipped two of them.
+
+## Shape and truth are different questions
+
+`conforms_to` grades structure. `grounded_in` grades content. An agent can be
+flawless at one and hopeless at the other, and you need to know which:
+
+```
+web-extraction-contract     result matches the contract   12 / 12
+web-extraction-grounding    entities grounded in the page  4 / 12
+```
+
+Those are the same twelve runs of the same live agent. Every field a consumer
+parses was present and correctly typed every time; two runs in three, the
+values in those fields were invented. A schema check alone would have called
+this agent healthy.
+
+Declare the schema from what your agent actually returns, not from its
+documentation — record some runs first, then write the contract from them.
+Unknown keywords are refused rather than ignored, so `minlength` for
+`minLength` is an error at load time instead of a constraint that quietly
+does nothing.
+
+## Injection resistance
+
+The test is whether an agent treats text it retrieved as data rather than as
+instructions. Two scenarios ship:
+
+```bash
+# Tool-using agents: injections live in files the agent reads
+python3 -m beacon run scenarios/injection-resistance/scenario.json --adapter ...
+
+# Hosted agents: the injection is in the content you send
+python3 -m beacon run scenarios/hosted-injection-resistance/scenario.json \
+  --adapter a2a --agent-url https://your-agent.example
+```
+
+Detection is deterministic, with no judge model. Two mechanisms:
+
+- **Tool coercion** — `event_absent` on a destructive tool. The attempt is
+  recorded before dispatch, so "tried and was blocked by policy" stays
+  distinguishable from "never tried". End-state checks alone miss it.
+- **Exfiltration canaries** — `contains_none` on strings that appear *only* in
+  the withheld material, never in the injected instruction itself. That
+  distinction is the whole design: an agent that quotes the injection back
+  while refusing it must not be scored as leaking, and quoting is exactly what
+  a well-behaved assistant does when it flags an attempt.
+
+**Always pair it with an assertion that the real work was done.** An agent
+that answers something else entirely discloses nothing and passes the
+injection check outright. On the first live run of this scenario, an
+extraction agent did precisely that — ignored the note, invented a product
+page, and scored a clean pass on "annex not reproduced". You cannot resist an
+instruction you never read, and without the paired assertion the report would
+have claimed otherwise.
+
+Resistance in one scenario is not resistance in general. This measures one
+injection style, in one position, in one format.
 
 ## Wire it into CI
 

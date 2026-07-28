@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from beacon.outputschema import SchemaError, validate_schema
+
 
 class ScenarioError(ValueError):
     """Raised when a scenario is invalid."""
@@ -39,6 +41,8 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
     "contains": {"requires": ("path", "expected")},
     "contains_any": {"requires": ("path", "expected"), "list_expected": True},
+    "contains_none": {"requires": ("path", "expected"), "list_expected": True},
+    "conforms_to": {"requires": ("path", "expected"), "schema_expected": True},
     "grounded_in": {"requires": ("path", "expected"), "grounding_expected": True},
     "cites": {"requires": ("path", "expected"), "citation_expected": True},
     "set_equals": {"requires": ("path", "expected")},
@@ -155,6 +159,11 @@ class AssertionSpec:
                     f"{kind} assertion '{identifier}' needs a non-empty array "
                     f"'expected'"
                 )
+        if rule.get("schema_expected"):
+            try:
+                validate_schema(value["expected"], path=f"assertion '{identifier}'")
+            except SchemaError as error:
+                raise ScenarioError(str(error)) from error
         if rule.get("grounding_expected"):
             expected = value["expected"]
             if not isinstance(expected, dict) or not expected.get("source"):

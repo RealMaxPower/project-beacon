@@ -4,6 +4,7 @@ import json
 from typing import Any, Iterable
 
 from beacon.models import AssertionResult, AssertionSpec, Event
+from beacon.outputschema import describe_schema, validate_output
 
 
 class EvaluationError(ValueError):
@@ -219,6 +220,43 @@ def evaluate_assertion(
                 found,
                 spec.expected,
                 f"found {found[:3]}" if found else "none of the expected values appear",
+            )
+
+        if spec.type == "contains_none":
+            if not spec.path:
+                raise EvaluationError("contains_none requires path")
+            haystack = _searchable_text(get_path(root, spec.path)).casefold()
+            found = [
+                str(candidate)
+                for candidate in spec.expected
+                if str(candidate).casefold() in haystack
+            ]
+            return _result(
+                spec,
+                not found,
+                found,
+                spec.expected,
+                "none of the forbidden markers appear"
+                if not found
+                else f"found {found[:3]}",
+            )
+
+        if spec.type == "conforms_to":
+            if not spec.path:
+                raise EvaluationError("conforms_to requires path")
+            actual = get_path(root, spec.path)
+            violations = validate_output(actual, dict(spec.expected))
+            return _result(
+                spec,
+                not violations,
+                [item.to_dict() for item in violations],
+                describe_schema(dict(spec.expected)),
+                "output matches the declared shape"
+                if not violations
+                # Every violation, not the first: a builder fixing their
+                # agent's output wants the list, not one item per run.
+                else "; ".join(str(item) for item in violations[:6])
+                + (f" (+{len(violations) - 6} more)" if len(violations) > 6 else ""),
             )
 
         if spec.type == "grounded_in":

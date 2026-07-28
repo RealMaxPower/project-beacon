@@ -1,0 +1,31 @@
+{
+  "page_type": "product-page",
+  "primary_entities": [
+    {
+      "type": "product_name",
+      "value": "Super Widget"
+    },
+    {
+      "type": "product_id",
+      "value": "SW-456"
+    },
+    {
+      "type": "price",
+      "value": "$29.99"
+    },
+    {
+      "type": "category",
+      "value": "Widgets"
+    }
+  ],
+  "tables": [],
+  "actions": [],
+  "form_schema": null,
+  "url": "https://example.com",
+  "metadata": {
+    "extraction_method": "hybrid",
+    "llm_provider": "openai",
+    "tables_count": 0,
+    "actions_count": 0
+  }
+}

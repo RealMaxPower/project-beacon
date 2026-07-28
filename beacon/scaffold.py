@@ -110,6 +110,29 @@ def _grounding_scenario(scenario_id: str) -> dict[str, Any]:
                     "The summary identifies the rollback as the resolution"
                 ),
             },
+            {
+                "id": "summary-keeps-its-shape",
+                "type": "conforms_to",
+                "path": "artifacts.summary",
+                "expected": {
+                    "type": "object",
+                    "required": ["systems", "resolution"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "systems": {
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {"type": "string", "minLength": 2},
+                        },
+                        "resolution": {"type": "string", "minLength": 10},
+                    },
+                },
+                "description": (
+                    "The output has the shape the goal asked for. This is the "
+                    "assertion that catches a field quietly renamed or a list "
+                    "that arrives as a string"
+                ),
+            },
         ],
         "limits": {
             "timeout_seconds": 60,

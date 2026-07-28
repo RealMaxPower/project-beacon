@@ -83,6 +83,8 @@
               "count_lte",
               "contains",
               "contains_any",
+              "contains_none",
+              "conforms_to",
               "cites",
               "grounded_in",
               "set_equals",

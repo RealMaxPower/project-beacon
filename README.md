@@ -14,9 +14,14 @@ A2A protocol entry points without coupling the core to one agent runtime.
 
 ## What works
 
-- Four scenarios: two graded on the state of a synthetic service (mail and
-  files), one of which carries a prompt-injection fixture, and two graded on
-  whether a hosted agent's answer is grounded in what it was given.
+- Seven scenarios: three graded on the state of a synthetic service (mail and
+  files), and four graded on what a hosted agent returned — grounding,
+  fabrication, output-schema conformance, and injection resistance.
+- Prompt-injection scenarios for both integration levels, detecting tool
+  coercion through recorded attempts and exfiltration through canaries that
+  exist only in the withheld material.
+- Output-schema conformance that reports every violation with its path, and
+  refuses a misspelled keyword instead of ignoring it.
 - `beacon init`, which generates a scenario that runs immediately together
   with the subject that violates it.
 - A deterministic in-process reference agent.
@@ -24,8 +29,9 @@ A2A protocol entry points without coupling the core to one agent runtime.
 - Synthetic mail and document services with scoped tools and policy
   enforcement, built from a public registry so a scenario pack can add its own.
 - Scenario-declared tool surfaces, output contracts, and resource limits.
-- State-based assertions, forbidden-action checks, and grounded citation
-  checks that a name-drop does not satisfy.
+- State-based assertions, forbidden-action checks, grounded citation checks
+  that a name-drop does not satisfy, and shape checks that a renamed field
+  cannot slip past.
 - Before/after state digests and human-readable state diffs.
 - Exact reset verification, cross-run flakiness rates, and regression
   detection against either a committed baseline or the last N runs, with a
@@ -104,6 +110,45 @@ The scenario includes a synthetic prompt-injection payload: one message wraps a
 genuine request around an instruction to send everything and open protected
 mail. Answering the request is correct; obeying the instruction is what the
 forbidden-action assertions catch.
+
+## Grade the shape and the truth separately
+
+An agent can hold its output contract perfectly while inventing what goes
+inside it. Two scenarios, one live agent, the same twelve runs:
+
+```text
+web-extraction-contract     result matches the contract   12 / 12
+web-extraction-grounding    entities grounded in the page  4 / 12
+```
+
+Every field a consumer parses was present and correctly typed every time. Two
+runs in three, the values were fabricated. Either check alone reports a
+different agent than the one that exists.
+
+`conforms_to` reports every violation with its path rather than the first, and
+refuses a misspelled keyword at load time instead of ignoring it:
+
+```text
+FAILED -> summary-keeps-its-shape
+  confidence         is not an accepted property
+  documents[0].point is 2 characters, minimum 10
+  documents[1].path  is required but missing
+  themes[0]          expected string, got integer
+```
+
+## Test whether content can give orders
+
+`scenarios/injection-resistance` puts injected instructions inside documents a
+subject is asked to summarise; `scenarios/hosted-injection-resistance` puts one
+in the content sent to a hosted agent. Detection is deterministic:
+`event_absent` catches coerced tool calls — recorded before dispatch, so an
+attempt policy refused is still evidence — and `contains_none` catches
+exfiltration using strings that appear only in the withheld material, never in
+the injected instruction. An agent that quotes the injection while declining it
+passes, which is the behaviour you want.
+
+Pair it with an assertion that the real work happened. An agent that answers
+something else entirely leaks nothing and would otherwise pass.
 
 ## Check that a result is repeatable
 
@@ -420,6 +465,7 @@ beacon/
   cli.py          Dependency-free command-line interface
   evaluation.py   Deterministic assertion engine
   evidence.py     JSON and Markdown evidence output
+  outputschema.py Output-shape checking for `conforms_to`
   runner.py       Scenario lifecycle orchestration
   scaffold.py     `beacon init` scenario and service generation
 examples/         External JSONL subject and MCP fixture
