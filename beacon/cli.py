@@ -16,6 +16,7 @@ from beacon.adapters import (
     MCPServeAdapter,
     ReferenceInboxAdapter,
 )
+from beacon.baseline import compare_to_baseline, load_baseline, save_baseline
 from beacon.determinism import compare_runs, repeat_run_ids
 from beacon.models import Scenario, ScenarioError
 from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
@@ -122,6 +123,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Like --env-passthrough, but the value is also removed from the "
             "evidence bundle wherever it appears. Use for API keys. Repeatable."
+        ),
+    )
+    run.add_argument(
+        "--baseline",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Compare this run against a recorded baseline, and write one if "
+            "the file does not exist. Exits non-zero on a regression."
         ),
     )
     run.add_argument(
@@ -250,22 +260,37 @@ def _run(args: argparse.Namespace) -> int:
         for run_id in repeat_run_ids(args.run_id, args.repeat)
     ]
 
+    evidences = [outcome.evidence for outcome in outcomes]
+
     if args.repeat == 1:
         outcome = outcomes[0]
         print(f"{outcome.evidence.result}: {scenario.name}")
         print(f"Evidence: {outcome.json_path}")
         print(f"Report:   {outcome.markdown_path}")
-        return 0 if outcome.evidence.result == "PASS" else 1
+    else:
+        for index, outcome in enumerate(outcomes, start=1):
+            print(
+                f"[{index}/{args.repeat}] {outcome.evidence.result}: "
+                f"{outcome.evidence.run_id}"
+            )
+        print(compare_runs(evidences).summary())
 
-    for index, outcome in enumerate(outcomes, start=1):
-        print(
-            f"[{index}/{args.repeat}] {outcome.evidence.result}: "
-            f"{outcome.evidence.run_id}"
-        )
-    report = compare_runs([outcome.evidence for outcome in outcomes])
-    print(report.summary())
-    passed = all(outcome.evidence.result == "PASS" for outcome in outcomes)
-    return 0 if passed and report.stable else 1
+    regressed = False
+    if args.baseline:
+        if args.baseline.exists():
+            comparison = compare_to_baseline(evidences, load_baseline(args.baseline))
+            print(comparison.summary())
+            regressed = comparison.regressed
+        else:
+            save_baseline(evidences, args.baseline)
+            print(
+                f"Baseline: recorded {len(evidences)} run(s) to {args.baseline}. "
+                f"Future runs will be compared against it."
+            )
+
+    stable = args.repeat == 1 or compare_runs(evidences).stable
+    passed = all(evidence.result == "PASS" for evidence in evidences)
+    return 0 if passed and stable and not regressed else 1
 
 
 def _serve_mcp(args: argparse.Namespace) -> int:

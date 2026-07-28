@@ -24,7 +24,8 @@ A2A protocol entry points without coupling the core to one agent runtime.
 - State-based assertions, forbidden-action checks, and grounded citation
   checks that a name-drop does not satisfy.
 - Before/after state digests and human-readable state diffs.
-- Exact reset verification, and cross-run determinism checking.
+- Exact reset verification, cross-run flakiness rates, and regression
+  detection against a recorded baseline.
 - Immutable JSON evidence, event logs, and a Markdown report — written for
   every run, whatever the verdict.
 - Scenario validation at load time, checked against the published JSON Schema.
@@ -45,6 +46,13 @@ A2A protocol entry points without coupling the core to one agent runtime.
   cost accounting, signing, or hosted service.
 - A passing report is evidence for one synthetic scenario and configuration.
   It is not a safety certification.
+
+## If you build agents
+
+[docs/agent-builders.md](docs/agent-builders.md) is the shortest path: point
+Beacon at your agent, measure how often it fails rather than whether it failed
+once, and fail CI when it regresses against a recorded baseline. No API key —
+your agent brings its own model, and grading is deterministic.
 
 ## Requirements
 
