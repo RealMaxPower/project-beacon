@@ -16,12 +16,20 @@ from beacon.adapters import (
     MCPServeAdapter,
     ReferenceInboxAdapter,
 )
-from beacon.baseline import compare_to_baseline, load_baseline, save_baseline
+from beacon.baseline import (
+    build_baseline,
+    compare_to_baseline,
+    load_baseline,
+    load_recent_evidence,
+    save_baseline,
+)
 from beacon.determinism import compare_runs, repeat_run_ids
-from beacon.models import Scenario, ScenarioError
+from beacon.models import Evidence, Scenario, ScenarioError
 from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
+from beacon.scaffold import scaffold
 from beacon.secrets import SecretError, looks_like_a_secret
 from beacon.runner import run_scenario
+from beacon.services import import_service_module, is_service
 
 
 def split_command(text: str) -> list[str]:
@@ -67,6 +75,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subparsers.add_parser("validate", help="Validate a scenario file.")
     validate.add_argument("scenario", type=Path)
+    validate.add_argument(
+        "--service-module",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help=(
+            "Import this module first, so a service it registers is "
+            "recognised rather than reported as a plain data fixture."
+        ),
+    )
 
     run = subparsers.add_parser("run", help="Run a scenario and write evidence.")
     run.add_argument("scenario", type=Path)
@@ -135,6 +153,38 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     run.add_argument(
+        "--service-module",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help=(
+            "Import this module before running, so a service it registers is "
+            "available to the scenario. Accepts a dotted name or a path to a "
+            ".py file. Repeatable."
+        ),
+    )
+    run.add_argument(
+        "--baseline-recent",
+        type=int,
+        metavar="N",
+        help=(
+            "Compare this run against the last N runs of the same scenario "
+            "and subject already in --output. Needs no committed file, and "
+            "reports nothing on the first run. Exits non-zero on a regression."
+        ),
+    )
+    run.add_argument(
+        "--baseline-tolerance",
+        type=float,
+        default=0.0,
+        metavar="RATE",
+        help=(
+            "Allow a pass rate to drop this much before calling it a "
+            "regression, as a fraction: 0.1 permits ten points of sampling "
+            "noise. Defaults to 0, which reports any drop."
+        ),
+    )
+    run.add_argument(
         "--repeat",
         type=int,
         default=1,
@@ -143,6 +193,35 @@ def build_parser() -> argparse.ArgumentParser:
             "Run the scenario N times and report whether the verdict, state "
             "digests, and assertion results are identical across runs."
         ),
+    )
+
+    init = subparsers.add_parser(
+        "init",
+        help="Generate a runnable scenario, with the subjects that prove it grades.",
+    )
+    init.add_argument(
+        "scenario_id",
+        help="Lowercase, hyphenated, e.g. refund-policy-grounding.",
+    )
+    init.add_argument(
+        "--dir",
+        type=Path,
+        default=Path("scenarios"),
+        help="Where the scenario directory is created. Default: scenarios/",
+    )
+    init.add_argument(
+        "--service",
+        metavar="NAME",
+        help=(
+            "Also generate a synthetic service under this fixture name, and a "
+            "scenario graded on its state rather than on the answer text. "
+            "Omit for a black-box scenario against a hosted agent."
+        ),
+    )
+    init.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing files.",
     )
 
     adapters = subparsers.add_parser(
@@ -191,7 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _validate(path: Path) -> int:
+def _validate(path: Path, service_modules: Sequence[str] = ()) -> int:
+    for module in service_modules:
+        import_service_module(module)
     scenario = Scenario.load(path)
     print(
         json.dumps(
@@ -200,7 +281,15 @@ def _validate(path: Path) -> int:
                 "id": scenario.id,
                 "name": scenario.name,
                 "assertions": len(scenario.assertions),
-                "services": sorted(scenario.fixtures),
+                # A fixture is only a service if something is registered under
+                # that name. Calling a plain data fixture a service implies the
+                # subject gets tools it will never be offered.
+                "services": sorted(
+                    name for name in scenario.fixtures if is_service(name)
+                ),
+                "data_fixtures": sorted(
+                    name for name in scenario.fixtures if not is_service(name)
+                ),
             },
             indent=2,
         )
@@ -208,10 +297,85 @@ def _validate(path: Path) -> int:
     return 0
 
 
+def _report_baseline(
+    args: argparse.Namespace, evidences: Sequence[Evidence]
+) -> bool:
+    """Print the baseline comparison, if one was asked for. True on regression."""
+    if args.baseline:
+        if args.baseline.exists():
+            comparison = compare_to_baseline(
+                evidences,
+                load_baseline(args.baseline),
+                tolerance=args.baseline_tolerance,
+                source=str(args.baseline),
+            )
+            print(comparison.summary())
+            return comparison.regressed
+        save_baseline(evidences, args.baseline)
+        print(
+            f"Baseline: recorded {len(evidences)} run(s) to {args.baseline}. "
+            f"Future runs will be compared against it."
+        )
+        return False
+
+    if args.baseline_recent:
+        history = load_recent_evidence(
+            args.output,
+            like=evidences[0],
+            exclude_run_ids=[evidence.run_id for evidence in evidences],
+            limit=args.baseline_recent,
+        )
+        if not history:
+            # The first run of a scenario has nothing to be worse than. Saying
+            # so is better than printing an empty comparison that reads like a
+            # clean bill of health.
+            print(
+                "Baseline: no earlier runs of this scenario and subject in "
+                f"{args.output}. Recording this run as the first."
+            )
+            return False
+        comparison = compare_to_baseline(
+            evidences,
+            build_baseline(history),
+            tolerance=args.baseline_tolerance,
+            source=f"last {len(history)} run(s)",
+        )
+        print(comparison.summary())
+        return comparison.regressed
+
+    return False
+
+
+def _init(args: argparse.Namespace) -> int:
+    created = scaffold(
+        args.scenario_id, args.dir, service=args.service, force=args.force
+    )
+    for path in created:
+        print(f"created  {path}")
+    directory = args.dir / args.scenario_id
+    print()
+    print(f"Next: {directory / 'README.md'} has the two commands to run.")
+    print("The second one is meant to fail. That is how you know it grades.")
+    return 0
+
+
 def _run(args: argparse.Namespace) -> int:
+    for module in args.service_module:
+        import_service_module(module)
     scenario = Scenario.load(args.scenario)
     if args.repeat < 1:
         raise ScenarioError("--repeat must be at least 1")
+    if args.baseline and args.baseline_recent:
+        raise ScenarioError(
+            "--baseline and --baseline-recent are two different questions. "
+            "A file baseline asks whether this is worse than the version you "
+            "blessed; --baseline-recent asks whether it is worse than "
+            "yesterday. Pick one."
+        )
+    if args.baseline_recent is not None and args.baseline_recent < 1:
+        raise ScenarioError("--baseline-recent must be at least 1")
+    if not 0.0 <= args.baseline_tolerance < 1.0:
+        raise ScenarioError("--baseline-tolerance must be a fraction in [0, 1)")
     unmarked = [name for name in args.env_passthrough if looks_like_a_secret(name)]
     if unmarked:
         raise ScenarioError(
@@ -275,18 +439,7 @@ def _run(args: argparse.Namespace) -> int:
             )
         print(compare_runs(evidences).summary())
 
-    regressed = False
-    if args.baseline:
-        if args.baseline.exists():
-            comparison = compare_to_baseline(evidences, load_baseline(args.baseline))
-            print(comparison.summary())
-            regressed = comparison.regressed
-        else:
-            save_baseline(evidences, args.baseline)
-            print(
-                f"Baseline: recorded {len(evidences)} run(s) to {args.baseline}. "
-                f"Future runs will be compared against it."
-            )
+    regressed = _report_baseline(args, evidences)
 
     stable = args.repeat == 1 or compare_runs(evidences).stable
     passed = all(evidence.result == "PASS" for evidence in evidences)
@@ -395,7 +548,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command_name == "validate":
-            return _validate(args.scenario)
+            return _validate(args.scenario, args.service_module)
+        if args.command_name == "init":
+            return _init(args)
         if args.command_name == "run":
             return _run(args)
         if args.command_name == "serve-mcp":

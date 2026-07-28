@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -109,6 +109,21 @@ class AssertionSpec:
                 raise ScenarioError(
                     f"{kind} assertion '{identifier}' needs a non-empty '{name}'"
                 )
+        # A field this type does not read is worse than a missing one: it is
+        # silently ignored, so the author believes they constrained something
+        # they did not, and the resulting verdict looks like the agent's
+        # failure rather than the scenario's.
+        ignored = sorted(
+            name
+            for name in ("path", "expected", "target")
+            if name in value and name not in rule["requires"]
+        )
+        if ignored:
+            raise ScenarioError(
+                f"{kind} assertion '{identifier}' does not use "
+                f"{', '.join(repr(name) for name in ignored)}; the field would "
+                f"be ignored. {kind} reads {', '.join(rule['requires'])}."
+            )
         if rule.get("citation_expected"):
             expected = value["expected"]
             if not isinstance(expected, dict):
@@ -366,6 +381,47 @@ class Evidence:
     reset_verified: bool
     limitations: list[str]
     digest: str = ""
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Evidence":
+        """
+        Rebuild an evidence bundle from disk.
+
+        Every field is taken as written, including the digest, so a bundle can
+        be re-read and re-graded without calling the subject again. Fields
+        added since a bundle was written default rather than raising: an old
+        bundle staying readable is the point of writing one.
+        """
+        known = {item.name for item in fields(cls)}
+        unknown = sorted(set(value) - known)
+        if unknown:
+            raise ValueError(
+                f"evidence has unknown fields: {', '.join(unknown)}"
+            )
+        return cls(
+            evidence_version=str(value.get("evidence_version", "0.1")),
+            run_id=str(value["run_id"]),
+            started_at=str(value.get("started_at", "")),
+            completed_at=str(value.get("completed_at", "")),
+            scenario=dict(value.get("scenario", {})),
+            subject=dict(value.get("subject", {})),
+            result=str(value["result"]),
+            assertions=list(value.get("assertions", [])),
+            state=dict(value.get("state", {})),
+            state_diff=dict(value.get("state_diff", {})),
+            events=list(value.get("events", [])),
+            artifacts=dict(value.get("artifacts", {})),
+            usage=dict(value.get("usage", {})),
+            reset_verified=bool(value.get("reset_verified", False)),
+            limitations=list(value.get("limitations", [])),
+            digest=str(value.get("digest", "")),
+        )
+
+    @classmethod
+    def load(cls, path: str | Path) -> "Evidence":
+        return cls.from_dict(
+            json.loads(Path(path).read_text(encoding="utf-8"))
+        )
 
     def unsigned_dict(self) -> dict[str, Any]:
         value = asdict(self)

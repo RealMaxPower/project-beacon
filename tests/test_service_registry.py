@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ from beacon.services import (
     ServiceError,
     SyntheticService,
     build_service,
+    import_service_module,
     is_service,
     register_service,
     registered_services,
@@ -95,6 +97,63 @@ class RegistryTests(unittest.TestCase):
     def test_a_service_name_must_be_usable_as_a_fixture_key(self) -> None:
         with self.assertRaises(ServiceError):
             register_service("not a name", lambda fixture, recorder: object())
+
+
+class ServiceModuleImportTests(unittest.TestCase):
+    """
+    `--service-module` is what makes a service living outside this package
+    reachable from the command line. A generated service sits in a scenario
+    directory with no package around it, so a dotted name is not enough.
+    """
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def _module(self, name: str) -> Path:
+        # The registry is process-global, so a test that leaves an entry
+        # behind changes what a later test sees. This one asserts the exact
+        # set of shipped services.
+        self.addCleanup(
+            lambda: __import__(
+                "beacon.services.registry", fromlist=["_FACTORIES"]
+            )._FACTORIES.pop(name, None)
+        )
+        path = self.root / f"{name}.py"
+        path.write_text(
+            "from beacon.services import register_service\n"
+            "class Svc:\n"
+            "    def __init__(self, fixture, recorder): pass\n"
+            "    def definitions(self): return ()\n"
+            "    def call(self, tool, arguments): raise KeyError(tool)\n"
+            "    def snapshot(self): return {}\n"
+            "    def reset(self): pass\n"
+            f'register_service("{name}", lambda fixture, recorder: Svc(fixture, recorder))\n',
+            encoding="utf-8",
+        )
+        return path
+
+    def test_a_service_file_can_be_imported_by_path(self) -> None:
+        import_service_module(str(self._module("bypath")))
+        self.assertTrue(is_service("bypath"))
+
+    def test_importing_the_same_file_twice_is_not_a_conflict(self) -> None:
+        """
+        The second import would build a second, different factory for the same
+        name, which the registry refuses — correctly. Load once instead.
+        """
+        path = str(self._module("twice"))
+        import_service_module(path)
+        import_service_module(path)
+        self.assertTrue(is_service("twice"))
+
+    def test_a_missing_file_is_reported_clearly(self) -> None:
+        with self.assertRaises(ServiceError):
+            import_service_module(str(self.root / "absent.py"))
+
+    def test_an_unimportable_dotted_name_is_reported_clearly(self) -> None:
+        with self.assertRaises(ServiceError):
+            import_service_module("no_such_module_anywhere")
 
 
 class FileServiceTests(unittest.TestCase):

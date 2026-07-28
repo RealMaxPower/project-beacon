@@ -8,6 +8,20 @@ there is no API key to give Beacon and no per-run inference cost on its side.
 Grading is deterministic string and state comparison — reproducible, free, and
 it does not drift when a judge model is updated underneath you.
 
+## Start from something that runs
+
+```bash
+python3 -m beacon init my-first-probe
+```
+
+That writes a scenario, and two subjects: one that satisfies every assertion
+and one that violates exactly one. Run both — the second is *meant* to fail,
+and watching it fail is how you know the assertion measures something. Add
+`--service notes` instead for a scenario graded on the state of a simulated
+service rather than on the answer text.
+
+The generated `README.md` has the exact commands.
+
 ## Point it at your agent
 
 No bridge code for either of these.
@@ -61,8 +75,8 @@ python3 -m beacon run scenario.json --adapter a2a --agent-url ... \
 The first run records the baseline. Every run after compares against it:
 
 ```
-Baseline: recorded 2026-07-01T09:00:00+00:00 over 20 run(s).
-  REGRESSION  entities-grounded passed 100% of baseline runs, 33% now
+Baseline (baselines/my-agent.json): recorded 2026-07-01T09:00:00+00:00 over 20 run(s).
+  REGRESSION  entities-grounded passed 100% of baseline runs, 33% now (4/12)
 ```
 
 Non-zero exit, so CI fails. Comparison is by **pass rate**, not verdict,
@@ -71,6 +85,36 @@ single-run comparisons in four.
 
 Commit the baseline file. Regenerate it deliberately when a change is
 intentional, the way you would re-record a snapshot test.
+
+### Or compare against the last N runs
+
+If nobody has blessed a version yet, `--baseline-recent` asks the other
+question — is this worse than yesterday — with no file to maintain:
+
+```bash
+python3 -m beacon run scenario.json --adapter a2a --agent-url ... \
+  --repeat 10 --baseline-recent 20
+```
+
+It reads the last 20 runs of the same scenario and the same subject out of
+the output directory, and says so when there are none yet rather than
+printing a clean bill of health. Runs of a different scenario, or of a
+different agent sharing the directory, are skipped — a subject is identified
+by its endpoint or command line, not by the adapter's name, because every
+A2A subject reports the same id.
+
+### A drop is not automatically a regression
+
+Both modes only call a drop a regression when the sample rules out chance.
+An agent that genuinely passes a third of the time fails a single run two
+times in three; reporting each of those would make the check worthless
+inside a week. So a single failing run against a flaky baseline says nothing,
+while the same single run against a baseline that never failed is conclusive.
+**How many runs it takes to prove a regression scales with how flaky the
+baseline already said the subject was.**
+
+`--baseline-tolerance 0.1` adds a deliberate margin on top: a ten-point drop
+is accepted as uninteresting even where it is statistically real.
 
 ## Assertions that survive a model rewrite
 
@@ -131,20 +175,31 @@ bundle under `usage`.
 
 ## Test your own domain
 
-Scenarios need a synthetic service. Beacon ships `mail` and `files`; register
-your own without touching Beacon's source:
+A scenario graded on *state* needs a synthetic service. Beacon ships `mail`
+and `files`; `beacon init --service <name>` generates a third, or write one
+and register it without touching Beacon's source:
 
 ```python
 from beacon.services import register_service
-register_service("calendar", CalendarService)
+register_service("calendar", lambda fixture, recorder: CalendarService(fixture, recorder))
+```
+
+Then point Beacon at the module that registers it:
+
+```bash
+python3 -m beacon run scenario.json --service-module scenarios/mine/service.py
 ```
 
 A service implements four methods — `definitions`, `call`, `snapshot`,
 `reset`. Snapshot and reset carry the weight: every verdict is a diff between
 two snapshots, and a reset that is not exact corrupts the next run of a
-repeat. See [beacon/services/files.py](../beacon/services/files.py), which was
-written entirely against the published contract and needed no change to the
-runner, router or evaluator.
+repeat. Assertions read paths out of the snapshot and cannot filter, so
+anything you want to assert on has to be something the snapshot names — derive
+it there rather than trying to express it in the assertion.
+
+See [beacon/services/files.py](../beacon/services/files.py), which was written
+entirely against the published contract and needed no change to the runner,
+router or evaluator.
 
 ## What Beacon will not tell you
 

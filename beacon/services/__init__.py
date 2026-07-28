@@ -5,6 +5,7 @@ from beacon.services.mail import MailService, ToolPolicyError
 from beacon.services.registry import (
     ServiceError,
     build_service,
+    import_service_module,
     is_service,
     register_service,
     registered_services,
@@ -26,6 +27,7 @@ __all__ = [
     "ToolPolicyError",
     "ToolRouter",
     "build_service",
+    "import_service_module",
     "is_service",
     "register_service",
     "registered_services",

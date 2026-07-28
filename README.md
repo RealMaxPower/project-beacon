@@ -14,8 +14,11 @@ A2A protocol entry points without coupling the core to one agent runtime.
 
 ## What works
 
-- Two synthetic scenarios over two services (mail and files), one carrying a
-  prompt-injection fixture.
+- Four scenarios: two graded on the state of a synthetic service (mail and
+  files), one of which carries a prompt-injection fixture, and two graded on
+  whether a hosted agent's answer is grounded in what it was given.
+- `beacon init`, which generates a scenario that runs immediately together
+  with the subject that violates it.
 - A deterministic in-process reference agent.
 - A bidirectional JSONL adapter for wrapping a CLI, API, or SDK agent.
 - Synthetic mail and document services with scoped tools and policy
@@ -25,22 +28,24 @@ A2A protocol entry points without coupling the core to one agent runtime.
   checks that a name-drop does not satisfy.
 - Before/after state digests and human-readable state diffs.
 - Exact reset verification, cross-run flakiness rates, and regression
-  detection against a recorded baseline.
+  detection against either a committed baseline or the last N runs, with a
+  significance test so a flaky subject does not fail CI at random.
 - Immutable JSON evidence, event logs, and a Markdown report — written for
   every run, whatever the verdict.
 - Scenario validation at load time, checked against the published JSON Schema.
 - An adversarial subject suite that tests whether the verdicts are right.
 - An MCP server façade: any MCP host can be the subject, over HTTP with a
   per-run bearer token.
-- Minimal MCP stdio client for discovery and tool calls.
-- Minimal A2A v1.0 Agent Card discovery and message sending.
+- An A2A subject adapter: a hosted agent is graded through the full
+  scenario and evidence lifecycle with no bridge code, against both the 0.x
+  and 1.x request shapes.
+- Minimal MCP stdio and Streamable HTTP clients for discovery and tool calls.
+- Minimal A2A Agent Card discovery and message sending.
 - A dependency-free Python CLI and test suite.
 
 ## What does not work yet
 
 - The process runner is not a hardened container or VM sandbox.
-- A2A targets can be inspected and called, but are not yet wired into the
-  full scenario/evidence lifecycle.
 - There is no OpenClaw, Hermes, Codex, or other native runtime adapter yet.
 - There is no web UI, approval interface, service virtualization proxy, model
   cost accounting, signing, or hosted service.
@@ -53,6 +58,18 @@ A2A protocol entry points without coupling the core to one agent runtime.
 Beacon at your agent, measure how often it fails rather than whether it failed
 once, and fail CI when it regresses against a recorded baseline. No API key —
 your agent brings its own model, and grading is deterministic.
+
+## Start your own scenario
+
+```bash
+python3 -m beacon init my-first-probe
+```
+
+Writes a scenario that runs immediately, plus two subjects: one that satisfies
+every assertion and one that violates exactly one. The second is meant to fail
+— watching it fail is the only proof the assertion measures anything. Add
+`--service notes` for a scenario graded on the state of a simulated service
+instead of on the answer.
 
 ## Requirements
 
@@ -113,6 +130,33 @@ count as divergence.
 
 Use `--run-id` to give a run a stable directory name; repeats are suffixed
 `-001`, `-002`, and so on.
+
+## Catch a regression, not just a failure
+
+`--repeat` asks whether a subject agrees with itself right now. Whether it is
+worse than it was is a different question, and a subject can be perfectly
+self-consistent and consistently wrong:
+
+```bash
+# Against a committed snapshot, recorded on the first run
+python3 -m beacon run scenarios/inbox-briefing/scenario.json \
+  --repeat 10 --baseline baselines/reference.json
+
+# Or against the last 20 runs already in the output directory
+python3 -m beacon run scenarios/inbox-briefing/scenario.json \
+  --repeat 10 --baseline-recent 20
+```
+
+```text
+Baseline (last 20 run(s)): recorded 2026-07-01T09:00:00+00:00 over 20 run(s).
+  REGRESSION  entities-grounded passed 100% of baseline runs, 33% now (4/12)
+```
+
+Non-zero exit, so CI fails. Comparison is by pass **rate**, because a subject
+failing a quarter of the time still passes three single-run comparisons in
+four. A drop counts as a regression only when the sample rules out chance, so
+a flaky agent does not fail the build at random — and how many runs it takes
+to prove a regression scales with how flaky the baseline said the subject was.
 
 ## Run an external command subject
 
@@ -372,10 +416,12 @@ beacon/
   adapters/       Subject contracts and reference adapters
   protocols/      MCP and A2A protocol clients
   services/       Synthetic stateful services and tool router
+  baseline.py     Pass-rate baselines and regression detection
   cli.py          Dependency-free command-line interface
   evaluation.py   Deterministic assertion engine
   evidence.py     JSON and Markdown evidence output
   runner.py       Scenario lifecycle orchestration
+  scaffold.py     `beacon init` scenario and service generation
 examples/         External JSONL subject and MCP fixture
 scenarios/        Versioned scenario packages and synthetic fixtures
 schemas/          Scenario and evidence JSON Schemas

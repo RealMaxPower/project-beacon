@@ -89,6 +89,68 @@ class ToolScopingTests(unittest.TestCase):
         self.assertIn("mail_send_draft", scenario.tools or ())
 
 
+class AssertionFieldTests(unittest.TestCase):
+    """
+    A field an assertion type does not read is silently ignored, so the author
+    believes they constrained something they did not — and the verdict that
+    follows reads as the agent's failure rather than the scenario's. Found by
+    writing a set_equals with a target filter that did nothing.
+    """
+
+    def _with_assertion(self, assertion: dict[str, Any]) -> dict[str, Any]:
+        return _scenario_dict(assertions=[assertion])
+
+    def test_a_filter_target_on_a_state_assertion_is_refused(self) -> None:
+        with self.assertRaises(ScenarioError) as caught:
+            Scenario.from_dict(
+                self._with_assertion(
+                    {
+                        "id": "a",
+                        "type": "set_equals",
+                        "description": "d",
+                        "path": "after.mail.messages.*.id",
+                        "expected": ["m-001"],
+                        "target": "mail_send_draft",
+                    }
+                )
+            )
+        self.assertIn("does not use", str(caught.exception))
+        self.assertIn("target", str(caught.exception))
+
+    def test_an_expected_value_on_unchanged_is_refused(self) -> None:
+        with self.assertRaises(ScenarioError):
+            Scenario.from_dict(
+                self._with_assertion(
+                    {
+                        "id": "a",
+                        "type": "unchanged",
+                        "description": "d",
+                        "path": "after.mail.messages",
+                        "expected": [],
+                    }
+                )
+            )
+
+    def test_a_path_on_an_event_assertion_is_refused(self) -> None:
+        with self.assertRaises(ScenarioError):
+            Scenario.from_dict(
+                self._with_assertion(
+                    {
+                        "id": "a",
+                        "type": "event_absent",
+                        "description": "d",
+                        "target": "mail_send_draft",
+                        "path": "events.*.target",
+                    }
+                )
+            )
+
+    def test_the_shipped_scenarios_all_still_load(self) -> None:
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            with self.subTest(scenario=path.parent.name):
+                Scenario.load(path)
+
+
 class WorkspaceIsolationTests(unittest.TestCase):
     def test_subject_files_land_beside_the_evidence_not_among_it(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -179,6 +180,47 @@ class RepeatedRunTests(unittest.TestCase):
                 ["run", str(SCENARIO), "--output", directory, "--repeat", "0"]
             )
         self.assertEqual(code, 2)
+
+
+class RollingBaselineCLITests(unittest.TestCase):
+    """`--baseline-recent` reads its history out of the output directory."""
+
+    def setUp(self) -> None:
+        self.directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.directory, True)
+
+    def _run(self, *extra: str) -> int:
+        return main(["run", str(SCENARIO), "--output", self.directory, *extra])
+
+    def test_the_first_run_has_nothing_to_compare_against_and_still_passes(self) -> None:
+        self.assertEqual(self._run("--baseline-recent", "5"), 0)
+
+    def test_an_unchanged_subject_reports_no_regression(self) -> None:
+        self._run("--run-id", "history", "--repeat", "3")
+        self.assertEqual(self._run("--baseline-recent", "5"), 0)
+
+    def test_the_current_runs_do_not_become_their_own_baseline(self) -> None:
+        """
+        Comparing a run against itself always says "no change", which would
+        make the check pass unconditionally.
+        """
+        self.assertEqual(
+            self._run("--run-id", "solo", "--repeat", "3", "--baseline-recent", "5"), 0
+        )
+        recorded = sorted(path.parent.name for path in Path(self.directory).glob("*/evidence.json"))
+        self.assertEqual(recorded, ["solo-001", "solo-002", "solo-003"])
+
+    def test_the_two_baseline_modes_are_mutually_exclusive(self) -> None:
+        code = self._run(
+            "--baseline", str(Path(self.directory) / "b.json"), "--baseline-recent", "5"
+        )
+        self.assertEqual(code, 2)
+
+    def test_a_window_below_one_is_refused(self) -> None:
+        self.assertEqual(self._run("--baseline-recent", "0"), 2)
+
+    def test_a_tolerance_outside_zero_to_one_is_refused(self) -> None:
+        self.assertEqual(self._run("--baseline-recent", "5", "--baseline-tolerance", "1.5"), 2)
 
 
 if __name__ == "__main__":
