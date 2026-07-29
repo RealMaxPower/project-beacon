@@ -8,20 +8,26 @@ version = "0.1.0"
 description = "A protocol-neutral trial and readiness lab for AI agents, tools, and multi-agent systems."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
   { name = "Project Beacon contributors" }
 ]
 keywords = ["agents", "mcp", "a2a", "evaluation", "simulation"]
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/project-beacon/project-beacon"
+Repository = "https://github.com/project-beacon/project-beacon"
+Issues = "https://github.com/project-beacon/project-beacon/issues"
+Changelog = "https://github.com/project-beacon/project-beacon/releases"
 
 # The core stays stdlib-only so `python3 -m beacon run` works in an empty
 # environment. Extras add depth, never a requirement: with jsonschema absent
@@ -33,7 +39,19 @@ validate = ["jsonschema>=4.21"]
 [project.scripts]
 beacon = "beacon.cli:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["beacon*"]
+[tool.setuptools]
+packages = [
+  "beacon",
+  "beacon.adapters",
+  "beacon.protocols",
+  "beacon.services",
+  "beacon.builtin_scenarios",
+]
+
+[tool.setuptools.package-dir]
+"beacon.builtin_scenarios" = "scenarios"
+
+[tool.setuptools.package-data]
+"beacon.builtin_scenarios" = ["*/scenario.json"]
+
 

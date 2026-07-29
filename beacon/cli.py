@@ -16,6 +16,7 @@ from beacon.adapters import (
     MCPServeAdapter,
     ReferenceInboxAdapter,
 )
+from beacon.builtins import builtin_names, builtin_root, resolve_scenario
 from beacon.baseline import (
     build_baseline,
     compare_to_baseline,
@@ -74,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command_name", required=True)
 
     validate = subparsers.add_parser("validate", help="Validate a scenario file.")
-    validate.add_argument("scenario", type=Path)
+    validate.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
     validate.add_argument(
         "--service-module",
         action="append",
@@ -87,7 +88,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     run = subparsers.add_parser("run", help="Run a scenario and write evidence.")
-    run.add_argument("scenario", type=Path)
+    run.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
     run.add_argument(
         "--adapter",
         choices=("reference", "command", "mcp-host", "a2a"),
@@ -224,6 +225,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overwrite existing files.",
     )
 
+    subparsers.add_parser(
+        "scenarios",
+        help="List the scenarios shipped with this installation.",
+    )
+
     adapters = subparsers.add_parser(
         "adapters",
         help="List built-in subject and protocol adapters.",
@@ -233,7 +239,7 @@ def build_parser() -> argparse.ArgumentParser:
         "serve-mcp",
         help="Serve a scenario's tools over MCP and wait for a host to connect.",
     )
-    serve.add_argument("scenario", type=Path)
+    serve.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
     serve.add_argument(
         "--output",
         type=Path,
@@ -273,7 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _validate(path: Path, service_modules: Sequence[str] = ()) -> int:
     for module in service_modules:
         import_service_module(module)
-    scenario = Scenario.load(path)
+    scenario = Scenario.load(resolve_scenario(path))
     print(
         json.dumps(
             {
@@ -362,7 +368,7 @@ def _init(args: argparse.Namespace) -> int:
 def _run(args: argparse.Namespace) -> int:
     for module in args.service_module:
         import_service_module(module)
-    scenario = Scenario.load(args.scenario)
+    scenario = Scenario.load(resolve_scenario(args.scenario))
     if args.repeat < 1:
         raise ScenarioError("--repeat must be at least 1")
     if args.baseline and args.baseline_recent:
@@ -447,7 +453,7 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def _serve_mcp(args: argparse.Namespace) -> int:
-    scenario = Scenario.load(args.scenario)
+    scenario = Scenario.load(resolve_scenario(args.scenario))
     outcome = run_scenario(
         scenario,
         MCPServeAdapter(timeout_seconds=args.timeout),
@@ -459,6 +465,23 @@ def _serve_mcp(args: argparse.Namespace) -> int:
     print(f"Evidence: {outcome.json_path}")
     print(f"Report:   {outcome.markdown_path}")
     return 0 if outcome.evidence.result == "PASS" else 1
+
+
+def _scenarios() -> int:
+    root = builtin_root()
+    names = builtin_names()
+    if not names:
+        print(
+            "No built-in scenarios found in this installation.", file=sys.stderr
+        )
+        return 2
+    print(f"Built-in scenarios ({root}):")
+    for name in names:
+        scenario = Scenario.load(root / name / "scenario.json")
+        print(f"  {name:32} {scenario.name}")
+    print()
+    print("Run one by name, with no path:  beacon run inbox-briefing")
+    return 0
 
 
 def _adapters() -> int:
@@ -555,6 +578,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run(args)
         if args.command_name == "serve-mcp":
             return _serve_mcp(args)
+        if args.command_name == "scenarios":
+            return _scenarios()
         if args.command_name == "adapters":
             return _adapters()
         if args.command_name == "mcp-inspect":

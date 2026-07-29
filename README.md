@@ -79,6 +79,24 @@ every assertion and one that violates exactly one. The second is meant to fail
 `--service notes` for a scenario graded on the state of a simulated service
 instead of on the answer.
 
+## Install
+
+```bash
+pip install project-beacon
+```
+
+That gives you the `beacon` command and every scenario below, so nothing here
+needs a checkout:
+
+```bash
+beacon scenarios          # what shipped
+beacon run inbox-briefing # run one by name
+```
+
+Cloning works too, with no install and no dependencies — `python3 -m beacon`
+in place of `beacon`, and a path in place of a name. A path always wins over a
+built-in of the same name, so an edited local copy is the one that runs.
+
 ## Requirements
 
 - Python 3.11 or newer.
@@ -88,11 +106,9 @@ instead of on the answer.
 
 ## Run the vertical slice
 
-From the repository root:
-
 ```bash
-python3 -m beacon validate scenarios/inbox-briefing/scenario.json
-python3 -m beacon run scenarios/inbox-briefing/scenario.json
+python3 -m beacon validate inbox-briefing
+python3 -m beacon run inbox-briefing
 ```
 
 The second command writes an immutable run directory beneath
