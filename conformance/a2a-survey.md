@@ -104,6 +104,47 @@ speaks JSON-RPC. That is the same failure that once made every deployed agent
 unreachable, reached from a different direction — the earlier fix taught the
 client to *read* `additionalInterfaces`, and left the default wrong.
 
+## Can a marketplace supply more agents?
+
+It was worth asking — agent.ai's own card claims thousands of agents — so both
+marketplaces were followed to their listings.
+
+**agent.ai routes everything through one door.** Its card carries a
+non-standard `endpoint` field pointing at `https://mcp.agent.ai/mcp`, a
+Streamable HTTP MCP server, and the description says each agent is exposed
+"as a typed A2A skill and MCP tool". Beacon's MCP client reaches it and gets
+a clean `HTTP 401 invalid_token`. Enumerating the catalogue needs an account.
+
+**Kore's marketplace has no public listing.** It is an Angular application
+whose bundle names `/marketplace/data` — a client-side route that returns the
+shell — and an API at `/api/1.1/` that answers unauthenticated requests with
+a JSON 404. Its agents run inside the Kore platform rather than as separately
+addressable endpoints.
+
+**And a marketplace is the wrong shape for this job anyway.** A protocol
+client is hardened by *distinct implementations*, not by volume of traffic. A
+thousand agents behind one gateway is one implementation of the protocol
+exercised a thousand times: it would vary the content of the replies and
+nothing about their shape. Every defect in this survey came from a different
+implementation — the official Python SDK, a fly.io deployment, two servers on
+the older card path, and agent.ai's card — and none of them came from
+re-running an implementation already covered.
+
+Where the diversity actually lives is the SDKs. Five official ones exist, each
+written by different people from the same specification:
+
+| SDK | |
+|---|---|
+| `a2aproject/a2a-python` | swept here, 3 defects |
+| `a2aproject/a2a-js` | not yet |
+| `a2aproject/a2a-go` | not yet |
+| `a2aproject/a2a-java` | not yet |
+| `a2aproject/a2a-dotnet` | not yet |
+
+One of those five produced three defects in an afternoon. That is the seam to
+keep pulling, and `conformance/a2a_reference_agent.py` is the template: stand
+up the sample server, point Beacon at it, pin whatever shapes come back.
+
 ## On finding public A2A agents
 
 There are very few. The MCP registry lists hundreds of hosted servers; the A2A
