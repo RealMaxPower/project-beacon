@@ -19,6 +19,30 @@ TERMINAL_BAD = {
 }
 NEEDS_MORE = {"auth-required", "input-required", "TASK_STATE_INPUT_REQUIRED"}
 
+AGENT_ROLES = {"agent", "ROLE_AGENT"}
+"""
+How the two protocol lines spell the same role.
+
+0.x sends the JSON string `agent`. 1.x generates its wire format from
+protobuf, where the enum member is `ROLE_AGENT` and that name is what appears
+in JSON. Matching only one of them silently drops every reply from half the
+servers in the ecosystem.
+"""
+
+
+def _is_message(result: dict[str, Any]) -> bool:
+    """
+    Whether a `message/send` result is a Message rather than a Task.
+
+    Keyed on the reply actually carrying agent content — a nested `message`,
+    or parts of its own — rather than on the absence of `status`, so a
+    malformed task with no status is still reported as the unknown state it
+    is instead of being quietly promoted to a completed run.
+    """
+    if isinstance(result.get("message"), dict):
+        return True
+    return bool(result.get("parts")) and "artifacts" not in result
+
 
 class A2ASubjectAdapter:
     """
@@ -89,16 +113,31 @@ class A2ASubjectAdapter:
             context.add_artifact(name, payload)
             stored.append(name)
 
-        # A task can answer in messages rather than artifacts.
-        for message in result.get("history") or []:
-            if message.get("role") != "agent":
+        # An agent can answer in messages rather than artifacts. Two shapes:
+        # a task carrying `history`, and — the case that had Beacon reporting
+        # working agents as INCOMPLETE — a bare Message returned instead of a
+        # task at all, which `message/send` is explicitly allowed to do and
+        # which the reference SDK does for any agent that has no long-running
+        # work to track.
+        candidates = list(result.get("history") or [])
+        direct = result.get("message")
+        if isinstance(direct, dict):
+            candidates.append(direct)
+        elif result.get("role") in AGENT_ROLES and result.get("parts"):
+            # Some servers make the result *be* the message rather than
+            # wrapping it.
+            candidates.append(result)
+
+        for message in candidates:
+            if message.get("role") not in AGENT_ROLES:
                 continue
             text = "".join(
                 part.get("text", "") for part in message.get("parts") or []
             )
             if text:
-                context.add_artifact("agent_message", text)
-                stored.append("agent_message")
+                name = self._artifact_name or "agent_message"
+                context.add_artifact(name, text)
+                stored.append(name)
                 break
         return stored
 
@@ -151,8 +190,17 @@ class A2ASubjectAdapter:
             return SubjectResult(status="error", error=str(exc))
 
         result = response.get("result") or response.get("task") or {}
-        state = str((result.get("status") or {}).get("state", "unknown"))
         stored = self._store_artifacts(context, result)
+
+        # `message/send` may answer with a Task or with a Message. A Message
+        # has no status and needs none: it is the whole reply, already final.
+        # Reading a missing status as an unrecognised state reported a
+        # perfectly good agent as INCOMPLETE — and INCOMPLETE means "did not
+        # run", so the evidence said the opposite of what happened.
+        if "status" not in result and _is_message(result):
+            state = "completed"
+        else:
+            state = str((result.get("status") or {}).get("state", "unknown"))
 
         context.recorder.record(
             "a2a_task",

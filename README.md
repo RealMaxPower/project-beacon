@@ -48,6 +48,9 @@ A2A protocol entry points without coupling the core to one agent runtime.
   scenario and evidence lifecycle with no bridge code, against both the 0.x
   and 1.x request shapes.
 - Minimal MCP stdio and Streamable HTTP clients for discovery and tool calls.
+- A2A discovery across both well-known card paths, and replies accepted as
+  either a Task or a bare Message — checked against the official SDK's
+  reference server, which found four defects the specification alone did not.
 - Minimal A2A Agent Card discovery and message sending.
 - A dependency-free Python CLI and test suite.
 

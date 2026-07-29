@@ -66,12 +66,34 @@ class A2AClient:
         self.protocol_version = protocol_version
         self.authorization = authorization
         self.agent_card: dict[str, Any] | None = None
+        # Which well-known path actually answered, for the evidence record.
+        self.card_url_used: str | None = None
+
+    WELL_KNOWN_PATHS = (
+        "/.well-known/agent-card.json",
+        "/.well-known/agent.json",
+    )
+    """
+    Where an Agent Card may live, newest first.
+
+    The specification renamed this path: 0.2.x published `agent.json` and
+    later revisions publish `agent-card.json`. Deployed agents did not all
+    move, and two of the live public agents found in a survey answer 404 on
+    the new path and 200 on the old one. Trying only the current name makes
+    an entire generation of running agents invisible, and the failure reads
+    as "no such agent" rather than "we looked in one place".
+    """
 
     @property
     def card_url(self) -> str:
-        if self.base_url.endswith("agent-card.json"):
+        if self.base_url.endswith(".json"):
             return self.base_url
-        return f"{self.base_url}/.well-known/agent-card.json"
+        return f"{self.base_url}{self.WELL_KNOWN_PATHS[0]}"
+
+    def _card_urls(self) -> tuple[str, ...]:
+        if self.base_url.endswith(".json"):
+            return (self.base_url,)
+        return tuple(f"{self.base_url}{path}" for path in self.WELL_KNOWN_PATHS)
 
     def _request(
         self,
@@ -119,9 +141,28 @@ class A2AClient:
         return value
 
     def discover(self) -> dict[str, Any]:
-        card = self._request(self.card_url)
-        self.agent_card = card
-        return card
+        """
+        Fetch the Agent Card, trying each well-known path in turn.
+
+        Only a 404 moves on to the next path. A 401, a 403 or a timeout is
+        about *this* endpoint and says nothing about where the card lives, so
+        retrying elsewhere would replace an accurate error with a misleading
+        one about a path the agent never claimed to serve.
+        """
+        urls = self._card_urls()
+        last: A2AError | None = None
+        for index, url in enumerate(urls):
+            try:
+                card = self._request(url)
+            except A2AError as error:
+                if index + 1 < len(urls) and "404" in str(error):
+                    last = error
+                    continue
+                raise
+            self.card_url_used = url
+            self.agent_card = card
+            return card
+        raise last or A2AError(f"no Agent Card found under {self.base_url}")
 
     def _interface(self) -> dict[str, Any]:
         """
