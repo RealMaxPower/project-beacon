@@ -21,11 +21,11 @@ default that would have sent the wrong request shape to any card omitting it.
 | `agent-chat.…azurecontainerapps.io` | live, discovery only | **undiscoverable** |
 | `agent.ai` | live, discovery only, auth-gated | **wrong transport** |
 
-The last two were discovered but not driven. `UpMoltWork` publishes a
+The last three were discovered but not driven. `UpMoltWork` publishes a
 `task-marketplace` skill and `ConferenceHaven` publishes
 `send_calendar_invite`; both can change someone's state, and neither belongs
-to us. Fetching a card costs one request and is what the card is for. Sending
-a message is not.
+to us. `agent.ai` is gated behind oauth2 or an API key. Fetching a card costs
+one request and is what the card is for. Sending a message is not.
 
 ## Defects found
 
@@ -96,16 +96,13 @@ answers 200 to `/.well-known/agent-card.json`, `/.well-known/mcp.json` and
 parsing the body does, which is why the sweep checks content rather than
 reachability.
 
-**agent.ai found a fourth defect.** Its card is 0.3.0 with a top-level `url`
+**agent.ai found the fifth defect.** Its card is 0.3.0 with a top-level `url`
 and no `preferredTransport` at all. The specification declares
 `@default "JSONRPC"` for that field; Beacon defaulted to the REST binding, so
 an omitted transport produced `POST /message:send` against an agent that only
 speaks JSON-RPC. That is the same failure that once made every deployed agent
 unreachable, reached from a different direction — the earlier fix taught the
 client to *read* `additionalInterfaces`, and left the default wrong.
-
-Its skills are drafting and research rather than sending, but it is gated
-behind oauth2 or an API key, so it was discovered and not driven.
 
 ## On finding public A2A agents
 
