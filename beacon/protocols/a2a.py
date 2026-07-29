@@ -186,7 +186,13 @@ class A2AClient:
         if card.get("url"):
             return {
                 "url": card["url"],
-                "transport": card.get("preferredTransport", "HTTP+JSON"),
+                # The specification declares `@default "JSONRPC"` for an
+                # omitted preferredTransport, and omitting it is common —
+                # agent.ai's live card does. Defaulting to the REST binding
+                # instead sends `POST /message:send` to an agent that only
+                # speaks JSON-RPC, which is the same failure that made every
+                # deployed agent unreachable before, reached another way.
+                "transport": card.get("preferredTransport") or "JSONRPC",
                 "protocolVersion": self._card_protocol_version(),
             }
 

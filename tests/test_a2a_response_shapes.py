@@ -233,6 +233,66 @@ class OneDotXCardTests(unittest.TestCase):
         )
 
 
+class TransportDefaultTests(unittest.TestCase):
+    """
+    A 0.x card may omit `preferredTransport`. The specification declares
+    `@default "JSONRPC"`; Beacon defaulted to the REST binding, so a card
+    that left the field out got `POST /message:send` — a shape a JSON-RPC
+    agent has never heard of.
+
+    Found on agent.ai, whose live card is 0.3.0 with a top-level `url` and no
+    transport field at all. It is the same failure that made every deployed
+    agent unreachable before, arrived at from a different direction.
+    """
+
+    CARD_NO_TRANSPORT = {
+        "name": "Agent.ai",
+        "protocolVersion": "0.3.0",
+        "url": "https://fixture.invalid",
+        "capabilities": {},
+        "skills": [],
+    }
+
+    def _send(self, card: dict) -> tuple[str, str | None]:
+        from beacon.protocols.a2a import A2AClient
+
+        sent: list[tuple[str, str | None]] = []
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith(".json"):
+                return _FakeResponse(card)
+            body = json.loads(request.data)
+            sent.append((request.full_url, body.get("method")))
+            return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
+        return sent[0]
+
+    def test_an_omitted_transport_means_jsonrpc(self) -> None:
+        url, method = self._send(self.CARD_NO_TRANSPORT)
+        self.assertEqual(method, "message/send")
+        self.assertFalse(url.endswith("/message:send"), "sent the REST shape")
+
+    def test_an_empty_transport_string_is_treated_as_omitted(self) -> None:
+        card = dict(self.CARD_NO_TRANSPORT, preferredTransport="")
+        self.assertEqual(self._send(card)[1], "message/send")
+
+    def test_an_explicit_rest_transport_is_still_honoured(self) -> None:
+        """The default must not become an override."""
+        card = dict(self.CARD_NO_TRANSPORT, preferredTransport="HTTP+JSON")
+        url, method = self._send(card)
+        self.assertTrue(url.endswith("/message:send"))
+        self.assertIsNone(method)
+
+    def test_an_explicit_jsonrpc_transport_still_works(self) -> None:
+        card = dict(self.CARD_NO_TRANSPORT, preferredTransport="JSONRPC")
+        self.assertEqual(self._send(card)[1], "message/send")
+
+
 class WellKnownPathTests(unittest.TestCase):
     """
     The Agent Card path was renamed: 0.2.x served `/.well-known/agent.json`,

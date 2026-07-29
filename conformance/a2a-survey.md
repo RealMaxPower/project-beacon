@@ -6,7 +6,8 @@ and its discovery had only ever been pointed at agents that serve the current
 well-known path.
 
 This survey went looking for the gaps. It found four defects, three of them
-capable of reporting a working agent as broken.
+capable of reporting a working agent as broken, and a fifth in the transport
+default that would have sent the wrong request shape to any card omitting it.
 
 ## What was tested
 
@@ -18,6 +19,7 @@ capable of reporting a working agent as broken.
 | `searchopti.cloud` | live, read-only, 8 skills | already worked |
 | `api.upmoltwork.mingles.ai` | live, discovery only | **undiscoverable** |
 | `agent-chat.…azurecontainerapps.io` | live, discovery only | **undiscoverable** |
+| `agent.ai` | live, discovery only, auth-gated | **wrong transport** |
 
 The last two were discovered but not driven. `UpMoltWork` publishes a
 `task-marketplace` skill and `ConferenceHaven` publishes
@@ -74,6 +76,36 @@ The wire shapes the reference server produced are pinned in
 `tests/test_a2a_response_shapes.py`, which needs no SDK and runs everywhere.
 Re-run the server against a new SDK release to find out whether they still
 hold.
+
+## Agent directories
+
+Three were checked. Only one hosts a real A2A agent, and finding out which
+took a request each — a directory of "AI agents" in the marketing sense lists
+SaaS products with web UIs, which a protocol client cannot drive at all.
+
+| Directory | Verdict |
+|---|---|
+| `agent.ai` | **A real A2A agent.** 0.3.0 card, 7 skills, oauth2/apiKey |
+| `marketplace.kore.ai` | SPA catch-all — HTML for every path, including `/openapi.json` |
+| `aiagentsdirectory.com` | SaaS product listings; 78 categories, none protocol-related |
+
+The catch-all is worth calling out as a method note: `marketplace.kore.ai`
+answers 200 to `/.well-known/agent-card.json`, `/.well-known/mcp.json` and
+`/openapi.json` alike, and every one of them is the same HTML shell.
+`a2aregistry.org` does the same. A status code proves nothing here; only
+parsing the body does, which is why the sweep checks content rather than
+reachability.
+
+**agent.ai found a fourth defect.** Its card is 0.3.0 with a top-level `url`
+and no `preferredTransport` at all. The specification declares
+`@default "JSONRPC"` for that field; Beacon defaulted to the REST binding, so
+an omitted transport produced `POST /message:send` against an agent that only
+speaks JSON-RPC. That is the same failure that once made every deployed agent
+unreachable, reached from a different direction — the earlier fix taught the
+client to *read* `additionalInterfaces`, and left the default wrong.
+
+Its skills are drafting and research rather than sending, but it is gated
+behind oauth2 or an API key, so it was discovered and not driven.
 
 ## On finding public A2A agents
 
