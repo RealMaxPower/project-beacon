@@ -150,5 +150,62 @@ class GeneratedScenarioRunsTests(unittest.TestCase):
         self._check_pair("scaffold-service-probe", "notes")
 
 
+
+
+class GeneratedSourceCompilesTests(unittest.TestCase):
+    """
+    `beacon init` writes the scaffold's own location into the docstrings of
+    the subjects it generates. On Windows that is a backslash path, so
+    `C:\\Users\\...` puts `\\U` inside a string literal where Python reads a
+    truncated unicode escape. Every subject generated on Windows was a syntax
+    error, and the harness reported it as the subject failing to start.
+
+    Reproduced on any platform by scaffolding into a directory whose *name*
+    contains the sequence, so this stays honest without a Windows runner.
+    """
+
+    AWKWARD = (r"C:\Users", r"D:\new", r"E:\x123", r"F:\Nope", r"G:\Ugly")
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_generated_subjects_compile_from_a_backslash_path(self) -> None:
+        for index, name in enumerate(self.AWKWARD):
+            target = self.root / f"case{index}" / name
+            target.mkdir(parents=True)
+            scaffold("probe", target)
+            for path in sorted((target / "probe" / "subjects").glob("*.py")):
+                with self.subTest(directory=name, subject=path.name):
+                    try:
+                        compile(path.read_text(encoding="utf-8"), str(path), "exec")
+                    except SyntaxError as error:
+                        self.fail(f"{path.name} does not compile: {error}")
+
+    def test_the_generated_service_compiles_too(self) -> None:
+        target = self.root / r"C:\Users\runner"
+        target.mkdir(parents=True)
+        scaffold("probe", target, service="notes")
+        service = target / "probe" / "service.py"
+        compile(service.read_text(encoding="utf-8"), str(service), "exec")
+
+    def test_no_embedded_path_carries_a_backslash(self) -> None:
+        """
+        The property behind the fix. Checked on the lines that quote a path
+        rather than the whole file, since a generated shell example ends its
+        lines with a legitimate backslash continuation.
+        """
+        target = self.root / r"C:\Users"
+        target.mkdir(parents=True)
+        scaffold("probe", target)
+        for path in (target / "probe").rglob("*"):
+            if path.suffix not in {".py", ".md"}:
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if "probe/scenario.json" in line or "probe/subjects" in line:
+                    with self.subTest(file=path.name, line=line.strip()[:60]):
+                        self.assertNotIn("\\", line.rstrip("\\"))
+
+
 if __name__ == "__main__":
     unittest.main()

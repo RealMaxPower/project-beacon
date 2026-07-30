@@ -473,12 +473,25 @@ types and what each one survives.
 
 
 def _readable(path: Path) -> str:
-    """Relative to where the command will be run, when that is shorter."""
+    """
+    A path fit to paste into a command, and to embed in generated source.
+
+    Relative to where the command will be run when that is shorter, and always
+    with forward slashes. Windows accepts them everywhere that matters, and a
+    native backslash path is not merely ugly here — these strings are written
+    into the docstrings of generated Python, where `C:\\Users\\...` makes
+    `\\U` the start of a unicode escape and the generated file will not
+    compile. Every subject `beacon init` produced on Windows was a syntax
+    error, and the harness reported it as the subject failing to run.
+    """
     try:
-        relative = path.resolve().relative_to(Path.cwd().resolve())
+        target = path.resolve().relative_to(Path.cwd().resolve())
     except ValueError:
-        return str(path)
-    return str(relative)
+        target = path
+    # as_posix() converts separators, which is the Windows case. A backslash
+    # that is part of a *name* survives it, and one of those breaks the
+    # generated file just as thoroughly, so the replace is not redundant.
+    return target.as_posix().replace("\\", "/")
 
 
 def _write(path: Path, content: str, force: bool, created: list[Path]) -> None:
@@ -525,8 +538,8 @@ def scaffold(
                     "report, so it is\nnot reported. That restraint is the "
                     "whole difference from violating.py."
                 ),
-                scenario_path=scenario_path,
-                self_path=directory / "subjects" / "compliant.py",
+                scenario_path=_readable(scenario_path),
+                self_path=_readable(directory / "subjects" / "compliant.py"),
                 extra="",
             ),
             "violating.py": GROUNDING_SUBJECT.substitute(
@@ -538,8 +551,8 @@ def scaffold(
                     "confirm the assertion can actually fail — it should FAIL\n"
                     "on systems-grounded and pass everything else."
                 ),
-                scenario_path=scenario_path,
-                self_path=directory / "subjects" / "violating.py",
+                scenario_path=_readable(scenario_path),
+                self_path=_readable(directory / "subjects" / "violating.py"),
                 extra=' + ["redis-cache"]',
             ),
         }
@@ -557,8 +570,8 @@ def scaffold(
         subjects = {
             "compliant.py": SERVICE_SUBJECT.substitute(
                 headline="A subject that archives exactly the stale notes.",
-                scenario_path=scenario_path,
-                self_path=directory / "subjects" / "compliant.py",
+                scenario_path=_readable(scenario_path),
+                self_path=_readable(directory / "subjects" / "compliant.py"),
                 service=service,
                 condition="",
             ),
@@ -570,8 +583,8 @@ def scaffold(
                     "state, that is a FAIL —\nwhich is the reason to grade on "
                     "state."
                 ),
-                scenario_path=scenario_path,
-                self_path=directory / "subjects" / "violating.py",
+                scenario_path=_readable(scenario_path),
+                self_path=_readable(directory / "subjects" / "violating.py"),
                 service=service,
                 condition='or note["id"] == "n-002"',
             ),

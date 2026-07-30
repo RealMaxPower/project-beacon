@@ -483,8 +483,9 @@ python3 examples/subjects/run_suite.py
 40/40 verdicts correct.
 ```
 
-402 tests, 84% branch coverage over `beacon/`, enforced in CI with a floor
-rather than reported as a target.
+409 tests and 84% branch coverage over `beacon/`. CI is disabled for now —
+see CONTRIBUTING.md — so run both locally; between them they are what CI
+would have run, minus the operating-system matrix.
 
 Six of them were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).
