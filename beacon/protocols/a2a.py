@@ -102,10 +102,11 @@ class A2AClient:
         method: str = "GET",
         body: dict[str, Any] | None = None,
         content_type: str = "application/json",
+        version: str | None = None,
     ) -> dict[str, Any]:
         headers = {
             "Accept": "application/a2a+json, application/json",
-            "A2A-Version": self.protocol_version,
+            "A2A-Version": version or self.protocol_version,
             # Agents behind a WAF reject the default Python-urllib agent with
             # a 403, which reads as "the agent refused" rather than "we were
             # filtered". Identify ourselves.
@@ -204,6 +205,23 @@ class A2AClient:
 
         raise A2AError("Agent Card does not declare a supported interface URL")
 
+    def _negotiated_version(self) -> str:
+        """
+        The value for the `A2A-Version` header, taken from the card.
+
+        It used to be a fixed "1.0" while the *method name* was chosen from
+        the card, so a 0.3 agent received a request whose header claimed 1.0
+        and whose body used `message/send`. Every agent tested tolerated the
+        contradiction by ignoring the header; the JavaScript SDK reads it, and
+        answers a mismatched pair with an internal error — which would have
+        been recorded as the agent failing, on a request Beacon malformed.
+
+        Reported as major.minor, which is the granularity the header uses:
+        a card saying "0.3.0" negotiates "0.3".
+        """
+        parts = self._card_protocol_version().split(".")
+        return ".".join(parts[:2]) if len(parts) >= 2 else self.protocol_version
+
     def _card_protocol_version(self) -> str:
         card = self.agent_card or {}
         return str(card.get("protocolVersion") or self.protocol_version)
@@ -250,6 +268,7 @@ class A2AClient:
                     "params": {"message": message},
                 },
                 content_type="application/json",
+                version=self._negotiated_version(),
             )
             if "error" in response:
                 raise A2AError(
@@ -263,5 +282,6 @@ class A2AClient:
             method="POST",
             body={"message": message},
             content_type="application/a2a+json",
+            version=self._negotiated_version(),
         )
 

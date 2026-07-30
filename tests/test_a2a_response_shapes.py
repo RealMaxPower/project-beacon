@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 from beacon.adapters import A2ASubjectAdapter
@@ -291,6 +292,85 @@ class TransportDefaultTests(unittest.TestCase):
     def test_an_explicit_jsonrpc_transport_still_works(self) -> None:
         card = dict(self.CARD_NO_TRANSPORT, preferredTransport="JSONRPC")
         self.assertEqual(self._send(card)[1], "message/send")
+
+
+class VersionNegotiationTests(unittest.TestCase):
+    """
+    The `A2A-Version` header and the JSON-RPC method name have to describe the
+    same protocol. The method name was chosen from the card while the header
+    was a fixed "1.0", so every 0.3 agent received a request whose header
+    claimed 1.0 and whose body called `message/send`.
+
+    Every agent tested tolerated it by ignoring the header. The JavaScript SDK
+    reads it, and answers the mismatched pair with an internal error — which
+    Beacon would have recorded as the agent failing, on a request Beacon
+    malformed.
+    """
+
+    def _sent(self, card_version: str) -> tuple[str | None, str]:
+        from beacon.protocols.a2a import A2AClient
+
+        card = {
+            "name": "fixture",
+            "protocolVersion": card_version,
+            "url": "https://fixture.invalid",
+            "preferredTransport": "JSONRPC",
+            "capabilities": {},
+            "skills": [],
+        }
+        seen: dict[str, Any] = {}
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith(".json"):
+                return _FakeResponse(card)
+            seen["header"] = request.get_header("A2a-version")
+            seen["method"] = json.loads(request.data)["method"]
+            return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
+        return seen["header"], seen["method"]
+
+    def test_a_0x_card_negotiates_a_0x_header(self) -> None:
+        header, method = self._sent("0.3.0")
+        self.assertEqual(header, "0.3")
+        self.assertEqual(method, "message/send")
+
+    def test_a_1x_card_negotiates_a_1x_header(self) -> None:
+        header, method = self._sent("1.0")
+        self.assertEqual(header, "1.0")
+        self.assertEqual(method, "SendMessage")
+
+    def test_the_header_and_the_method_never_disagree(self) -> None:
+        """The property that matters, stated once for every version seen live."""
+        for version in ("0.2.5", "0.3", "0.3.0", "1.0", "1.1.0"):
+            with self.subTest(version=version):
+                header, method = self._sent(version)
+                self.assertEqual(
+                    header.startswith("0."),
+                    method == "message/send",
+                    f"header {header} disagrees with method {method}",
+                )
+
+    def test_the_card_fetch_itself_uses_the_default(self) -> None:
+        """There is no card yet when the card is being fetched."""
+        from beacon.protocols.a2a import A2AClient
+
+        seen: list[str | None] = []
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            seen.append(request.get_header("A2a-version"))
+            return _FakeResponse(CARD_1X)
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            A2AClient("https://fixture.invalid", timeout_seconds=3).discover()
+        self.assertEqual(seen, ["1.0"])
 
 
 class WellKnownPathTests(unittest.TestCase):

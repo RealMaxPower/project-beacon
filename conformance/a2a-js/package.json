@@ -1,0 +1,13 @@
+{
+  "name": "beacon-a2a-js-reference",
+  "private": true,
+  "description": "Reference A2A agent built with the official JavaScript SDK, for checking Beacon's A2A client against a second independent implementation.",
+  "scripts": {
+    "start": "node reference_agent.js 8751",
+    "start:v03": "node reference_agent.js 8752 --v03"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "^1.0.1",
+    "express": "^5.0.0"
+  }
+}

@@ -11,3 +11,7 @@ __pycache__/
 dist/
 build/
 
+
+# Conformance harnesses install their own dependencies.
+conformance/a2a-js/node_modules/
+conformance/a2a-js/package-lock.json

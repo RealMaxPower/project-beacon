@@ -5,9 +5,14 @@ four live agents that all speak 0.x. Its 1.x path had never met a 1.x server,
 and its discovery had only ever been pointed at agents that serve the current
 well-known path.
 
-This survey went looking for the gaps. It found four defects, three of them
-capable of reporting a working agent as broken, and a fifth in the transport
-default that would have sent the wrong request shape to any card omitting it.
+This survey went looking for the gaps. It found six defects across two SDK
+implementations and three live deployments. Four of them would have reported
+a working agent as broken.
+
+The second SDK is the more interesting result. It produced no wire-shape
+defects of its own, which says the fixes from the first generalise rather
+than encoding one library's serialisation habits. What it caught instead was
+strictness: it validates a header every other server ignores.
 
 ## What was tested
 
@@ -15,6 +20,7 @@ default that would have sent the wrong request shape to any card omitting it.
 |---|---|---|
 | Official `a2a-sdk` 1.1.2, 1.0-only mode | local reference server | 3 defects |
 | Official `a2a-sdk` 1.1.2, 0.3-compat mode | local reference server | same shapes |
+| Official `@a2a-js/sdk` 1.0.1 | local reference server | 1 defect |
 | `web-page-extractor.fly.dev` | live, read-only | already worked |
 | `searchopti.cloud` | live, read-only, 8 skills | already worked |
 | `api.upmoltwork.mingles.ai` | live, discovery only | **undiscoverable** |
@@ -48,6 +54,8 @@ history filter matched only the 0.x spelling `agent`. The reference server
 sends `ROLE_AGENT` even in its 0.3 compatibility mode, so this was not
 confined to 1.x servers.
 
+**The `A2A-Version` header contradicted the method name.** The method was chosen from the card while the header was a fixed `1.0`, so every 0.3 agent received a request whose header claimed 1.0 and whose body called `message/send`. Every server tested tolerated it by ignoring the header. The JavaScript SDK reads it, and answers the mismatched pair with `-32603 Cannot read properties of undefined` — an internal crash Beacon would have recorded as the agent failing, on a request Beacon malformed. The header now follows the card, at the major.minor granularity the header uses.
+
 **The legacy Agent Card path was never tried.** The specification renamed
 `/.well-known/agent.json` to `/.well-known/agent-card.json`. Deployed agents
 did not all move. Both live public agents found in this survey answer 404 on
@@ -58,11 +66,23 @@ endpoint and says nothing about where the card lives.
 
 ## Reproducing
 
+Python SDK:
+
 ```bash
 pip install "a2a-sdk[http-server]" fastapi uvicorn
 python3 conformance/a2a_reference_agent.py 8731        # 1.0 only
 python3 conformance/a2a_reference_agent.py 8732 --v03  # + 0.3 methods
+```
 
+JavaScript SDK:
+
+```bash
+cd conformance/a2a-js && npm install && npm start   # port 8751
+```
+
+Against either:
+
+```bash
 python3 -m beacon a2a-inspect http://127.0.0.1:8731 --send hello
 python3 -m beacon run hosted-injection-resistance \
   --adapter a2a --agent-url http://127.0.0.1:8731
@@ -136,7 +156,7 @@ written by different people from the same specification:
 | SDK | |
 |---|---|
 | `a2aproject/a2a-python` | swept here, 3 defects |
-| `a2aproject/a2a-js` | not yet |
+| `a2aproject/a2a-js` | swept here, 1 defect |
 | `a2aproject/a2a-go` | not yet |
 | `a2aproject/a2a-java` | not yet |
 | `a2aproject/a2a-dotnet` | not yet |
