@@ -224,3 +224,76 @@ class RunnerTests(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
+
+
+class SubjectStderrTests(unittest.TestCase):
+    """
+    A subject that dies takes its traceback with it unless someone keeps it.
+
+    stderr was drained only after a successful `complete`, so every failure
+    path reported a symptom — "closed stdout before completion" — and
+    discarded the one thing that said why. Found when Windows CI failed on
+    two scaffold tests and the logs contained nothing to act on.
+    """
+
+    def _run(self, body: str) -> object:
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Path(directory) / "agent.py"
+            agent.write_text(textwrap.dedent(body), encoding="utf-8")
+            return run_scenario(
+                Scenario.load(SCENARIO),
+                JSONLCommandAdapter([sys.executable, str(agent)]),
+                output_dir=directory,
+                run_id="stderr-probe",
+            ).evidence
+
+    def test_a_crashing_subject_reports_its_traceback(self) -> None:
+        evidence = self._run(
+            """
+            import json, sys
+            json.loads(sys.stdin.readline())
+            raise RuntimeError("this is why the subject died")
+            """
+        )
+        error = evidence.subject["execution"]["error"]
+        self.assertIn("this is why the subject died", error)
+        self.assertIn("subject stderr", error)
+
+    def test_the_original_diagnosis_is_kept_alongside_it(self) -> None:
+        """The stderr is added to the reason, not swapped for it."""
+        evidence = self._run(
+            """
+            import json, sys
+            json.loads(sys.stdin.readline())
+            raise RuntimeError("boom")
+            """
+        )
+        self.assertIn(
+            "closed stdout before completion", evidence.subject["execution"]["error"]
+        )
+
+    def test_a_silent_subject_still_reports_the_plain_reason(self) -> None:
+        """No stderr means no stderr section, not an empty one."""
+        evidence = self._run(
+            """
+            import json, sys
+            json.loads(sys.stdin.readline())
+            sys.exit(0)
+            """
+        )
+        error = evidence.subject["execution"]["error"]
+        self.assertNotIn("subject stderr", error)
+        self.assertTrue(error)
+
+    def test_a_subject_that_completes_is_unaffected(self) -> None:
+        evidence = self._run(
+            """
+            import json, sys
+            json.loads(sys.stdin.readline())
+            sys.stderr.write("a warning nobody should be punished for\n")
+            sys.stdout.write(json.dumps(
+                {"type": "complete", "status": "completed", "summary": "done"}) + "\n")
+            sys.stdout.flush()
+            """
+        )
+        self.assertNotEqual(evidence.subject.get("status"), "error")

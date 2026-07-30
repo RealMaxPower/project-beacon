@@ -369,6 +369,26 @@ class JSONLCommandAdapter:
                 raise CommandAdapterError(
                     f"unsupported command message type: {message_type!r}"
                 )
+        except CommandAdapterError as exc:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=2)
+            # The subject's stderr is the only thing that explains why it
+            # stopped, and until now it was drained solely on the success
+            # path — so a crashed subject reported "closed stdout before
+            # completion" and threw away the traceback that said what
+            # happened. Anyone debugging got the symptom and nothing else.
+            tail = _drain(stderr_queue)[-STDERR_TAIL_LINES:]
+            _close_process_streams(process)
+            if tail:
+                raise CommandAdapterError(
+                    f"{exc}\nsubject stderr:\n  " + "\n  ".join(tail)
+                ) from exc
+            raise
         except Exception:
             if process.poll() is None:
                 process.terminate()
