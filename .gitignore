@@ -15,3 +15,7 @@ build/
 # Conformance harnesses install their own dependencies.
 conformance/a2a-js/node_modules/
 conformance/a2a-js/package-lock.json
+conformance/a2a-go/refagent
+conformance/a2a-java/target/
+conformance/a2a-dotnet/bin/
+conformance/a2a-dotnet/obj/

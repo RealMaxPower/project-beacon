@@ -223,7 +223,26 @@ class A2AClient:
         return ".".join(parts[:2]) if len(parts) >= 2 else self.protocol_version
 
     def _card_protocol_version(self) -> str:
+        """
+        The protocol version the agent claims, wherever it chose to say it.
+
+        1.x moved the statement into each entry of `supportedInterfaces`, and
+        an SDK that generates cards from the current schema may not emit the
+        top-level field at all — the Go SDK does not. Reading only the
+        top-level meant those cards silently fell back to the constructor
+        default, so an interface declaring 0.3 was answered with 1.x method
+        names.
+
+        The interface wins because it is the more specific claim: it
+        describes the endpoint about to be called, where the top-level field
+        describes the agent as a whole.
+        """
         card = self.agent_card or {}
+        interfaces = card.get("supportedInterfaces")
+        if isinstance(interfaces, list) and interfaces:
+            first = interfaces[0]
+            if isinstance(first, dict) and first.get("protocolVersion"):
+                return str(first["protocolVersion"])
         return str(card.get("protocolVersion") or self.protocol_version)
 
     def _message(self, text: str) -> dict[str, Any]:

@@ -355,6 +355,83 @@ class VersionNegotiationTests(unittest.TestCase):
                     f"header {header} disagrees with method {method}",
                 )
 
+    def _sent_for_card(self, card: dict) -> tuple[str | None, str]:
+        from beacon.protocols.a2a import A2AClient
+
+        seen: dict[str, Any] = {}
+
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith(".json"):
+                return _FakeResponse(card)
+            seen["header"] = request.get_header("A2a-version")
+            seen["method"] = json.loads(request.data)["method"]
+            return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
+
+        with mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
+        return seen["header"], seen["method"]
+
+    def test_a_version_declared_only_on_the_interface_is_honoured(self) -> None:
+        """
+        1.x moved the version statement into each `supportedInterfaces` entry,
+        and an SDK generating cards from the current schema need not emit the
+        top-level field at all — the Go SDK does not. Reading only the
+        top-level made those cards fall back to the constructor default, so an
+        interface declaring 0.3 was answered with 1.x method names.
+        """
+        card = {
+            "name": "go-shaped",
+            "capabilities": {},
+            "skills": [],
+            "supportedInterfaces": [
+                {
+                    "url": "https://fixture.invalid/",
+                    "protocolBinding": "JSONRPC",
+                    "protocolVersion": "0.3",
+                }
+            ],
+        }
+        header, method = self._sent_for_card(card)
+        self.assertEqual(header, "0.3")
+        self.assertEqual(method, "message/send")
+
+    def test_the_interface_wins_over_a_stale_top_level_field(self) -> None:
+        """
+        The interface describes the endpoint about to be called; the top-level
+        field describes the agent. The more specific claim governs.
+        """
+        card = {
+            "name": "mixed",
+            "protocolVersion": "0.3.0",
+            "capabilities": {},
+            "skills": [],
+            "supportedInterfaces": [
+                {
+                    "url": "https://fixture.invalid/",
+                    "protocolBinding": "JSONRPC",
+                    "protocolVersion": "1.0",
+                }
+            ],
+        }
+        header, method = self._sent_for_card(card)
+        self.assertEqual(header, "1.0")
+        self.assertEqual(method, "SendMessage")
+
+    def test_an_interface_without_a_version_falls_back_to_the_card(self) -> None:
+        card = {
+            "name": "partial",
+            "protocolVersion": "0.3.0",
+            "capabilities": {},
+            "skills": [],
+            "supportedInterfaces": [
+                {"url": "https://fixture.invalid/", "protocolBinding": "JSONRPC"}
+            ],
+        }
+        self.assertEqual(self._sent_for_card(card), ("0.3", "message/send"))
+
     def test_the_card_fetch_itself_uses_the_default(self) -> None:
         """There is no card yet when the card is being fetched."""
         from beacon.protocols.a2a import A2AClient
