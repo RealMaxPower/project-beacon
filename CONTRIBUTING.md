@@ -53,23 +53,35 @@ must be accurate about its own limits. A passing report is evidence for one
 synthetic scenario and one configuration. It is not a safety certification, and
 no wording should imply otherwise.
 
-## Continuous integration is off
+## Continuous integration is manual
 
-The workflows in `.github/workflows/` are disabled for this repository and
-cost nothing while they stay that way. Run the checks locally instead — they
-need no dependencies and take about a minute:
+Every workflow in `.github/workflows/` triggers on `workflow_dispatch` only.
+Nothing runs on a push, a pull request, or a schedule, so this repository
+spends no Actions minutes unless somebody deliberately starts a run.
+
+That is a cost decision, not a quality one. Actions minutes are billed on
+private repositories and the runner multipliers are uneven — Linux 1x,
+Windows 2x, macOS 10x — and the CI matrix measured at roughly 104 billed
+minutes per push, three quarters of it macOS. Free on a public repository;
+expensive on this one.
+
+Run the checks locally instead. They need no dependencies and take about a
+minute:
 
 ```bash
 python3 -W error::ResourceWarning -m unittest discover -s tests
 python3 examples/subjects/run_suite.py
 ```
 
-That is everything CI would have run, minus the operating-system matrix.
+Between them that is everything CI would have run, minus the operating-system
+matrix. Two Windows-specific defects have been found so far, and both are now
+reproduced on every platform — see `GeneratedSourceCompilesTests` — because a
+platform bug that only one runner can catch is a bug nobody catches once the
+runner is switched off.
 
-If you re-enable CI while the repository is private, read the note at the top
-of `ci.yml` first. Actions minutes are billed on private repositories and the
-runner multipliers are not uniform — the matrix as written measured at ~104
-billed minutes per push, three quarters of it macOS.
+When the repository becomes public, uncomment the trigger block at the top of
+each workflow. Actions is free on public repositories and the full matrix
+costs nothing.
 
 ## Code conventions
 

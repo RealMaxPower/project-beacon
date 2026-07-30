@@ -1,27 +1,30 @@
-# DISABLED. These workflows are turned off for this repository
-# (`gh workflow disable ci.yml`) and cost nothing while they stay that way.
-#
-# Read this before re-enabling. On a *private* repository Actions minutes are
-# billed, and the runner multipliers are not uniform: Linux 1x, Windows 2x,
-# macOS 10x. The matrix below is 3 operating systems by 3 Python versions,
-# which measured at ~104 billed minutes per push — 19 pushes against the
-# 2,000-minute free allowance, with macOS alone accounting for 77% of it.
-#
-# That shape is right for a public repository, where all of this is free. It
-# is the wrong shape for a private one. If you re-enable while private, cut
-# the matrix to `ubuntu-latest` and one Python version first: that is ~2
-# minutes per push and catches nearly everything the full matrix does.
-#
-# Run the full matrix by hand instead, from the Actions tab, when a release
-# is close.
-
 name: CI
 
+# Manual only, on purpose.
+#
+# Actions minutes are billed on a private repository, and the runner
+# multipliers are not uniform: Linux 1x, Windows 2x, macOS 10x. The matrix
+# below is three operating systems by three Python versions, which measured
+# at ~104 billed minutes per push — nineteen pushes against the 2,000-minute
+# free allowance, with macOS alone accounting for 77% of it.
+#
+# So the automatic triggers are commented out rather than deleted. Nothing
+# here runs unless someone starts it from the Actions tab, and while the
+# repository stays private that is the correct setting.
+#
+# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
+# and uncommenting the block below restores the automatic runs at no cost.
+#
+# Until then the local equivalent is two commands and about a minute:
+#   python3 -W error::ResourceWarning -m unittest discover -s tests
+#   python3 examples/subjects/run_suite.py
+
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
+  # Uncomment when the repository is public:
+  # push:
+  #   branches: [main]
+  # pull_request:
 
 permissions:
   contents: read

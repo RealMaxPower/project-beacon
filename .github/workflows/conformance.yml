@@ -1,19 +1,29 @@
 name: Conformance (external targets)
 
-# Separate from CI on purpose. This workflow downloads and runs servers other
-# people wrote, so it is slower, needs the network, and can break for reasons
-# that have nothing to do with a pull request. Keeping it out of the PR gate
-# means an upstream package moving does not block unrelated work — but it still
-# runs on a schedule, because "works against real implementations" is a claim
-# that decays silently if nobody checks it.
+# Manual only, on purpose.
+#
+# Two reasons, and the second outlives the first. Actions minutes are billed
+# on a private repository. And this sweep calls other people's running
+# services, so it should stay rare and deliberate however little it costs us.
+#
+# So the automatic triggers are commented out rather than deleted. Nothing
+# here runs unless someone starts it from the Actions tab, and while the
+# repository stays private that is the correct setting.
+#
+# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
+# and uncommenting the block below restores the automatic runs at no cost.
+
 on:
-  schedule:
-    - cron: "0 6 * * 1"
   workflow_dispatch:
-  push:
-    paths:
-      - "beacon/protocols/**"
-      - "conformance/**"
+  # Uncomment when the repository is public. The schedule is deliberately
+  # weekly rather than per-push: this sweep calls other people's running
+  # services, so it should stay rare whatever it costs us.
+  # schedule:
+  #   - cron: "0 6 * * 1"
+  # push:
+  #   paths:
+  #     - "beacon/protocols/**"
+  #     - "conformance/**"
 
 permissions:
   contents: read

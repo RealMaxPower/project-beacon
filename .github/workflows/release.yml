@@ -1,17 +1,30 @@
 name: release
 
-# Publishing is deliberately manual and tag-driven. A push to main should
-# never reach PyPI: a version there cannot be replaced, only yanked.
+# Manual only, on purpose.
+#
+# Actions minutes are billed on a private repository, and there is nothing to
+# release from one: publishing to PyPI from a repository nobody can read would
+# put a package on the index whose source is not there to check.
+#
+# So the automatic triggers are commented out rather than deleted. Nothing
+# here runs unless someone starts it from the Actions tab, and while the
+# repository stays private that is the correct setting.
+#
+# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
+# and uncommenting the block below restores the automatic runs at no cost.
+
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       publish:
         description: "Publish to PyPI (otherwise build and check only)"
         type: boolean
         default: false
+  # Uncomment when the repository is public, so that tagging a version
+  # publishes it:
+  # push:
+  #   tags:
+  #     - "v*"
 
 permissions:
   contents: read
