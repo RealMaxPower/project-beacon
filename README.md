@@ -12,6 +12,31 @@ can run against different subject adapters, mutate synthetic services, produce
 deterministic PASS/FAIL/INCOMPLETE evidence, reset exactly, and expose MCP and
 A2A protocol entry points without coupling the core to one agent runtime.
 
+## Sixty seconds
+
+Not on PyPI yet — clone it. There is nothing to install: the core is stdlib
+only, and `python3 -m beacon` works straight out of the checkout.
+
+```bash
+git clone https://github.com/project-beacon/project-beacon
+cd project-beacon
+
+python3 -m beacon scenarios            # the seven that ship
+python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
+python3 -m beacon init my-first-probe  # scaffold your own
+```
+
+`init` writes a scenario that runs immediately plus two subjects: one that
+satisfies every assertion and one that violates exactly one. **The second is
+meant to fail** — watching it fail is the only proof the assertion measures
+anything. Add `--service notes` for a scenario graded on the state of a
+simulated service instead of on the answer.
+
+Packaging is ready and verified — wheel and sdist both install clean into an
+empty environment and pass a smoke test — but nothing has been published, so
+`pip install project-beacon` does not work yet. When it does, `beacon`
+replaces `python3 -m beacon` and a bare scenario name replaces a path.
+
 ## What works
 
 - Seven scenarios: three graded on the state of a synthetic service (mail and
@@ -42,6 +67,9 @@ A2A protocol entry points without coupling the core to one agent runtime.
 - An adversarial subject suite that tests whether the verdicts are right,
   and a check that every behavioural assertion has a subject which breaks
   it — so the report never states something nobody has tested.
+- A worked scenario pack in [examples/scenario-pack/](examples/scenario-pack/)
+  that brings its own service, with a test that runs it from outside the
+  repository so "no need to edit Beacon" is evidence rather than a claim.
 - An MCP server façade: any MCP host can be the subject, over HTTP with a
   per-run bearer token.
 - An A2A subject adapter: a hosted agent is graded through the full
@@ -76,36 +104,6 @@ and how to wire the MCP façade into Cursor or Claude Desktop.
 Beacon at your agent, measure how often it fails rather than whether it failed
 once, and fail CI when it regresses against a recorded baseline. No API key —
 your agent brings its own model, and grading is deterministic.
-
-## Start your own scenario
-
-```bash
-python3 -m beacon init my-first-probe
-```
-
-Writes a scenario that runs immediately, plus two subjects: one that satisfies
-every assertion and one that violates exactly one. The second is meant to fail
-— watching it fail is the only proof the assertion measures anything. Add
-`--service notes` for a scenario graded on the state of a simulated service
-instead of on the answer.
-
-## Install
-
-```bash
-pip install project-beacon
-```
-
-That gives you the `beacon` command and every scenario below, so nothing here
-needs a checkout:
-
-```bash
-beacon scenarios          # what shipped
-beacon run inbox-briefing # run one by name
-```
-
-Cloning works too, with no install and no dependencies — `python3 -m beacon`
-in place of `beacon`, and a path in place of a name. A path always wins over a
-built-in of the same name, so an edited local copy is the one that runs.
 
 ## Requirements
 
@@ -484,6 +482,9 @@ python3 examples/subjects/run_suite.py
 ```text
 40/40 verdicts correct.
 ```
+
+402 tests, 84% branch coverage over `beacon/`, enforced in CI with a floor
+rather than reported as a target.
 
 Six of them were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).

@@ -1,0 +1,51 @@
+name: Wrong verdict
+description: Beacon graded a run in a way you believe is incorrect
+labels: ["wrong-verdict"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The most valuable kind of report this project gets. A harness that
+        grades agents is worth nothing if its own verdicts are wrong, and
+        every one found so far came from someone running it against something
+        we did not write.
+
+        If you can share the evidence bundle, that alone is often enough — it
+        records the scenario, the subject, every tool call, and the state
+        before and after. Check it for secrets first; redaction covers values
+        Beacon injected, not ones your agent produced.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What verdict did you expect, and why?
+      placeholder: |
+        PASS. The agent did the task correctly — it drafted the three replies
+        and cited each message.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What did Beacon report?
+      description: The verdict line, and which assertions failed.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How do we reproduce it?
+      description: >
+        The command you ran. If the subject is something we can run — a
+        script, a public endpoint, an SDK sample — say so; that is what turns
+        a report into a fix.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "python3 -m beacon --version, or a commit sha"
+    validations:
+      required: true

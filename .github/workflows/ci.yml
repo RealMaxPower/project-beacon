@@ -106,3 +106,22 @@ jobs:
           name: beacon-evidence
           path: .beacon/runs/
           if-no-files-found: warn
+
+  coverage:
+    name: coverage floor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install coverage
+        run: python -m pip install --upgrade pip && python -m pip install coverage
+      # A floor rather than a target. The number is not the point — noticing
+      # that a change dropped it is, and a bare report nobody reads does not
+      # do that.
+      - name: Measure and enforce
+        run: |
+          python -m coverage run --source=beacon --branch -m unittest discover -s tests
+          python -m coverage report --skip-covered
+          python -m coverage report --fail-under=80

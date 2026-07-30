@@ -1,0 +1,44 @@
+name: Protocol mismatch
+description: An MCP server or A2A agent that Beacon cannot talk to
+labels: ["protocol"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Beacon's clients were written from specifications and then repaired
+        against real implementations, which disagree with the specification
+        and with each other. Seven defects have come from exactly this. If
+        something will not connect, that is worth reporting even if you are
+        not sure whose fault it is.
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      options: ["A2A", "MCP (stdio)", "MCP (Streamable HTTP)", "not sure"]
+    validations:
+      required: true
+  - type: input
+    id: implementation
+    attributes:
+      label: What is on the other end?
+      description: SDK and version, or the hosted service. "Unknown" is fine.
+      placeholder: "@a2a-js/sdk 1.0.1, or https://agent.example"
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: What Beacon said
+      description: >
+        Output of `beacon a2a-inspect <url>` or `beacon mcp-inspect
+        --command ...` is ideal — it shows discovery separately from the call.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: wire
+    attributes:
+      label: The agent card or tool manifest, if you can share it
+      description: >
+        Usually the fastest route to a fix. Redact anything private.
+      render: json
