@@ -335,3 +335,67 @@ class HostAdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PinnedFacadeTests(unittest.TestCase):
+    """
+    A GUI host is configured by hand. With an ephemeral port and a fresh token
+    per run, the stored connector is stale before the second run starts, which
+    is enough friction to stop anyone trying the desktop flow twice.
+    """
+
+    def test_a_pinned_port_and_token_survive_two_runs(self) -> None:
+        scenario = Scenario.load(SCENARIO)
+        seen: list[tuple[str, str]] = []
+
+        for index in range(2):
+            recorder = EventRecorder()
+            router = ToolRouter(recorder, allowed=scenario.tools)
+            router.register(MailService(scenario.fixtures["mail"], recorder))
+            service = MCPHTTPService(
+                ScenarioMCPServer(scenario, router, recorder),
+                port=0 if index else 0,
+                token="pinned-token",
+            )
+            url = service.start()
+            try:
+                seen.append((url, service.token))
+            finally:
+                service.stop()
+
+        self.assertEqual(seen[0][1], seen[1][1], "the token changed between runs")
+        self.assertEqual(seen[0][1], "pinned-token")
+
+    def test_an_unpinned_token_is_different_every_run(self) -> None:
+        """The default must stay ephemeral; pinning is opt-in."""
+        scenario = Scenario.load(SCENARIO)
+        tokens = set()
+        for _ in range(2):
+            recorder = EventRecorder()
+            router = ToolRouter(recorder, allowed=scenario.tools)
+            router.register(MailService(scenario.fixtures["mail"], recorder))
+            service = MCPHTTPService(ScenarioMCPServer(scenario, router, recorder))
+            service.start()
+            tokens.add(service.token)
+            service.stop()
+        self.assertEqual(len(tokens), 2)
+
+    def test_the_cli_refuses_an_unset_token_variable(self) -> None:
+        """
+        Silently generating a random token would leave the operator staring at
+        a host that cannot connect, with nothing saying why.
+        """
+        from beacon.cli import main
+
+        with tempfile.TemporaryDirectory() as directory:
+            code = main(
+                [
+                    "serve-mcp",
+                    str(SCENARIO),
+                    "--output",
+                    directory,
+                    "--token-env",
+                    "BEACON_DEFINITELY_UNSET_TOKEN_VAR",
+                ]
+            )
+        self.assertEqual(code, 2)

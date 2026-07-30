@@ -252,6 +252,25 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         help="How long to wait for a submission. Defaults to the scenario's limit.",
     )
+    serve.add_argument(
+        "--port",
+        type=int,
+        default=0,
+        metavar="N",
+        help=(
+            "Bind the façade to this loopback port instead of an ephemeral "
+            "one, so a GUI host's stored connector stays valid between runs."
+        ),
+    )
+    serve.add_argument(
+        "--token-env",
+        metavar="NAME",
+        help=(
+            "Read the bearer token from this environment variable instead of "
+            "generating a fresh one per run. Names only — a token on the "
+            "command line ends up in your shell history."
+        ),
+    )
 
     mcp = subparsers.add_parser(
         "mcp-inspect",
@@ -454,9 +473,19 @@ def _run(args: argparse.Namespace) -> int:
 
 def _serve_mcp(args: argparse.Namespace) -> int:
     scenario = Scenario.load(resolve_scenario(args.scenario))
+    token = None
+    if args.token_env:
+        token = os.environ.get(args.token_env)
+        if not token:
+            raise ScenarioError(
+                f"{args.token_env} is not set. Export a token first, or drop "
+                f"--token-env to have one generated for this run."
+            )
     outcome = run_scenario(
         scenario,
-        MCPServeAdapter(timeout_seconds=args.timeout),
+        MCPServeAdapter(
+            timeout_seconds=args.timeout, port=args.port, token=token
+        ),
         output_dir=args.output,
         run_id=args.run_id,
     )

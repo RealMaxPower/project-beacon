@@ -276,11 +276,19 @@ class MCPServeAdapter:
         poll_seconds: float = 0.25,
         announce: Any = print,
         server_name: str = "beacon",
+        port: int = 0,
+        token: str | None = None,
     ) -> None:
         self._timeout_seconds = timeout_seconds
         self._poll_seconds = poll_seconds
         self._announce = announce
         self._server_name = server_name
+        # A GUI host is configured by hand, and by default both the port and
+        # the token change every run — so the config has to be re-pasted
+        # before each one, which is enough friction to stop people trying.
+        # Pinning them keeps one stored connector valid across runs.
+        self._port = port
+        self._token = token
 
     @property
     def descriptor(self) -> dict[str, Any]:
@@ -299,7 +307,7 @@ class MCPServeAdapter:
             else limits.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
         )
         server = ScenarioMCPServer(context.scenario, context.tools, context.recorder)
-        service = MCPHTTPService(server)
+        service = MCPHTTPService(server, port=self._port, token=self._token)
         url = service.start()
         context.secrets.register("BEACON_MCP_TOKEN", service.token)
 

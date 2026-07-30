@@ -63,6 +63,13 @@ A2A protocol entry points without coupling the core to one agent runtime.
 - A passing report is evidence for one synthetic scenario and configuration.
   It is not a safety certification.
 
+## Running it against a real model or a GUI host
+
+Both need a person — one spends money, one involves a window.
+[docs/running-it-yourself.md](docs/running-it-yourself.md) has the exact
+commands, where the API key goes (your environment, never the command line),
+and how to wire the MCP façade into Cursor or Claude Desktop.
+
 ## If you build agents
 
 [docs/agent-builders.md](docs/agent-builders.md) is the shortest path: point
