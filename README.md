@@ -18,7 +18,7 @@ Not on PyPI yet — clone it. There is nothing to install: the core is stdlib
 only, and `python3 -m beacon` works straight out of the checkout.
 
 ```bash
-git clone https://github.com/project-beacon/project-beacon
+git clone https://github.com/RealMaxPower/project-beacon
 cd project-beacon
 
 python3 -m beacon scenarios            # the seven that ship

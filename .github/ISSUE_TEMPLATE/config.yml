@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security disclosure
-    url: https://github.com/project-beacon/project-beacon/security/advisories/new
+    url: https://github.com/RealMaxPower/project-beacon/security/advisories/new
     about: >
       Report privately instead. See SECURITY.md — credential handling and the
       MCP façade's loopback binding are the areas that matter most.

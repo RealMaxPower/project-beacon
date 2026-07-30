@@ -24,10 +24,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/project-beacon/project-beacon"
-Repository = "https://github.com/project-beacon/project-beacon"
-Issues = "https://github.com/project-beacon/project-beacon/issues"
-Changelog = "https://github.com/project-beacon/project-beacon/releases"
+Homepage = "https://github.com/RealMaxPower/project-beacon"
+Repository = "https://github.com/RealMaxPower/project-beacon"
+Issues = "https://github.com/RealMaxPower/project-beacon/issues"
+Changelog = "https://github.com/RealMaxPower/project-beacon/releases"
 
 # The core stays stdlib-only so `python3 -m beacon run` works in an empty
 # environment. Extras add depth, never a requirement: with jsonschema absent
