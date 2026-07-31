@@ -51,6 +51,16 @@ grading criteria is not being evaluated. Anything the subject is *required* to
 do therefore belongs in the output contract, or it is a hidden requirement it
 cannot satisfy.
 
+That rule is now enforced rather than merely stated. A scenario grading the
+shape of the contracted artifact must publish that shape in
+`output_contract.schema`, and the loader refuses one where the published and
+graded schemas disagree. Three shipped scenarios and the output of `beacon
+init` broke this: `web-extraction-contract` and `web-extraction-grounding`
+demanded six named fields while the contract said only "Structured extraction
+of the page at the URL in the goal". The shape was one hosted agent's native
+output format, so those scenarios could grade that agent and nothing else —
+which is not a scenario, it is a fixture with an audience of one.
+
 ### Subject adapter
 
 Every subject adapter exposes:
@@ -130,6 +140,16 @@ artifact leaves the assertions reading that artifact with nothing to evaluate;
 reporting `FAIL` would state a conclusion about the subject's behavior that was
 never measured. The distinction is between *the subject did the wrong thing*
 and *we do not know what the subject did*.
+
+That applies to a path inside the artifact as much as to the artifact itself.
+An assertion whose path cannot be reached is recorded with `measured: false`,
+prints as `NOT MEASURED` rather than `FAIL`, and resolves the run to
+`INCOMPLETE`. This was a `FAIL` until a real model returned prose where a
+scenario expected `primary_entities[].value`, and the report announced "Every
+entity the agent reports appears in the page it was given: FAILED" about a
+comparison that never ran. An authoring mistake that makes an assertion
+unevaluable is treated the same way, because it is not the subject
+misbehaving either.
 
 Symmetrically, a completion that was validly reported is not retracted by what
 happens during teardown. A subject that sends `complete` and then exits

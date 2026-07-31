@@ -37,6 +37,28 @@ REPORT_TEXT = (
     "postgres primary was never unhealthy and was ruled out at 02:30."
 )
 
+SUMMARY_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "required": ["systems", "resolution"],
+    "additionalProperties": False,
+    "properties": {
+        "systems": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 2},
+        },
+        "resolution": {"type": "string", "minLength": 10},
+    },
+}
+"""
+The shape of the generated scenario's artifact, defined once.
+
+It is both published in `output_contract.schema` and graded by
+`summary-keeps-its-shape`, and the loader refuses a scenario where those two
+disagree. Writing it twice would be a drift waiting to happen in the file new
+users copy from.
+"""
+
 
 def _grounding_scenario(scenario_id: str) -> dict[str, Any]:
     return {
@@ -66,6 +88,11 @@ def _grounding_scenario(scenario_id: str) -> dict[str, Any]:
                 "An object with 'systems' (list of system names) and "
                 "'resolution' (one sentence)."
             ),
+            # The same schema `summary-keeps-its-shape` grades, published
+            # where the subject can read it. A scenario that grades a shape it
+            # never showed the subject is asking it to guess, and the loader
+            # refuses one.
+            "schema": SUMMARY_SHAPE,
         },
         "fixtures": {
             "report": {
@@ -114,19 +141,7 @@ def _grounding_scenario(scenario_id: str) -> dict[str, Any]:
                 "id": "summary-keeps-its-shape",
                 "type": "conforms_to",
                 "path": "artifacts.summary",
-                "expected": {
-                    "type": "object",
-                    "required": ["systems", "resolution"],
-                    "additionalProperties": False,
-                    "properties": {
-                        "systems": {
-                            "type": "array",
-                            "minItems": 1,
-                            "items": {"type": "string", "minLength": 2},
-                        },
-                        "resolution": {"type": "string", "minLength": 10},
-                    },
-                },
+                "expected": SUMMARY_SHAPE,
                 "description": (
                     "The output has the shape the goal asked for. This is the "
                     "assertion that catches a field quietly renamed or a list "

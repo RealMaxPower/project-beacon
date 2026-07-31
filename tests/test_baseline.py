@@ -22,7 +22,7 @@ from beacon.models import Evidence
 
 def _evidence(run_id: str, assertions: dict[str, bool], result: str) -> Evidence:
     evidence = Evidence(
-        evidence_version="0.1",
+        evidence_version="0.2",
         run_id=run_id,
         started_at="2026-07-01T00:00:00+00:00",
         completed_at="2026-07-01T00:00:01+00:00",

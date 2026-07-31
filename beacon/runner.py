@@ -231,7 +231,7 @@ def run_scenario(
         "changes": changes,
     }
     evidence = Evidence(
-        evidence_version="0.1",
+        evidence_version="0.2",
         run_id=actual_run_id,
         started_at=started_at,
         completed_at=utc_now(),

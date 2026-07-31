@@ -220,6 +220,50 @@ class AssertionSpec:
         )
 
 
+def _check_shape_is_published(
+    assertions: tuple["AssertionSpec", ...],
+    output_contract: dict[str, Any],
+) -> None:
+    """
+    Refuse a scenario that grades a shape it never showed the subject.
+
+    `output_contract` is the only part of a scenario the subject is told, so a
+    `conforms_to` on the contracted artifact is a requirement the subject can
+    only meet by guessing unless the same schema is published there. Both
+    web-extraction scenarios did exactly that: they demanded `url`,
+    `page_type`, `primary_entities`, `tables`, `actions` and `metadata` while
+    the contract said only "Structured extraction of the page at the URL in
+    the goal". That shape was one hosted agent's native output format, so the
+    scenarios could grade that agent and nothing else — a real model returned
+    prose and was marked down for a schema it was never shown.
+
+    The schemas must be equal, not merely present. A contract that publishes
+    one shape and grades a stricter one is the same trap wearing a disguise.
+    """
+    artifact = output_contract.get("artifact")
+    if not artifact:
+        return
+    target = f"artifacts.{artifact}"
+    published = output_contract.get("schema")
+    for spec in assertions:
+        if spec.type != "conforms_to" or spec.path != target:
+            continue
+        if published is None:
+            raise ScenarioError(
+                f"assertion {spec.id!r} grades the shape of {artifact!r}, but "
+                f"output_contract does not publish a schema. The subject is "
+                f"never shown the assertions, so it would have to guess the "
+                f"shape. Add the same schema under output_contract.schema."
+            )
+        if published != spec.expected:
+            raise ScenarioError(
+                f"assertion {spec.id!r} grades a different shape from the one "
+                f"output_contract.schema publishes to the subject. A contract "
+                f"that advertises one shape and grades another is a hidden "
+                f"requirement."
+            )
+
+
 @dataclass(frozen=True)
 class Scenario:
     schema_version: str
@@ -286,6 +330,7 @@ class Scenario:
         output_contract = value.get("output_contract", {})
         if not isinstance(output_contract, dict):
             raise ScenarioError("output_contract must be an object")
+        _check_shape_is_published(assertions, output_contract)
         return cls(
             schema_version=str(value["schema_version"]),
             id=str(value["id"]),
@@ -376,6 +421,21 @@ class AssertionResult:
     actual: Any
     expected: Any
     message: str
+    measured: bool = True
+    """
+    Whether Beacon could evaluate this assertion at all.
+
+    A subject that finishes without producing the evidence an assertion reads
+    leaves nothing to compare. Reporting that as `passed=False` states a
+    conclusion about the subject's behavior that was never measured — the
+    distinction `docs/architecture.md` draws between *the subject did the wrong
+    thing* and *we do not know what the subject did*.
+
+    The runner already applies this when the artifact itself is missing. This
+    carries the same rule down to a path inside one: an unreachable path is not
+    a failure, it is an absence of evidence, and it resolves the run to
+    INCOMPLETE.
+    """
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

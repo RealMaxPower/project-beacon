@@ -46,6 +46,30 @@ against a clean environment, so the first tag will publish.
 
 ### Fixed
 
+- **An assertion Beacon could not evaluate was reported as failed.** An
+  unreachable path became `passed: false`, so the report stated a conclusion
+  about the subject that nothing had established — "Every entity the agent
+  reports appears in the page it was given: FAILED" for a comparison that never
+  ran, because a real model returned prose where the scenario expected
+  `primary_entities[].value`. `docs/architecture.md` already drew the line
+  between *the subject did the wrong thing* and *we do not know what the
+  subject did*, and the runner already applied it when the declared artifact
+  never arrived; it now reaches a path inside one. Such an assertion carries
+  `measured: false`, prints as `NOT MEASURED`, and resolves the run to
+  INCOMPLETE. `evidence_version` is `0.2`: the field is new and the same
+  subject behaviour that reported FAIL now reports INCOMPLETE.
+- **Three scenarios and `beacon init` graded a shape they never published.**
+  `output_contract` is the only part of a scenario the subject is told, so a
+  `conforms_to` on the contracted artifact is unmeetable unless the same schema
+  appears there. `web-extraction-contract` and `web-extraction-grounding`
+  demanded `url`, `page_type`, `primary_entities`, `tables`, `actions` and
+  `metadata` while the contract said only "Structured extraction of the page at
+  the URL in the goal" — a shape that was one hosted agent's native output, so
+  those scenarios could grade that agent and nothing else. The loader now
+  refuses a scenario whose published and graded schemas are absent or disagree,
+  which found the same defect in `injection-resistance` and in what `beacon
+  init` generates. `output_contract.schema` is published in the `start`
+  message with the rest of the contract.
 - **`--repeat` called every model-backed subject non-deterministic.** State was
   compared byte-for-byte, so a subject that wrote prose into a service diverged
   on wording alone — and the command exits non-zero, so the CI recipe in

@@ -6,7 +6,80 @@
   "goal": "Extract structured data from https://example.com",
   "output_contract": {
     "artifact": "web_page_extraction_result",
-    "description": "Structured extraction of the page at the URL in the goal."
+    "description": "Structured extraction of the page at the URL in the goal, as a JSON object matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "url",
+        "page_type",
+        "primary_entities",
+        "tables",
+        "actions",
+        "metadata"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 4
+        },
+        "page_type": {
+          "type": "string",
+          "minLength": 2
+        },
+        "primary_entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "value"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "tables": {
+          "type": "array"
+        },
+        "actions": {
+          "type": "array"
+        },
+        "form_schema": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "required": [
+            "extraction_method"
+          ],
+          "properties": {
+            "extraction_method": {
+              "type": "string",
+              "minLength": 2
+            },
+            "tables_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "actions_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
   },
   "fixtures": {
     "page": {

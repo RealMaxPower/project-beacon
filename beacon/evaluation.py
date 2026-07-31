@@ -140,6 +140,7 @@ def _result(
     actual: Any,
     expected: Any,
     message: str,
+    measured: bool = True,
 ) -> AssertionResult:
     return AssertionResult(
         id=spec.id,
@@ -148,6 +149,7 @@ def _result(
         actual=actual,
         expected=expected,
         message=message,
+        measured=measured,
     )
 
 
@@ -361,17 +363,26 @@ def evaluate_assertion(
 
         raise EvaluationError(f"unsupported assertion type: {spec.type}")
     except EvaluationError as exc:
-        return _result(spec, False, None, spec.expected, str(exc))
+        # Beacon could not read what the assertion asks about, so it has no
+        # finding to report. Marking it failed would announce a verdict on the
+        # subject that nothing established - a real model returned prose where
+        # a scenario expected `primary_entities[].value`, and the report said
+        # "Every entity the agent reports appears in the page it was given:
+        # FAILED" about a comparison that never ran.
+        return _result(spec, False, None, spec.expected, str(exc), measured=False)
     except (TypeError, ValueError, KeyError, AttributeError, IndexError) as exc:
         # A malformed spec should have been caught at load time. If one gets
-        # this far it becomes one failed assertion, not a crash that takes the
-        # whole run - and the evidence - down with it.
+        # this far it becomes one unmeasured assertion, not a crash that takes
+        # the whole run - and the evidence - down with it. Unmeasured rather
+        # than failed for the same reason: an authoring mistake is not the
+        # subject misbehaving.
         return _result(
             spec,
             False,
             None,
             spec.expected,
             f"assertion could not be evaluated: {type(exc).__name__}: {exc}",
+            measured=False,
         )
 
 
@@ -392,6 +403,12 @@ def resolve_result(
     if subject_status != "completed":
         return "INCOMPLETE"
     if not results:
+        return "INCOMPLETE"
+    # An assertion Beacon could not evaluate leaves the run unjudged on that
+    # point, and "we do not know" is not a verdict about the subject. This is
+    # the same rule the runner applies when the declared artifact never
+    # arrives, carried down to a path inside one that cannot be reached.
+    if any(not result.measured for result in results):
         return "INCOMPLETE"
     return "PASS" if all(result.passed for result in results) else "FAIL"
 

@@ -34,7 +34,7 @@ def _evidence(
     tool_targets: tuple[str, ...] = ("mail_list_messages",),
 ) -> Evidence:
     evidence = Evidence(
-        evidence_version="0.1",
+        evidence_version="0.2",
         run_id=run_id,
         started_at=started_at,
         completed_at=started_at,

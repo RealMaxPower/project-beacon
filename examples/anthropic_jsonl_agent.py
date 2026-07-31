@@ -25,6 +25,7 @@ declares nothing about the scenario itself.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from typing import Any
@@ -50,6 +51,31 @@ def to_anthropic_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _as_contracted(scenario: dict[str, Any], text: str) -> Any:
+    """
+    Parse the reply when the contract asks for a structured artifact.
+
+    A scenario grading shape reads into the artifact — `primary_entities[]`,
+    say — which cannot be done to a string. Submitting the raw text would make
+    every such assertion unevaluable, and an assertion Beacon cannot evaluate
+    resolves the run to INCOMPLETE rather than saying anything about the model.
+
+    A model that answers with prose where JSON was asked for still submits that
+    prose, because failing to hold the contract is a finding and hiding it here
+    would be the bridge grading its own subject.
+    """
+    contract = scenario.get("output_contract") or {}
+    if not contract.get("schema"):
+        return text
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.split("\n", 1)[-1].rsplit("```", 1)[0]
+    try:
+        return json.loads(stripped)
+    except (ValueError, IndexError):
+        return text
+
+
 def build_prompt(scenario: dict[str, Any]) -> str:
     contract = scenario.get("output_contract") or {}
     artifact = contract.get("artifact")
@@ -67,6 +93,16 @@ def build_prompt(scenario: dict[str, Any]) -> str:
         ]
         if contract.get("description"):
             lines.append(f"It must be: {contract['description']}")
+        # A scenario that grades the shape of the answer publishes that shape
+        # here. Relaying it is the difference between measuring whether the
+        # subject can hold a contract and measuring whether it can guess one.
+        if contract.get("schema"):
+            lines += [
+                "",
+                "It must be JSON, and nothing else — no prose around it, no "
+                "code fence — matching this JSON Schema exactly:",
+                json.dumps(contract["schema"], indent=2),
+            ]
     return "\n".join(lines)
 
 
@@ -148,7 +184,7 @@ def main() -> int:
         return 0
 
     if artifact_name:
-        bridge.artifact(artifact_name, final_text)
+        bridge.artifact(artifact_name, _as_contracted(scenario, final_text))
     bridge.complete(
         f"Completed in {turn + 1} turn(s).",
         metadata={"model": MODEL, "turns": turn + 1},

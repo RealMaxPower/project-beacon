@@ -49,10 +49,18 @@ def render_markdown(evidence: Evidence) -> str:
         "|---|---|---|---|",
     ]
     for assertion in evidence.assertions:
-        marker = "PASS" if assertion["passed"] else "FAIL"
+        # "NOT MEASURED" rather than "FAIL": Beacon could not read what this
+        # assertion asks about, so it has no finding, and printing one would
+        # attribute to the subject a result nothing established.
+        if not assertion.get("measured", True):
+            marker = "NOT MEASURED"
+            actual = _display(assertion.get("message", ""))
+        else:
+            marker = "PASS" if assertion["passed"] else "FAIL"
+            actual = _display(assertion["actual"])
         lines.append(
             f"| {marker} | {assertion['description']} | "
-            f"{_display(assertion['actual'])} | {_display(assertion['expected'])} |"
+            f"{actual} | {_display(assertion['expected'])} |"
         )
 
     lines.extend(

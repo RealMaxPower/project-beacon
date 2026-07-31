@@ -55,6 +55,10 @@
         },
         "description": {
           "type": "string"
+        },
+        "schema": {
+          "description": "The shape the artifact must take, published to the subject with the rest of the contract. A scenario that grades shape must declare it here, or it is asking for a structure the subject was never shown.",
+          "type": "object"
         }
       },
       "required": [
