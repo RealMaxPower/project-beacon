@@ -32,10 +32,16 @@ meant to fail** — watching it fail is the only proof the assertion measures
 anything. Add `--service notes` for a scenario graded on the state of a
 simulated service instead of on the answer.
 
-Packaging is ready and verified — wheel and sdist both install clean into an
-empty environment and pass a smoke test — but nothing has been published, so
-`pip install project-beacon` does not work yet. When it does, `beacon`
-replaces `python3 -m beacon` and a bare scenario name replaces a path.
+Packaging builds and installs clean into an empty environment, but nothing has
+been published, so `pip install project-beacon` does not work yet. When it
+does, `beacon` replaces `python3 -m beacon` and a bare scenario name replaces
+a path.
+
+The smoke test that verified this used to run only `--version`, `scenarios`,
+`validate`, `run` and `init` — which is exactly the subset that worked while
+the sdist was shipping without `examples/`, `docs/` or `schemas/`, breaking
+every command on this page that names one. `MANIFEST.in` fixes the
+distribution and `tests/test_packaging.py` fails if it regresses.
 
 ## What works
 
@@ -61,9 +67,12 @@ replaces `python3 -m beacon` and a bare scenario name replaces a path.
 - Exact reset verification, cross-run flakiness rates, and regression
   detection against either a committed baseline or the last N runs, with a
   significance test so a flaky subject does not fail CI at random.
-- Immutable JSON evidence, event logs, and a Markdown report — written for
-  every run, whatever the verdict.
-- Scenario validation at load time, checked against the published JSON Schema.
+- JSON evidence, event logs, and a Markdown report — written for every run,
+  whatever the verdict, and digested so a later edit is detectable. The digest
+  is an unsigned SHA-256 integrity check, and nothing yet ships a command to
+  verify one.
+- Scenario validation at load time, enforced in code and kept in step with the
+  published JSON Schema by test rather than read from it at run time.
 - An adversarial subject suite that tests whether the verdicts are right,
   and a check that every behavioural assertion has a subject which breaks
   it — so the report never states something nobody has tested.
@@ -77,8 +86,9 @@ replaces `python3 -m beacon` and a bare scenario name replaces a path.
   and 1.x request shapes.
 - Minimal MCP stdio and Streamable HTTP clients for discovery and tool calls.
 - A2A discovery across both well-known card paths, and replies accepted as
-  either a Task or a bare Message — checked against the official SDK's
-  reference server, which found four defects the specification alone did not.
+  either a Task or a bare Message — checked against reference servers built
+  with all five official SDKs, which found five defects the specification
+  alone did not.
 - Minimal A2A Agent Card discovery and message sending.
 - A dependency-free Python CLI and test suite.
 
@@ -418,8 +428,15 @@ python3 -m beacon mcp-inspect \
 
 This is the opposite direction from the façade above, and it answers a
 different question: the façade grades an *agent* against synthetic services,
-while this client would grade a *server* — someone else's tool provider. Making
-an MCP server a graded subject in its own right is still to do.
+while this client grades a *server* — someone else's tool provider.
+
+Grading a server as a subject in its own right is built —
+`MCPToolSubjectAdapter` runs one tool on a hosted MCP server through the full
+scenario and evidence lifecycle, and it is what probed 29 hosted agents in
+[conformance/hosted-agent-probe.md](conformance/hosted-agent-probe.md). It has
+no `--adapter` value yet, so reaching it means writing Python rather than a
+command line, and no unit test covers it. Both are why it is not listed under
+"What works".
 
 ## Inspect an A2A agent
 
@@ -451,6 +468,14 @@ written into evidence by the protocol inspector.
 | 3 | CLI/API/SDK/container bridge | Lifecycle, events, budgets, and termination |
 | 4 | Native runtime adapter | Runtime configuration, approvals, cost, and richer traces |
 
+The only Level 4 subject today is Beacon's own in-process reference agent,
+where Beacon *is* the runtime — which is why a default run's evidence reads
+`Integration: in-process (level 4)` while "What does not work yet" says there
+is no native runtime adapter. Both are true and the pair is easy to misread:
+no adapter exists for anyone *else's* runtime, and the two rungs that promise
+approvals and cost are promising evidence Beacon does not yet collect from any
+subject.
+
 OpenClaw and Hermes are intended as future Level 4 reference adapters. They are
 not architectural dependencies.
 
@@ -470,7 +495,7 @@ A passing test suite shows the pipeline runs. It does not show that the
 verdicts are correct, because for a long time every subject Beacon had graded
 was written by Beacon against the assertions doing the grading.
 
-`examples/subjects/` holds twenty-one subjects that behave the way a real agent
+`examples/subjects/` holds forty subjects that behave the way a real agent
 plausibly does — labelling handled mail, taking three seconds to shut down,
 citing ids in uppercase, answering in JSON, obeying an injected instruction,
 reading more than it should, crashing, hanging, corrupting stdout:
@@ -483,10 +508,12 @@ python3 examples/subjects/run_suite.py
 40/40 verdicts correct.
 ```
 
-417 tests and 84% branch coverage over `beacon/`. Every workflow is
-manual-only while this repository is private, so run both locally —
-between them they are what CI would have run, minus the operating-system
-matrix. See CONTRIBUTING.md.
+Over 400 tests, against an enforced floor of 80% branch coverage over
+`beacon/` — a floor rather than a snapshot, because a number in prose goes
+stale the week after it is written and nobody notices. Every workflow is
+manual-only while this repository is private, so run both locally — between
+them they are what CI would have run, minus the operating-system matrix. See
+CONTRIBUTING.md.
 
 Six of them were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).

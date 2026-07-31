@@ -10,7 +10,7 @@ import urllib.parse
 from pathlib import Path
 from unittest import mock
 
-from beacon.adapters import JSONLCommandAdapter
+from beacon.adapters import A2ASubjectAdapter, JSONLCommandAdapter
 from beacon.cli import main
 from beacon.models import Scenario
 from beacon.runner import run_scenario
@@ -24,8 +24,25 @@ from beacon.secrets import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "inbox-briefing" / "scenario.json"
+A2A_SCENARIO = ROOT / "scenarios" / "hosted-injection-resistance" / "scenario.json"
 CANARY = ROOT / "examples" / "subjects" / "leaks_its_key.py"
 SECRET_VALUE = "sk-beacon-canary-4f8a2b17c9de-DO-NOT-SHIP"
+
+
+class _FakeA2AResponse:
+    """Stands in for a urlopen context manager, as the A2A client uses it."""
+
+    def __init__(self, value: dict) -> None:
+        self._payload = json.dumps(value).encode("utf-8")
+
+    def __enter__(self) -> "_FakeA2AResponse":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._payload
 
 
 class SecretRegistryTests(unittest.TestCase):
@@ -86,6 +103,122 @@ class SecretRegistryTests(unittest.TestCase):
         for name in ("HOME", "LANG", "PATH"):
             with self.subTest(name=name):
                 self.assertFalse(looks_like_a_secret(name))
+
+
+A2A_CARD = {
+    "name": "Credentialed fixture agent",
+    "version": "1.0.0",
+    "supportedInterfaces": [
+        {
+            "url": "http://fixture.invalid/",
+            "protocolBinding": "JSONRPC",
+            "protocolVersion": "1.0",
+        }
+    ],
+    "capabilities": {"streaming": False},
+    "skills": [],
+}
+
+A2A_REPLY = {
+    "message": {
+        "messageId": "m-1",
+        "role": "ROLE_AGENT",
+        "parts": [{"text": "The public note describes phase two."}],
+    }
+}
+
+
+class A2ACredentialTests(unittest.TestCase):
+    """
+    An A2A subject's credential arrives on the command line, not from the
+    environment, and the command line is written into evidence verbatim.
+
+    Two holes met here. `--authorization` was never registered as a secret, so
+    nothing knew the value to remove; and `usage` was absent from
+    `REDACTED_EVIDENCE_FIELDS` while `UsageRecorder` stores a `target` per
+    call, so an agent URL carrying the same token in a query string survived in
+    the one field the redaction pass skipped.
+    """
+
+    TOKEN = "a2a-fixture-token-91b7c4e2-DO-NOT-SHIP"
+
+    def _run(self, base_url: str, authorization: str | None):
+        def fake_urlopen(request: object, timeout: float = 0, context=None):
+            del timeout, context
+            if request.full_url.endswith(".json"):
+                return _FakeA2AResponse(A2A_CARD)
+            return _FakeA2AResponse(
+                {"jsonrpc": "2.0", "id": "1", "result": A2A_REPLY}
+            )
+
+        patcher = mock.patch(
+            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        outcome = run_scenario(
+            Scenario.load(A2A_SCENARIO),
+            A2ASubjectAdapter(
+                base_url, timeout_seconds=5, authorization=authorization
+            ),
+            output_dir=directory.name,
+            run_id="credentialed",
+        )
+        return outcome, outcome.json_path.parent
+
+    def test_the_bearer_token_reaches_none_of_the_written_files(self) -> None:
+        _, run_dir = self._run("http://fixture.invalid", f"Bearer {self.TOKEN}")
+        for name in ("evidence.json", "report.md", "events.json"):
+            with self.subTest(file=name):
+                text = (run_dir / name).read_text(encoding="utf-8")
+                self.assertNotIn(self.TOKEN, text)
+
+    def test_a_token_in_the_agent_url_is_redacted_from_usage(self) -> None:
+        """
+        The regression this pair was written for. `usage.calls[].target` is the
+        agent URL, and it was published unredacted.
+        """
+        outcome, run_dir = self._run(
+            f"http://fixture.invalid/?access_token={self.TOKEN}",
+            f"Bearer {self.TOKEN}",
+        )
+        self.assertTrue(outcome.evidence.usage["calls"], "no call was recorded")
+        self.assertNotIn(self.TOKEN, json.dumps(outcome.evidence.usage))
+        text = (run_dir / "evidence.json").read_text(encoding="utf-8")
+        self.assertNotIn(self.TOKEN, text)
+        self.assertGreater(
+            outcome.evidence.subject["secret_redaction"]["replacements"],
+            0,
+            "the token was in the URL, so something had to be replaced",
+        )
+
+    def test_the_credential_is_named_even_when_nothing_needed_removing(self) -> None:
+        """
+        A header-only credential never reaches the bundle, so the replacement
+        count is legitimately zero. The name is still recorded, because "a
+        credential was in play" is part of the conditions of the run.
+        """
+        outcome, _ = self._run("http://fixture.invalid", f"Bearer {self.TOKEN}")
+        record = outcome.evidence.subject["secret_redaction"]
+        self.assertEqual(record["names"], ["authorization"])
+        self.assertEqual(record["replacements"], 0)
+
+    def test_the_digest_still_verifies_after_redacting_usage(self) -> None:
+        """Redaction must precede finalize(), for the new field as for the rest."""
+        from beacon.models import canonical_digest
+
+        _, run_dir = self._run("http://fixture.invalid", f"Bearer {self.TOKEN}")
+        document = json.loads((run_dir / "evidence.json").read_text(encoding="utf-8"))
+        published = dict(document)
+        published["digest"] = ""
+        self.assertEqual(document["digest"], canonical_digest(published))
+
+    def test_no_authorization_means_no_redaction_record(self) -> None:
+        outcome, _ = self._run("http://fixture.invalid", None)
+        self.assertNotIn("secret_redaction", outcome.evidence.subject)
 
 
 class CanaryTests(unittest.TestCase):

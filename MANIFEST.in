@@ -1,0 +1,53 @@
+# What the source distribution carries beyond the package itself.
+#
+# Without this file setuptools ships `beacon/`, `scenarios/`, `tests/`, the
+# README and the LICENSE, and nothing else. That is not enough to be a source
+# distribution of this project:
+#
+#   - Twelve of the test files reach for `examples/` or `schemas/`, so the
+#     shipped suite could not run.
+#   - Thirteen commands in the README name a path under `examples/`, so every
+#     one of them failed after an install.
+#   - `schemas/` is described in the README as the published contract.
+#
+# The release smoke test only ever exercised `--version`, `scenarios`,
+# `validate`, `run` and `init` — precisely the subset that survives the
+# omission — so nothing caught it. `tests/test_packaging.py` does now.
+
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SECURITY.md
+include MANIFEST.in
+
+recursive-include docs *.md
+recursive-include schemas *.json
+recursive-include scenarios *.json
+recursive-include examples *.py *.md *.json *.txt
+
+# setuptools ships `tests/test_*.py` by default and nothing else, so the stub
+# package the suite runs against - a fake `anthropic` module and a recorded
+# extractor response - was missing and three test classes could not run.
+recursive-include tests *.py *.json
+
+# `tests/test_workflow_cost.py` reads these to assert no workflow can spend
+# Actions minutes without someone asking. Shipping the test without the files
+# it reads makes the check an error rather than a guarantee.
+recursive-include .github *.yml *.yaml *.md
+include .github/CODEOWNERS
+
+# The protocol surveys are cited by name from the README and pinned by
+# `tests/test_documented_claims.py`. The reference agents for the non-Python
+# SDKs are deliberately left out: they need a Go, Java, or .NET toolchain and
+# download other people's servers, which is not what a `pip install` is for.
+recursive-include conformance *.md *.py *.json
+
+prune conformance/a2a-js/node_modules
+prune conformance/a2a-java/target
+prune conformance/a2a-dotnet/bin
+prune conformance/a2a-dotnet/obj
+prune .beacon
+prune build
+prune dist
+
+global-exclude *.py[cod]
+global-exclude __pycache__

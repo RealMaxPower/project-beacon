@@ -5,6 +5,7 @@ from typing import Any
 from beacon.adapters.base import ExecutionContext
 from beacon.models import SubjectResult
 from beacon.protocols.a2a import A2AClient, A2AError
+from beacon.secrets import MINIMUM_SECRET_LENGTH
 from beacon.usage import UsageLimitExceeded
 
 
@@ -141,7 +142,26 @@ class A2ASubjectAdapter:
                 break
         return stored
 
+    def _register_secrets(self, context: ExecutionContext) -> None:
+        """
+        Teach the run's registry the credential before anything can record it.
+
+        The other adapters do this for `--env-secret`; an A2A subject's
+        credential arrives on the command line instead, and the command line is
+        written into evidence.json verbatim. The bare token is registered
+        alongside the full header value because an agent URL can carry it in a
+        query string, where the `Bearer ` prefix is absent.
+        """
+        if not self._authorization:
+            return
+        context.secrets.register("authorization", self._authorization)
+        _, _, credential = self._authorization.partition(" ")
+        credential = credential.strip()
+        if len(credential) >= MINIMUM_SECRET_LENGTH:
+            context.secrets.register("authorization", credential)
+
     def execute(self, context: ExecutionContext) -> SubjectResult:
+        self._register_secrets(context)
         limits = context.scenario.limits
         timeout = float(
             self._timeout_seconds

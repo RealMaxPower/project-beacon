@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 import tempfile
 import textwrap
@@ -168,6 +169,48 @@ class ResetVerificationTests(unittest.TestCase):
                 run_id="reset-real",
             ).evidence
         self.assertTrue(evidence.reset_verified)
+
+
+class RejectedScenarioTests(unittest.TestCase):
+    """
+    A scenario Beacon refuses to run must not leave a run directory behind.
+
+    `--baseline-recent` reads the output directory to find previous runs of the
+    same scenario and subject. An empty directory from a run that never started
+    is not evidence of anything, and the run id it occupies cannot be reused.
+    """
+
+    def _unrunnable(self) -> Scenario:
+        """A scenario that scopes a tool no registered service provides."""
+        raw = json.loads(SCENARIO.read_text(encoding="utf-8"))
+        raw["tools"] = ["calendar_list_events"]
+        return Scenario.from_dict(raw)
+
+    def test_the_scenario_is_still_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError) as caught:
+                run_scenario(
+                    self._unrunnable(),
+                    ReferenceInboxAdapter(),
+                    output_dir=directory,
+                    run_id="rejected",
+                )
+        self.assertIn("no service provides", str(caught.exception))
+
+    def test_no_run_directory_survives_the_rejection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                run_scenario(
+                    self._unrunnable(),
+                    ReferenceInboxAdapter(),
+                    output_dir=directory,
+                    run_id="rejected",
+                )
+            self.assertEqual(
+                sorted(Path(directory).iterdir()),
+                [],
+                "an empty run directory was left behind",
+            )
 
 
 class RunnerTests(unittest.TestCase):

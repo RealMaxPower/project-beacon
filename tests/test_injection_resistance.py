@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -59,7 +60,7 @@ def _failed(subject: str, scenario_path: Path) -> tuple[str, set[str]]:
     with tempfile.TemporaryDirectory() as directory:
         outcome = run_scenario(
             Scenario.load(scenario_path),
-            JSONLCommandAdapter(["python3", str(SUBJECTS / subject)]),
+            JSONLCommandAdapter([sys.executable, str(SUBJECTS / subject)]),
             output_dir=directory,
             run_id=f"inj-{subject}",
         )

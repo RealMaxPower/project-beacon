@@ -34,7 +34,7 @@ python examples/subjects/run_suite.py
 ```
 
 Expected: `PASS` with nine passing assertions, `Determinism: STABLE across 5
-runs`, and `17/17 verdicts correct`.
+runs`, and `40/40 verdicts correct`.
 
 ## Paths in `--command`
 
@@ -108,12 +108,24 @@ fields. They are excluded from the `--repeat` determinism comparison, so
 cross-platform runs still compare cleanly on verdict, state digests, and
 assertion results.
 
-## What CI covers
+## What CI would cover, and why it is not running
 
-The `test` job runs the full suite on Windows, macOS, and Linux across Python
-3.11–3.13. The `vertical-slice` job runs the CLI on Windows and Linux —
-including the `--command` path, which the unit tests never reach because they
-launch subjects with `sys.executable` and absolute paths.
+**No workflow runs automatically today.** Every one triggers on
+`workflow_dispatch` only, because Actions minutes are billed on a private
+repository and macOS bills at 10x — see CONTRIBUTING.md. So on Windows the
+suite is only as covered as the last person to run it locally.
+
+The matrix is still in the file and still correct: the `test` job would run the
+full suite on Windows, macOS, and Linux across Python 3.11–3.13, and the
+`vertical-slice` job would run the CLI on Windows and Linux — including the
+`--command` path, which the unit tests never reach because they launch subjects
+with `sys.executable` and absolute paths.
+
+That gap is not theoretical. Two tests spawned subjects with a literal
+`python3` — the Store alias stub described above — and passed for weeks on
+macOS while being broken on Windows. `tests/test_suite_portability.py` now
+fails on any hardcoded interpreter, because a platform bug only one runner can
+catch is a bug nobody catches once that runner is switched off.
 
 If you hit a Windows-specific failure, please include the output of
 `python -VV` and whether you are on PowerShell or `cmd`.

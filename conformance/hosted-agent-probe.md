@@ -23,8 +23,13 @@ query. That is a relevance problem, and normal behaviour for nearest-neighbour
 retrieval. Calling it hallucination would be wrong.
 
 The one confirmed fabrication so far remains `web-page-extractor.fly.dev`,
-which invented an author, a date and tags for a page containing none of them —
-on one run in five.
+which invented an author, a date and tags for a page containing none of them.
+
+**Rate: 8 runs in 12 (67%).** This paragraph said "one run in five" (20%) for
+longer than it should have, which is the exact mistake the rest of the project
+warns about — a five-run sample is not a measurement, and the twelve-run figure
+that superseded it is more than three times larger. The number quoted in
+`README.md` and `docs/agent-builders.md` has always been the twelve-run one.
 
 ## Ask-style tools (a model writes prose)
 

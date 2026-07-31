@@ -114,7 +114,10 @@ even redacted. Declare provenance in the scenario's `metadata`.
 Sign off your commits (`git commit -s`) to certify the
 [Developer Certificate of Origin](https://developercertificate.org/). Describe
 what you changed, how you verified it, and what the change does *not* cover.
-CI must be green on all supported Python versions.
+
+**No CI runs on a pull request** while this repository is private — see above.
+The two local commands are the gate, and saying in the pull request that you
+ran them is what stands in for a green check.
 
 ## Security
 

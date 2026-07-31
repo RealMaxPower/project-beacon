@@ -46,6 +46,47 @@ against a clean environment, so the first tag will publish.
 
 ### Fixed
 
+- **A credential could survive in the evidence bundle.** `usage` was the one
+  field the redaction pass never walked, and `UsageRecorder` stores a `target`
+  per call — the agent URL for an A2A subject. `--authorization` was never
+  registered as a secret at all, unlike the `--env-secret` values the command
+  and MCP-host adapters register. A token passed in an agent URL's query
+  string therefore reached `evidence.json` intact, in the one artifact this
+  project tells people to share.
+- **A rejected scenario left an empty run directory behind.** The run
+  directory was created before the services were built, so a scenario scoping
+  a tool no service provides raised after taking a run id — and
+  `--baseline-recent` reads that directory looking for previous runs.
+- **Two tests launched subjects with a literal `python3`.** `docs/windows.md`
+  says in its own words that this is a Store alias stub on Windows. One of the
+  two was the falsifiability audit, the check that guarantees no report states
+  something nobody has tested. Both passed on macOS and would have failed the
+  Windows leg the moment it ran. `tests/test_suite_portability.py` now fails on
+  any hardcoded interpreter.
+- **The source distribution shipped a test suite that could not run.** With no
+  `MANIFEST.in`, the sdist carried neither `examples/`, `schemas/`, `docs/`,
+  `tests/stubs/` nor `.github/` — twelve test files read the first two, and
+  thirteen README commands name a path under `examples/`. The release smoke
+  test exercised only the subset of the CLI that needs no data files, so it
+  stayed green throughout. It now unpacks the sdist and runs the suite.
+- **The declared setuptools floor did not support the metadata in use.**
+  `pyproject.toml` writes its licence as a PEP 639 SPDX expression, which needs
+  setuptools 77; the floor said 69. Local builds passed because the local
+  setuptools is newer than the floor — only an isolated build honouring it
+  fails.
+- **Claims about the project that nothing checked had drifted.** The README
+  said "twenty-one subjects" ten lines above its own "40/40 verdicts correct";
+  it credited the A2A SDK sweep with four defects where the survey records
+  five; it called evidence "immutable" when nothing enforces that and no
+  command verifies a digest; it said scenario validation is "checked against
+  the published JSON Schema" when nothing under `beacon/` reads `schemas/`; it
+  listed grading an MCP server as still to do when `MCPToolSubjectAdapter` is
+  what probed 29 hosted agents; three documents described a CI that has not run
+  automatically since `a23cdf3`; and `conformance/hosted-agent-probe.md` still
+  quoted a five-run fabrication rate of 20% against the twelve-run 67% used
+  everywhere else — the exact mistake the rest of the project warns about.
+  `tests/test_documented_claims.py` and `tests/test_packaging.py` now pin the
+  countable ones to their source of truth.
 - **Six defects that made a working agent look broken.** A bare `Message`
   reply was reported INCOMPLETE — "did not run" — because only a `Task` was
   handled; the reply text was dropped entirely; `ROLE_AGENT` was not

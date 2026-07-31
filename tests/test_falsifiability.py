@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -40,7 +41,7 @@ def _failed_assertions(script: str, scenario_path: Path) -> set[str]:
     with tempfile.TemporaryDirectory() as directory:
         outcome = run_scenario(
             Scenario.load(scenario_path),
-            JSONLCommandAdapter(["python3", str(ROOT / script)]),
+            JSONLCommandAdapter([sys.executable, str(ROOT / script)]),
             output_dir=directory,
             run_id="falsify",
         )

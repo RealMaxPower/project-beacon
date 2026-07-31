@@ -31,6 +31,7 @@ REDACTED_EVIDENCE_FIELDS = (
     "state_diff",
     "events",
     "artifacts",
+    "usage",
 )
 """
 Every field of the bundle that can carry text the subject influenced.
@@ -39,6 +40,10 @@ Tool arguments and results, artifacts, the subject's stderr as it reaches
 `subject.execution.error`, and the command line itself have all reached
 evidence.json verbatim, so redaction runs over the whole document rather than
 at each capture point.
+
+`usage` is here because `UsageRecorder` stores a `target` per call - the agent
+URL for an A2A subject, the server URL for an MCP one - and a credential passed
+in a query string would otherwise survive in the one field the pass skipped.
 """
 
 DEFAULT_LIMITATIONS = [
@@ -102,10 +107,16 @@ def run_scenario(
 ) -> RunOutcome:
     actual_run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
     run_dir = Path(output_dir).resolve() / actual_run_id
-    run_dir.mkdir(parents=True, exist_ok=False)
 
+    # Services are built before the directory exists, because building them is
+    # the last thing that can reject the scenario outright. A scoped tool no
+    # service provides is an authoring error, not a verdict - creating the run
+    # directory first would leave an empty one behind for a run that never
+    # started, and `--baseline-recent` reads that directory.
     recorder = EventRecorder()
     router, services, before = _build_services(scenario, recorder)
+
+    run_dir.mkdir(parents=True, exist_ok=False)
     context = ExecutionContext(
         run_id=actual_run_id,
         run_dir=run_dir,

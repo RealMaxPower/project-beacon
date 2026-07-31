@@ -17,7 +17,8 @@
   An assertion nobody has watched fail is a claim the evidence does not
   support. This project has shipped three of those and found each one late;
   `tests/test_falsifiability.py` now enforces it, so a new assertion without a
-  breaking subject fails CI.
+  breaking subject fails the suite. Nothing runs it for you on a pull
+  request — see CONTRIBUTING.md — so run it yourself.
 
 **If this adds a tool to a scenario's surface:**
 

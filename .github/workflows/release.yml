@@ -79,6 +79,18 @@ jobs:
             --adapter command \
             --command "/tmp/fresh/bin/python scenarios/smoke-probe/subjects/compliant.py"
 
+      # The step above only ever touched the subset of the CLI that needs no
+      # data files, so it stayed green for weeks while the sdist shipped
+      # without examples/, docs/, schemas/ or tests/stubs/ — and the suite it
+      # did ship could not run. Unpacking the sdist and running that suite is
+      # the check that would have caught it.
+      - name: Run the shipped test suite out of the sdist
+        run: |
+          mkdir -p /tmp/sdist && tar xzf dist/*.tar.gz -C /tmp/sdist
+          cd /tmp/sdist/project_beacon-*
+          python -W error::ResourceWarning -m unittest discover -s tests
+          python examples/subjects/run_suite.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: distribution
