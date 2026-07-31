@@ -32,7 +32,15 @@ def _evidence(run_id: str, assertions: dict[str, bool], result: str) -> Evidence
         assertions=[
             {"id": key, "passed": value} for key, value in assertions.items()
         ],
-        state={"before_digest": "b", "after_digest": "a"},
+        # `before` and `after` carry the snapshots themselves, which every
+        # bundle Beacon writes contains and which `run_signature` compares by
+        # shape. The digests beside them stay exact.
+        state={
+            "before_digest": "b",
+            "after_digest": "a",
+            "before": {"mail": {"drafts": []}},
+            "after": {"mail": {"drafts": []}},
+        },
         state_diff={"change_count": 0, "changes": []},
         events=[],
         artifacts={"answer": "x"},

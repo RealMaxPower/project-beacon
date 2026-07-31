@@ -3,7 +3,43 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
-from beacon.models import Evidence
+from beacon.models import Evidence, canonical_digest
+
+
+TEXT_PLACEHOLDER = "<beacon:text>"
+EMPTY_TEXT_PLACEHOLDER = "<beacon:empty-text>"
+
+
+def state_shape(value: Any) -> Any:
+    """
+    A service snapshot with its free text collapsed, for comparing repeats.
+
+    The exact state digest answers "is this byte-for-byte what it was", which
+    is the right question for tamper evidence and the wrong one for asking
+    whether a subject behaved the same way twice. A model that drafts a reply
+    writes different words every run, so an exact comparison reports every
+    model-backed subject as non-deterministic however correct it is — the same
+    false positive that artifact wording was already excluded to avoid, reached
+    through state instead.
+
+    So structure and non-text values are kept and string *contents* dropped:
+    a different number of drafts, a renamed or missing key, a changed count or
+    flag, a body that is sometimes empty — all still diverge. Only the prose
+    stops mattering.
+
+    This does not weaken the check as much as it looks. What a scenario cares
+    about in its state is what its assertions read, and assertion results are
+    compared separately and exactly. This is the supplementary tripwire, not
+    the graded property. A string-only difference is still reported, so nothing
+    is dropped silently.
+    """
+    if isinstance(value, dict):
+        return {key: state_shape(item) for key, item in sorted(value.items())}
+    if isinstance(value, list):
+        return [state_shape(item) for item in value]
+    if isinstance(value, str):
+        return TEXT_PLACEHOLDER if value else EMPTY_TEXT_PLACEHOLDER
+    return value
 
 
 VOLATILE_EVIDENCE_FIELDS = (
@@ -29,8 +65,8 @@ def run_signature(evidence: Evidence) -> dict[str, Any]:
     """Reduce a run to the parts that must be identical across repeats."""
     return {
         "result": evidence.result,
-        "before_digest": evidence.state["before_digest"],
-        "after_digest": evidence.state["after_digest"],
+        "before_state": canonical_digest(state_shape(evidence.state["before"])),
+        "after_state": canonical_digest(state_shape(evidence.state["after"])),
         "reset_verified": evidence.reset_verified,
         "assertions": [
             {"id": item["id"], "passed": item["passed"]}
@@ -81,6 +117,14 @@ class DeterminismReport:
     tool_sequences_differ: bool
     verdicts: dict[str, int] = field(default_factory=dict)
     flaky: tuple[FlakyAssertion, ...] = ()
+    state_text_differs: bool = False
+    """
+    The state matched in shape but not in wording.
+
+    Reported rather than merely tolerated: it is the normal signature of a
+    model-backed subject, and it is also what a scenario grading prose through
+    an assertion would want to know about.
+    """
 
     @property
     def dominant_verdict(self) -> str | None:
@@ -95,6 +139,7 @@ class DeterminismReport:
             "verdicts": dict(self.verdicts),
             "divergent_fields": list(self.divergent_fields),
             "flaky": [item.to_dict() for item in self.flaky],
+            "state_text_differs": self.state_text_differs,
         }
 
     def summary(self) -> str:
@@ -111,7 +156,7 @@ class DeterminismReport:
         if self.stable:
             lines.append(
                 f"Determinism: STABLE across {self.run_count} runs "
-                f"(state digests, verdict, and assertion results identical)."
+                f"(state shape, verdict, and assertion results identical)."
             )
         else:
             lines.append(f"Determinism: DIVERGENT across {self.run_count} runs.")
@@ -136,6 +181,13 @@ class DeterminismReport:
         for field_name in self.divergent_fields:
             if field_name != "assertions":
                 lines.append(f"  differs: {field_name}")
+
+        if self.state_text_differs:
+            lines.append(
+                "  note: the state matched in shape but the text within it "
+                "differed. Expected of a model-backed subject that writes "
+                "prose; the wording itself is graded by assertions, not here."
+            )
 
         if self.tool_sequences_differ:
             lines.append(
@@ -182,6 +234,16 @@ def compare_runs(evidences: Sequence[Evidence]) -> DeterminismReport:
         if 0 < sum(results) < len(results)
     )
 
+    # Shape-equal but not byte-equal: the wording moved and nothing else did.
+    # Worth saying out loud rather than passing over in silence.
+    exact_states = {
+        (evidence.state["before_digest"], evidence.state["after_digest"])
+        for evidence in evidences
+    }
+    state_text_differs = len(exact_states) > 1 and not (
+        {"before_state", "after_state"} & set(divergent)
+    )
+
     sequences = {tool_sequence(evidence) for evidence in evidences}
     return DeterminismReport(
         stable=not divergent,
@@ -191,6 +253,7 @@ def compare_runs(evidences: Sequence[Evidence]) -> DeterminismReport:
         tool_sequences_differ=len(sequences) > 1,
         verdicts=verdicts,
         flaky=flaky,
+        state_text_differs=state_text_differs,
     )
 
 

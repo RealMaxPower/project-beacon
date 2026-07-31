@@ -28,6 +28,7 @@ def _evidence(
     started_at: str = "2026-01-01T00:00:00+00:00",
     result: str = "PASS",
     after_digest: str = "digest-after",
+    after: dict[str, Any] | None = None,
     assertions: list[dict[str, Any]] | None = None,
     artifacts: dict[str, Any] | None = None,
     tool_targets: tuple[str, ...] = ("mail_list_messages",),
@@ -43,7 +44,12 @@ def _evidence(
         assertions=assertions
         if assertions is not None
         else [{"id": "one", "passed": True}],
-        state={"before_digest": "digest-before", "after_digest": after_digest},
+        state={
+            "before_digest": "digest-before",
+            "after_digest": after_digest,
+            "before": {"mail": {"drafts": []}},
+            "after": after if after is not None else {"mail": {"drafts": []}},
+        },
         state_diff={"change_count": 0, "changes": []},
         events=[
             {"sequence": index, "kind": "tool_call", "target": target}
@@ -75,6 +81,103 @@ class SignatureTests(unittest.TestCase):
         self.assertIn("artifact_names", report.divergent_fields)
 
 
+class StateShapeTests(unittest.TestCase):
+    """
+    State is compared by shape, so a subject that rephrases is not called
+    non-deterministic — and one that behaves differently still is.
+
+    Five runs of `inbox-briefing` against a real model returned PASS with an
+    identical assertion vector and identical draft metadata every time, and
+    were reported DIVERGENT anyway, exiting non-zero, because the model chose
+    different words inside the drafts. Artifact wording was already excluded
+    from the comparison for exactly this reason; state was not, so the CI
+    recipe in `docs/agent-builders.md` failed every run for any scenario whose
+    subject writes prose into a service.
+
+    The cases below are the ones that must still diverge. Without them this
+    change would read as "make the check pass", which is not what it is.
+    """
+
+    def _drafts(self, *drafts: dict[str, Any]) -> dict[str, Any]:
+        return {"mail": {"drafts": list(drafts), "sent": []}}
+
+    BODY = {"id": "d-1", "in_reply_to": "m-1", "body": "Hi Maya, confirming."}
+
+    def test_rewording_alone_is_not_divergence(self) -> None:
+        reworded = dict(self.BODY, body="Hi Maya, I can confirm that.")
+        report = compare_runs(
+            [
+                _evidence(after=self._drafts(self.BODY), after_digest="a"),
+                _evidence(after=self._drafts(reworded), after_digest="b"),
+            ]
+        )
+        self.assertTrue(report.stable, report.divergent_fields)
+
+    def test_rewording_is_still_reported_rather_than_passed_over(self) -> None:
+        """Tolerated is not the same as unmentioned."""
+        reworded = dict(self.BODY, body="Hi Maya, I can confirm that.")
+        report = compare_runs(
+            [
+                _evidence(after=self._drafts(self.BODY), after_digest="a"),
+                _evidence(after=self._drafts(reworded), after_digest="b"),
+            ]
+        )
+        self.assertTrue(report.state_text_differs)
+        self.assertIn("matched in shape", report.summary())
+
+    def test_identical_text_reports_no_text_difference(self) -> None:
+        """Otherwise the note above would be printed for every stable run."""
+        report = compare_runs(
+            [
+                _evidence(after=self._drafts(self.BODY), after_digest="a"),
+                _evidence(after=self._drafts(self.BODY), after_digest="a"),
+            ]
+        )
+        self.assertFalse(report.state_text_differs)
+        self.assertNotIn("matched in shape", report.summary())
+
+    def test_a_structural_change_still_diverges(self) -> None:
+        second = dict(self.BODY, id="d-2")
+        cases = {
+            "an extra draft": self._drafts(self.BODY, second),
+            "a missing draft": self._drafts(),
+            "a dropped key": self._drafts({"id": "d-1", "body": "Hi Maya."}),
+            "a renamed key": self._drafts(
+                {"id": "d-1", "replies_to": "m-1", "body": "Hi Maya."}
+            ),
+            "a message actually sent": {
+                "mail": {"drafts": [self.BODY], "sent": [{"id": "m-1"}]}
+            },
+            "a body that is empty": self._drafts(dict(self.BODY, body="")),
+            "a changed number": {
+                "mail": {"drafts": [self.BODY], "sent": [], "unread": 2}
+            },
+            "a changed flag": {
+                "mail": {"drafts": [self.BODY], "sent": [], "locked": True}
+            },
+        }
+        for label, mutated in cases.items():
+            with self.subTest(change=label):
+                report = compare_runs(
+                    [
+                        _evidence(after=self._drafts(self.BODY), after_digest="a"),
+                        _evidence(after=mutated, after_digest="b"),
+                    ]
+                )
+                self.assertFalse(
+                    report.stable, f"{label} was tolerated as a rewording"
+                )
+                self.assertIn("after_state", report.divergent_fields)
+
+    def test_the_exact_digest_is_still_recorded_in_the_evidence(self) -> None:
+        """
+        Comparing by shape must not weaken the tamper-evidence digest, which
+        answers a different question and is taken over the whole document.
+        """
+        evidence = _evidence(after=self._drafts(self.BODY), after_digest="exact")
+        self.assertEqual(evidence.state["after_digest"], "exact")
+
+
 class CompareRunsTests(unittest.TestCase):
     def test_identical_runs_are_stable(self) -> None:
         report = compare_runs([_evidence(), _evidence(), _evidence()])
@@ -86,13 +189,13 @@ class CompareRunsTests(unittest.TestCase):
     def test_divergent_verdict_and_state_are_both_named(self) -> None:
         report = compare_runs(
             [
-                _evidence(result="PASS", after_digest="digest-x"),
-                _evidence(result="FAIL", after_digest="digest-y"),
+                _evidence(result="PASS", after={"mail": {"drafts": [{"id": "d-1"}]}}),
+                _evidence(result="FAIL", after={"mail": {"drafts": []}}),
             ]
         )
         self.assertFalse(report.stable)
         self.assertIn("result", report.divergent_fields)
-        self.assertIn("after_digest", report.divergent_fields)
+        self.assertIn("after_state", report.divergent_fields)
         self.assertIn("DIVERGENT", report.summary())
 
     def test_assertion_vector_divergence_is_detected(self) -> None:

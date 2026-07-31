@@ -46,6 +46,19 @@ against a clean environment, so the first tag will publish.
 
 ### Fixed
 
+- **`--repeat` called every model-backed subject non-deterministic.** State was
+  compared byte-for-byte, so a subject that wrote prose into a service diverged
+  on wording alone — and the command exits non-zero, so the CI recipe in
+  `docs/agent-builders.md` failed every run for any such scenario. Found on the
+  first run of the bridge against a real model: five repeats of
+  `inbox-briefing` returned PASS with one distinct assertion vector and
+  identical draft metadata, reported DIVERGENT because the drafts were phrased
+  differently. State is now compared by shape — a different number of drafts, a
+  renamed or missing field, a changed count or flag, a body that is sometimes
+  empty all still diverge, and a wording-only difference is reported as a note
+  instead of a failure. `state.after_digest` in the bundle stays exact, because
+  tamper evidence asks a different question. The adversarial suite could not
+  have caught this: all forty subjects write byte-identical prose.
 - **A credential could survive in the evidence bundle.** `usage` was the one
   field the redaction pass never walked, and `UsageRecorder` stores a `target`
   per call — the agent URL for an A2A subject. `--authorization` was never
@@ -117,8 +130,7 @@ against a clean environment, so the first tag will publish.
 
 - The process runner is not a hardened container or VM sandbox.
 - No native runtime adapter for OpenClaw, Hermes, Codex or similar.
-- The model bridge in `examples/` has never been run against a real API key,
-  and the MCP façade has never been driven by a GUI host. Both need a person;
-  see [docs/running-it-yourself.md](docs/running-it-yourself.md).
+- The MCP façade has never been driven by a GUI host. It needs a person; see
+  [docs/running-it-yourself.md](docs/running-it-yourself.md).
 - A passing report is evidence for one scenario and one configuration. It is
   not a safety certification.

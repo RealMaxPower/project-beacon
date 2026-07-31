@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from beacon.determinism import compare_runs, run_signature
+from beacon.determinism import compare_runs
 from beacon.models import Evidence, utc_now
 
 
@@ -180,9 +180,13 @@ def build_baseline(evidences: Sequence[Evidence]) -> dict[str, Any]:
         "verdicts": verdicts,
         "dominant_verdict": report.dominant_verdict,
         "assertion_pass_rates": _rates(evidences),
+        # The exact digests, read from the evidence rather than through
+        # `run_signature`, which compares state by shape so that a rephrasing
+        # subject is not called non-deterministic. A baseline records what the
+        # state actually was; it does not compare it.
         "state": {
-            "before_digest": run_signature(evidences[0])["before_digest"],
-            "after_digest": run_signature(evidences[0])["after_digest"],
+            "before_digest": evidences[0].state["before_digest"],
+            "after_digest": evidences[0].state["after_digest"],
         },
     }
 

@@ -196,24 +196,39 @@ something else entirely leaks nothing and would otherwise pass.
 
 A single passing run says little if the next one disagrees. `--repeat` runs the
 same scenario against the same subject several times and compares the verdict,
-the before/after state digests, and the per-assertion result vector:
+the shape of the before/after state, and the per-assertion result vector:
 
 ```bash
 python3 -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
 ```
 
 ```text
-Determinism: STABLE across 5 runs (state digests, verdict, and assertion
+Determinism: STABLE across 5 runs (state shape, verdict, and assertion
 results identical).
 ```
 
 The command exits non-zero if any two runs disagree, and names the fields that
 diverged. Run identifiers, timestamps, and the evidence digest are excluded
-from the comparison because they differ by construction; artifact wording is
-excluded too, so a model-backed subject that rephrases its output is not
-reported as non-deterministic, while a subject that sometimes fails to produce
-that artifact at all still is. Tool-call ordering is reported but does not
-count as divergence.
+from the comparison because they differ by construction.
+
+**Prose is excluded, structure is not.** A model-backed subject rewrites its
+wording every run, so comparing state byte-for-byte reports every one of them
+as non-deterministic however correctly it behaved — five runs against a real
+model returned PASS with an identical assertion vector and identical draft
+metadata, and were called DIVERGENT because the drafts were phrased
+differently. So string *contents* are dropped from the comparison while
+everything around them is kept: a different number of drafts, a renamed or
+missing field, a changed count or flag, or a body that is sometimes empty all
+still diverge. A run whose state differs only in wording is reported as a note,
+not a failure, so nothing is passed over in silence.
+
+This is narrower than it sounds. What a scenario cares about in its state is
+what its assertions read, and assertion results are compared separately and
+exactly. The state comparison is the supplementary tripwire, not the graded
+property — and `state.after_digest` in the evidence bundle is still the exact
+digest, because tamper evidence asks a different question.
+
+Tool-call ordering is reported but does not count as divergence.
 
 Use `--run-id` to give a run a stable directory name; repeats are suffixed
 `-001`, `-002`, and so on.
