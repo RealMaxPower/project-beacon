@@ -43,9 +43,46 @@ against a clean environment, so the first tag will publish.
 - Credential passthrough by name only, with redaction from the evidence
   bundle, verified by a canary subject that tries to leak its key three ways.
 - Reference A2A servers for all five official SDKs under `conformance/`.
+- Recorded baselines in `baselines/`, from twelve runs of each web-extraction
+  scenario against a real model — the first numbers in this repository that a
+  reader can check against a committed artifact rather than take on trust.
+  They replace a headline figure that lived only in prose.
 
 ### Fixed
 
+- **A subject could write its own verdict into the report.** Artifact text is
+  written by the subject and was inserted into `report.md` raw, so it could
+  close the Artifacts heading and append a second Assertions section with a
+  forged PASS row — in the document people are asked to read and share. The
+  assertion table already escaped for this reason; the artifact section did
+  not. Artifacts are now fenced, with a fence longer than any backtick run
+  inside them.
+- **A failed MCP handshake leaked the server process.** `MCPStdioClient.start`
+  raised with the child still running and its three pipes open, and the caller
+  had no handle to close because it never received one. The documented test
+  command `-W error::ResourceWarning` could not catch it: the warnings surface
+  from `__del__` and reader threads, where they print as "Exception ignored"
+  and the suite stays green. The suite is now warning-clean and asserts the
+  cleanup directly.
+- **`serve-mcp` could not serve a scenario pack.** `run` and `validate` took
+  `--service-module` and `serve-mcp` did not, so a pack bringing its own
+  service — the proof that a third party needs no changes under `beacon/` —
+  could be run headless but never handed to a GUI host, which is the one flow
+  that needs a person. The two headline features did not compose.
+- **A resource budget that never applied.** `max_subject_calls` counts requests
+  Beacon makes *to* a subject, so it binds only where Beacon drives: the A2A
+  and MCP-tool adapters. `injection-resistance` declared one anyway, and
+  `docs/running-it-yourself.md` cited it as the guard against a runaway model
+  bill on a *command* subject, where it does nothing. The real bounds there are
+  `timeout_seconds`, `max_protocol_messages`, and the bridge's own turn cap.
+  A test now refuses a call budget on a scenario whose subject Beacon does not
+  drive.
+- **A sign-off rule nobody kept.** `CONTRIBUTING.md` required `git commit -s`
+  and no commit in the project's history had the trailer. The rule now names
+  the commit it starts applying from, and `tests/test_contributing_policy.py`
+  checks every commit since. Existing history is left unsigned rather than
+  rewritten, because a sign-off added retroactively by someone else certifies
+  nothing.
 - **An assertion Beacon could not evaluate was reported as failed.** An
   unreachable path became `passed: false`, so the report stated a conclusion
   about the subject that nothing had established — "Every entity the agent

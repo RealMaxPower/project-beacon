@@ -261,3 +261,47 @@ class A2ATests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StartupCleanupTests(unittest.TestCase):
+    """
+    A `start()` that raises must not leave the child running.
+
+    The caller never receives the client, so it has nothing to close, and the
+    process and its three pipes survive until the interpreter collects them —
+    reported as "subprocess N is still running" and three unclosed files.
+
+    The documented test command is `-W error::ResourceWarning`, which cannot
+    fail on any of this: the warnings surface from `__del__` and from reader
+    threads, where they print as "Exception ignored" and the suite stays green.
+    So the leak is asserted directly rather than left to a flag that cannot see
+    it.
+    """
+
+    def test_a_failed_handshake_reaps_the_child(self) -> None:
+        client = MCPStdioClient(
+            [sys.executable, "-c", MCPStreamRobustnessTests.BROKEN_SERVER],
+            timeout_seconds=10,
+        )
+        with self.assertRaises(MCPError):
+            client.start()
+        self.assertIsNone(
+            client._process, "the client still holds a process it never closed"
+        )
+
+    def test_a_server_that_never_answers_is_not_left_running(self) -> None:
+        silent = "import sys, time\ntime.sleep(30)\n"
+        client = MCPStdioClient([sys.executable, "-c", silent], timeout_seconds=1)
+        with self.assertRaises(MCPError):
+            client.start()
+        self.assertIsNone(client._process)
+
+    def test_a_healthy_client_still_starts_and_closes(self) -> None:
+        """The cleanup must not fire on the path that works."""
+        client = MCPStdioClient(
+            [sys.executable, "-c", MCPStreamRobustnessTests.NOISY_SERVER], timeout_seconds=10
+        )
+        client.start()
+        self.assertIsNotNone(client._process)
+        client.close()
+        self.assertIsNone(client._process)

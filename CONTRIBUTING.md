@@ -115,6 +115,15 @@ Sign off your commits (`git commit -s`) to certify the
 [Developer Certificate of Origin](https://developercertificate.org/). Describe
 what you changed, how you verified it, and what the change does *not* cover.
 
+The policy applies from the commit that added this sentence onward. Every
+commit before it is unsigned — the requirement was written and then not
+followed, by the only person contributing, for the whole of the project's
+history so far. It is recorded here rather than fixed by rewriting those
+commits, because a sign-off retroactively added by someone else certifies
+nothing. `tests/test_contributing_policy.py` checks that this paragraph and
+the requirement above stay together, so the rule cannot go back to being
+stated without being kept.
+
 **No CI runs on a pull request** while this repository is private — see above.
 The two local commands are the gate, and saying in the pull request that you
 ran them is what stands in for a green check.

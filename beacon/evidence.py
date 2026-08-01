@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,31 @@ def write_evidence(evidence: Evidence, run_dir: Path) -> tuple[Path, Path]:
     )
     markdown_path.write_text(render_markdown(evidence), encoding="utf-8")
     return json_path, markdown_path
+
+
+def _fenced(content: Any) -> str:
+    """
+    An artifact in a code fence long enough to survive its own contents.
+
+    Artifact text is written by the subject, and it was previously dropped into
+    the report raw. So a subject could close a heading, forge a PASS row in the
+    assertion table, or end the document — in the artifact people are asked to
+    read and share. The assertion table already escaped for this reason; the
+    artifact section did not.
+
+    A fence is used rather than escaping because an artifact is often JSON or
+    prose that should stay readable. The fence is one backtick longer than the
+    longest run inside the content, which is the rule CommonMark defines for
+    exactly this, so no content can terminate it early.
+    """
+    text = (
+        json.dumps(content, ensure_ascii=False, indent=2, sort_keys=True)
+        if isinstance(content, (dict, list))
+        else str(content)
+    )
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    fence = "`" * max(3, longest + 1)
+    return f"{fence}\n{text}\n{fence}"
 
 
 def _display(value: Any) -> str:
@@ -83,7 +109,7 @@ def render_markdown(evidence: Evidence) -> str:
     lines.extend(["", "## Artifacts", ""])
     if evidence.artifacts:
         for name, content in evidence.artifacts.items():
-            lines.extend([f"### {name}", "", str(content), ""])
+            lines.extend([f"### {name}", "", _fenced(content), ""])
     else:
         lines.append("- No artifacts.")
 

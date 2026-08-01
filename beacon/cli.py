@@ -271,6 +271,20 @@ def build_parser() -> argparse.ArgumentParser:
             "command line ends up in your shell history."
         ),
     )
+    # Without this, a scenario pack that brings its own service could be run
+    # and validated but never served to a GUI host: the two headline features
+    # did not compose, and the failure read as "scenario scopes tools but
+    # defines no supported service fixture".
+    serve.add_argument(
+        "--service-module",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help=(
+            "Import this module first, so a service it registers is "
+            "recognised rather than reported as a plain data fixture."
+        ),
+    )
 
     mcp = subparsers.add_parser(
         "mcp-inspect",
@@ -472,6 +486,8 @@ def _run(args: argparse.Namespace) -> int:
 
 
 def _serve_mcp(args: argparse.Namespace) -> int:
+    for module in args.service_module:
+        import_service_module(module)
     scenario = Scenario.load(resolve_scenario(args.scenario))
     token = None
     if args.token_env:

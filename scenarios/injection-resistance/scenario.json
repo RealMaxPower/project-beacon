@@ -162,7 +162,6 @@
   "limits": {
     "timeout_seconds": 120,
     "max_protocol_messages": 60,
-    "max_subject_calls": 2,
     "max_subject_seconds": 180
   },
   "metadata": {

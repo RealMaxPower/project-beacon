@@ -41,25 +41,54 @@ see [examples/reference_jsonl_agent.py](../examples/reference_jsonl_agent.py).
 
 ## One run tells you almost nothing
 
-This is the part worth internalising. A hosted extractor was asked to pull
-structured data from `example.com`, a page with one heading and one sentence.
-The first run passed. So did the next three.
+This is the part worth internalising. A model was asked to pull structured
+data from `example.com`, a page with one heading and one sentence, twelve
+times:
 
 ```
-python3 -m beacon run scenarios/web-extraction-grounding/scenario.json \
-  --adapter a2a --agent-url https://web-page-extractor.fly.dev --repeat 12
+python3 -m beacon run web-extraction-contract \
+  --adapter command --command "python3 examples/anthropic_jsonl_agent.py" \
+  --env-secret ANTHROPIC_API_KEY --timeout 180 --repeat 12
 ```
 
 ```
 Determinism: DIVERGENT across 12 runs.
-  verdicts: FAIL 8 (67%), PASS 4 (33%)
-  flaky: entities-grounded passed 4/12 (33%) — failed on run-002, run-003, run-004, run-005, +4 more
+  verdicts: INCOMPLETE 10 (83%), PASS 2 (17%)
+  flaky: result-matches-the-contract passed 2/12 (17%)
 ```
 
-It invents an author, a date and tags for a page containing none of them —
-two times in three. A five-run sample first put that at 20%; twelve runs put
-it at 67%. **Do not quote a rate from a handful of runs.** If a failure is
-intermittent, the number of runs *is* the measurement.
+It held its output contract **two runs in twelve**. Ten times it wrapped
+otherwise-valid JSON in a sentence of explanation, having been told to return
+JSON and nothing else. Any one of those ten looks like a broken integration;
+any one of the other two looks like a working one.
+
+The recorded rates are in
+[baselines/](../baselines/) — `web-extraction-contract.claude-sonnet-5.json`
+and `web-extraction-grounding.claude-sonnet-5.json`, written by
+`--baseline` from those runs. **Do not quote a rate from a handful of runs.**
+If a failure is intermittent, the number of runs *is* the measurement.
+
+### Shape first, then truth
+
+Run the grounding scenario over the same twelve and the interesting number is
+one nobody usually reports:
+
+```
+entities-grounded: measured 0/12
+```
+
+Not "failed" — *never evaluated*. Grounding reads
+`primary_entities[].value`, and a reply that is prose has no such path, so
+there was nothing to compare and every run resolved INCOMPLETE. You cannot
+measure whether an agent tells the truth until it holds its shape, and a
+harness that scored those ten as failures would be reporting a fabrication
+rate it never measured.
+
+On the runs where the shape did hold, the fabrication is real: asked about
+`example.com`, the model recited the page's *older* wording — "illustrative
+examples in documents… without prior coordination" — against a capture
+reading "documentation examples without needing permission. Avoid use in
+operations." A confident recitation of a page that changed.
 
 ## Catch the regression, not just the failure
 
@@ -76,7 +105,7 @@ The first run records the baseline. Every run after compares against it:
 
 ```
 Baseline (baselines/my-agent.json): recorded 2026-07-01T09:00:00+00:00 over 20 run(s).
-  REGRESSION  entities-grounded passed 100% of baseline runs, 33% now (4/12)
+  REGRESSION  result-matches-the-contract passed 100% of baseline runs, 17% now (2/12)
 ```
 
 Non-zero exit, so CI fails. Comparison is by **pass rate**, not verdict,

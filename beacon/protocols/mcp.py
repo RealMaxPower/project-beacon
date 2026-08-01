@@ -84,6 +84,7 @@ class MCPStdioClient:
         )
         if not process.stdin or not process.stdout or not process.stderr:
             process.kill()
+            process.wait(timeout=2)
             raise MCPError("failed to open MCP stdio streams")
         self._process = process
         threading.Thread(
@@ -96,25 +97,34 @@ class MCPStdioClient:
             args=(process.stderr, self._stderr_queue),
             daemon=True,
         ).start()
-        response = self.request(
-            "initialize",
-            {
-                "protocolVersion": self.protocol_version,
-                "capabilities": {},
-                "clientInfo": {
-                    "name": "project-beacon",
-                    "version": "0.1.0",
+
+        # Everything past this point can fail on the server's behaviour rather
+        # than ours - unparseable output, a missing protocolVersion, a hang -
+        # and a start() that raises with the child still running leaks the
+        # process and its three pipes. The caller has no handle to close,
+        # because it never got one.
+        try:
+            response = self.request(
+                "initialize",
+                {
+                    "protocolVersion": self.protocol_version,
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "project-beacon",
+                        "version": "0.1.0",
+                    },
                 },
-            },
-        )
-        negotiated = response.get("protocolVersion")
-        if not negotiated:
+            )
+            negotiated = response.get("protocolVersion")
+            if not negotiated:
+                raise MCPError("MCP initialize response omitted protocolVersion")
+            self.protocol_version = str(negotiated)
+            self.server_info = dict(response.get("serverInfo", {}))
+            self.capabilities = dict(response.get("capabilities", {}))
+            self.notify("notifications/initialized")
+        except BaseException:
             self.close()
-            raise MCPError("MCP initialize response omitted protocolVersion")
-        self.protocol_version = str(negotiated)
-        self.server_info = dict(response.get("serverInfo", {}))
-        self.capabilities = dict(response.get("capabilities", {}))
-        self.notify("notifications/initialized")
+            raise
 
     def close(self) -> None:
         process = self._process

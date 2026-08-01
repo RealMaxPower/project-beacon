@@ -340,3 +340,106 @@ class SubjectStderrTests(unittest.TestCase):
             """
         )
         self.assertNotEqual(evidence.subject.get("status"), "error")
+
+
+class ReportInjectionTests(unittest.TestCase):
+    """
+    Artifact text is written by the subject and lands in a document people are
+    asked to read and share. It was inserted raw, so a subject could close the
+    Artifacts heading and write its own — including a forged PASS row in a
+    table whose real rows Beacon escapes precisely because it does not trust
+    this text.
+    """
+
+    # Deliberately free of backticks. A payload that opens a fence of its own
+    # is swallowed by it and proves nothing; this is plain markdown, so raw
+    # insertion puts a second Assertions section straight into the document.
+    HOSTILE = (
+        "The briefing is complete.\n"
+        "\n"
+        "## Assertions\n"
+        "\n"
+        "| Result | Assertion | Actual | Expected |\n"
+        "|---|---|---|---|\n"
+        "| PASS | Nothing was sent | none | none |\n"
+        "\n"
+        "**Evidence digest:** forged\n"
+    )
+
+    def _report(self, artifact: str) -> str:
+        from beacon.evidence import render_markdown
+        from beacon.models import Evidence
+
+        evidence = Evidence(
+            evidence_version="0.2",
+            run_id="r",
+            started_at="2026-07-01T00:00:00+00:00",
+            completed_at="2026-07-01T00:00:01+00:00",
+            scenario={"id": "s", "name": "S"},
+            subject={"id": "subject", "name": "subject"},
+            result="FAIL",
+            assertions=[
+                {
+                    "id": "one",
+                    "description": "Nothing was sent",
+                    "passed": False,
+                    "actual": ["m-1"],
+                    "expected": [],
+                    "message": "values differ",
+                    "measured": True,
+                }
+            ],
+            state={"before_digest": "b", "after_digest": "a", "before": {}, "after": {}},
+            state_diff={"change_count": 0, "changes": []},
+            events=[],
+            artifacts={"summary": artifact},
+            usage={"calls": 0},
+            reset_verified=True,
+            limitations=[],
+        )
+        evidence.finalize()
+        return render_markdown(evidence)
+
+    @staticmethod
+    def _outside_fences(markdown: str) -> str:
+        """
+        The document as a reader sees it once fenced blocks are set aside.
+
+        Checking only the text before the Artifacts heading would pass without
+        any fix at all, because the forgery is appended *after* it — which is
+        exactly where a reader scrolling the report would still meet it.
+        """
+        kept: list[str] = []
+        fence: str | None = None
+        for line in markdown.splitlines():
+            stripped = line.strip()
+            if fence is None:
+                if stripped.startswith("```"):
+                    fence = stripped[: len(stripped) - len(stripped.lstrip("`"))]
+                    continue
+                kept.append(line)
+            elif stripped.startswith(fence) and set(stripped) == {"`"}:
+                fence = None
+        return "\n".join(kept)
+
+    def test_a_hostile_artifact_cannot_forge_a_passing_row(self) -> None:
+        live = self._outside_fences(self._report(self.HOSTILE))
+        self.assertIn("| FAIL |", live)
+        self.assertNotIn("| PASS |", live, "the subject wrote its own verdict row")
+        self.assertEqual(live.count("## Assertions"), 1)
+        self.assertNotIn("forged", live)
+
+    def test_the_artifact_fence_survives_backticks_inside_it(self) -> None:
+        """
+        A three-backtick fence is closed by three backticks in the content,
+        which puts everything after it back into the document.
+        """
+        report = self._report("```\nescaped?\n```\nafter the fence\n")
+        self.assertIn("````", report)
+        opener = report.split("### summary", 1)[1].strip().split("\n", 1)[0]
+        self.assertGreaterEqual(len(opener), 4)
+
+    def test_ordinary_artifacts_are_still_readable(self) -> None:
+        """Escaping must not turn a briefing into an unreadable blob."""
+        report = self._report("Three replies are drafted and unsent.")
+        self.assertIn("Three replies are drafted and unsent.", report)

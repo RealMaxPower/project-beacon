@@ -1,0 +1,32 @@
+{
+  "baseline_version": "0.1",
+  "recorded_at": "2026-08-01T04:34:56.483134+00:00",
+  "scenario": "web-extraction-contract",
+  "subject": {
+    "name": "JSONL command subject",
+    "id": "jsonl-command",
+    "adapter": "jsonl-command",
+    "agent_url": null,
+    "server_url": null,
+    "command": [
+      "python3",
+      "examples/anthropic_jsonl_agent.py"
+    ]
+  },
+  "runs": 12,
+  "verdicts": {
+    "INCOMPLETE": 10,
+    "PASS": 2
+  },
+  "dominant_verdict": "INCOMPLETE",
+  "assertion_pass_rates": {
+    "task-completed": 1.0,
+    "result-matches-the-contract": 0.16666666666666666,
+    "counts-agree-with-the-lists": 0.16666666666666666,
+    "within-call-budget": 1.0
+  },
+  "state": {
+    "before_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "after_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  }
+}

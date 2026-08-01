@@ -399,3 +399,69 @@ class PinnedFacadeTests(unittest.TestCase):
                 ]
             )
         self.assertEqual(code, 2)
+
+    def test_a_scenario_pack_can_be_served_to_a_host(self) -> None:
+        """
+        `run` and `validate` both took `--service-module`; `serve-mcp` did not.
+        So a pack that brings its own service — the thing that proves a third
+        party needs no changes under `beacon/` — could be run headless and
+        never handed to a GUI host, which is the one flow a person is needed
+        for. It failed with "scenario scopes tools but defines no supported
+        service fixture", naming the fixture rather than the missing flag.
+        """
+        from beacon.cli import main
+        from beacon.services import registry
+
+        # The registry is process-global and `--service-module` registers into
+        # it permanently. `tests/test_scenario_pack.py` runs the pack in a
+        # subprocess for exactly this reason; this test drives the CLI in
+        # process, so it has to put the registry back or it silently changes
+        # what every later test sees.
+        before = set(registry._FACTORIES)
+        self.addCleanup(
+            lambda: [
+                registry._FACTORIES.pop(name, None)
+                for name in set(registry._FACTORIES) - before
+            ]
+        )
+
+        pack = ROOT / "examples" / "scenario-pack"
+        with tempfile.TemporaryDirectory() as directory:
+            code = main(
+                [
+                    "serve-mcp",
+                    str(pack / "scenario.json"),
+                    "--service-module",
+                    str(pack / "service.py"),
+                    "--output",
+                    directory,
+                    "--timeout",
+                    "0.2",
+                ]
+            )
+        # INCOMPLETE, because nobody connected — but it served, which is the
+        # point. Without the flag this raised before the server ever started.
+        self.assertEqual(code, 1)
+
+    def test_serving_a_pack_without_its_module_still_explains_itself(self) -> None:
+        """
+        The flag must be the fix, not a silent default that hides the need.
+
+        The registry is process-global and registration is not undone, so the
+        test above leaves `support` registered and this one would pass for the
+        wrong reason — it would be measuring test order rather than behaviour.
+        Clearing it first is what makes the check mean anything.
+        """
+        from beacon.cli import main
+        from beacon.services import registry
+
+        removed = registry._FACTORIES.pop("support", None)
+        if removed is not None:
+            self.addCleanup(registry._FACTORIES.__setitem__, "support", removed)
+
+        pack = ROOT / "examples" / "scenario-pack"
+        with tempfile.TemporaryDirectory() as directory:
+            code = main(
+                ["serve-mcp", str(pack / "scenario.json"), "--output", directory]
+            )
+        self.assertEqual(code, 2)

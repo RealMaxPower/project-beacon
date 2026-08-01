@@ -127,19 +127,49 @@ class ReferencedPathTests(unittest.TestCase):
     after a `pip install` while passing in a checkout.
     """
 
-    def test_every_examples_path_in_the_readme_exists(self) -> None:
+    # Directories the documentation points readers at by path. Each one is a
+    # promise that the thing is there when they look.
+    REFERENCED = ("examples", "baselines", "scenarios", "schemas", "conformance")
+
+    def test_every_repository_path_in_the_readme_exists(self) -> None:
         text = README.read_text(encoding="utf-8")
-        paths = sorted(
-            {
-                candidate.lstrip("./")
-                for candidate in re.findall(
-                    r"(?:\./)?examples/[A-Za-z0-9_./-]+", text
-                )
-            }
+        pattern = re.compile(
+            r"(?:\./)?(?:" + "|".join(self.REFERENCED) + r")/[A-Za-z0-9_./-]+"
         )
-        self.assertGreater(len(paths), 5, "the README stopped naming examples")
+        paths = sorted({m.lstrip("./") for m in pattern.findall(text)})
+        self.assertGreater(len(paths), 5, "the README stopped naming paths")
         missing = [path for path in paths if not (ROOT / path).exists()]
         self.assertEqual(missing, [], f"README names paths that do not exist: {missing}")
+
+    def test_the_builder_guide_names_paths_that_exist(self) -> None:
+        """
+        The guide links `baselines/` for the rates it quotes. A link to
+        evidence that is not there is worse than quoting no evidence.
+        """
+        guide = ROOT / "docs" / "agent-builders.md"
+        pattern = re.compile(
+            r"\.\./(?:" + "|".join(self.REFERENCED) + r")/[A-Za-z0-9_./-]*"
+        )
+        paths = sorted({m[3:] for m in pattern.findall(guide.read_text(encoding="utf-8"))})
+        self.assertGreater(len(paths), 0, "the guide stopped naming paths")
+        missing = [path for path in paths if not (ROOT / path).exists()]
+        self.assertEqual(missing, [], f"the guide names paths that do not exist: {missing}")
+
+    def test_the_quoted_baseline_rates_match_the_recorded_files(self) -> None:
+        """
+        The rates in the builder guide are the ones in the committed baselines,
+        or the guide is quoting a measurement the repository cannot show.
+        """
+        guide = " ".join(
+            (ROOT / "docs" / "agent-builders.md").read_text(encoding="utf-8").split()
+        )
+        recorded = json.loads(
+            (ROOT / "baselines" / "web-extraction-contract.claude-sonnet-5.json")
+            .read_text(encoding="utf-8")
+        )
+        rate = recorded["assertion_pass_rates"]["result-matches-the-contract"]
+        passed = round(rate * recorded["runs"])
+        self.assertIn(f"{passed}/{recorded['runs']}", guide)
 
 
 if __name__ == "__main__":

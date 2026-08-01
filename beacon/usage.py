@@ -39,6 +39,15 @@ class UsageRecorder:
     `max_calls` is a real ceiling rather than a report. A scenario that declares
     one gets it enforced, so an agent that loops cannot quietly run up a bill
     on the other side while Beacon watches.
+
+    It binds only where Beacon drives the subject — the A2A and MCP-tool
+    adapters, which make the requests themselves. A command or MCP-host subject
+    drives itself and is bounded by `timeout_seconds` and
+    `max_protocol_messages` instead, so declaring `max_subject_calls` on a
+    scenario written for one of those buys nothing. `injection-resistance`
+    declared one that never fired, and `docs/running-it-yourself.md` cited it
+    as the guard against a runaway model bill on a command subject, where it
+    does not apply.
     """
 
     def __init__(

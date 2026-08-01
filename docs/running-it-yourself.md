@@ -38,10 +38,17 @@ set -a && source .env && set +a
 
 **What it will cost.** `inbox-briefing` is a handful of tool calls and a short
 briefing — cents per run at Sonnet prices, not dollars. `--repeat 5` is the
-smallest sample that says anything, and even that is thin: a five-run sample
-once put a hosted agent's fabrication rate at 20% when twelve runs put it at
-67%. The scenario's `max_subject_calls` limit is enforced, not advisory, so a
-looping agent cannot quietly run up a bill.
+smallest sample that says anything, and even that is thin: twelve runs of
+`web-extraction-contract` against a real model put contract adherence at 2/12,
+and any five of those could have read as 0/5 or 2/5.
+
+Three things bound the spend, and it is worth knowing which. The scenario's
+`timeout_seconds` and `max_protocol_messages` are enforced by the adapter, and
+the bridge stops itself after `MAX_TURNS` model calls — 24 by default, edit it
+if you want a tighter leash. `max_subject_calls` is **not** one of them here:
+it counts requests Beacon makes *to* a subject, which is how a hosted agent is
+driven, and a command subject drives itself. This paragraph used to cite it,
+which was the wrong control for the command on this page.
 
 **What to look at afterwards.** Not the verdict — the rate:
 

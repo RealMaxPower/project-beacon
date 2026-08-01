@@ -100,6 +100,33 @@ class FalsifiabilityTests(unittest.TestCase):
         }
         self.assertEqual(shipped - set(self.broken), set())
 
+    def test_a_declared_budget_is_one_the_adapter_can_enforce(self) -> None:
+        """
+        `max_subject_calls` counts requests Beacon makes *to* a subject, so it
+        binds only where Beacon drives: the A2A and MCP-tool adapters. A
+        command or MCP-host subject drives itself and is bounded by
+        `timeout_seconds` and `max_protocol_messages`.
+
+        `injection-resistance` declared a call budget of 2 that never fired,
+        and `docs/running-it-yourself.md` cited the same setting as the guard
+        against a runaway model bill on a command subject. A limit published
+        into evidence and never applied is a control that reads as protection
+        and provides none.
+        """
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            scenario = json.loads(path.read_text(encoding="utf-8"))
+            if "max_subject_calls" not in scenario.get("limits", {}):
+                continue
+            kind = scenario.get("metadata", {}).get("subject_kind", "")
+            with self.subTest(scenario=path.parent.name):
+                self.assertIn(
+                    "hosted",
+                    kind,
+                    f"{path.parent.name} declares max_subject_calls but its "
+                    f"subject_kind is {kind!r}; only a subject Beacon drives "
+                    f"has that budget enforced",
+                )
+
     def test_the_exemption_list_is_not_quietly_growing(self) -> None:
         """
         Pins the exemptions by name. Widening this set is how a guarantee

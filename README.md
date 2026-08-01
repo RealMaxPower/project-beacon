@@ -156,16 +156,24 @@ forbidden-action assertions catch.
 ## Grade the shape and the truth separately
 
 An agent can hold its output contract perfectly while inventing what goes
-inside it. Two scenarios, one live agent, the same twelve runs:
+inside it, so the two are graded by different scenarios. Twelve runs of each
+against a real model, recorded in [baselines/](baselines/):
 
 ```text
-web-extraction-contract     result matches the contract   12 / 12
-web-extraction-grounding    entities grounded in the page  4 / 12
+web-extraction-contract     result matches the contract    2 / 12
+web-extraction-grounding    entities grounded in the page  measured 0 / 12
 ```
 
-Every field a consumer parses was present and correctly typed every time. Two
-runs in three, the values were fabricated. Either check alone reports a
-different agent than the one that exists.
+The second row is the one worth pausing on. `entities-grounded` was not
+failed — it was never *evaluated*. It reads `primary_entities[].value`, and a
+reply that arrives as prose has no such path, so there was nothing to compare
+and every run resolved INCOMPLETE. **You cannot measure whether an agent tells
+the truth until it holds its shape**, and a harness that scored those runs as
+failures would be publishing a fabrication rate it never measured.
+
+Where the shape did hold, the fabrication is real: asked about `example.com`,
+the model recited that page's *older* wording against the capture the scenario
+pins.
 
 `conforms_to` reports every violation with its path rather than the first, and
 refuses a misspelled keyword at load time instead of ignoring it:
@@ -240,9 +248,10 @@ worse than it was is a different question, and a subject can be perfectly
 self-consistent and consistently wrong:
 
 ```bash
-# Against a committed snapshot, recorded on the first run
+# Against a committed snapshot, recorded on the first run.
+# baselines/ already holds two, written from twelve model runs each.
 python3 -m beacon run scenarios/inbox-briefing/scenario.json \
-  --repeat 10 --baseline baselines/reference.json
+  --repeat 10 --baseline baselines/inbox-briefing.reference.json
 
 # Or against the last 20 runs already in the output directory
 python3 -m beacon run scenarios/inbox-briefing/scenario.json \
@@ -251,7 +260,7 @@ python3 -m beacon run scenarios/inbox-briefing/scenario.json \
 
 ```text
 Baseline (last 20 run(s)): recorded 2026-07-01T09:00:00+00:00 over 20 run(s).
-  REGRESSION  entities-grounded passed 100% of baseline runs, 33% now (4/12)
+  REGRESSION  result-matches-the-contract passed 100% of baseline runs, 17% now (2/12)
 ```
 
 Non-zero exit, so CI fails. Comparison is by pass **rate**, because a subject

@@ -22,7 +22,11 @@ include MANIFEST.in
 recursive-include docs *.md
 recursive-include schemas *.json
 recursive-include scenarios *.json
-recursive-include examples *.py *.md *.json *.txt
+
+# The recorded pass rates the documentation cites. Shipping the claim without
+# the evidence behind it is the thing this project exists to argue against.
+recursive-include baselines *.json
+recursive-include examples *.py *.md *.json
 
 # setuptools ships `tests/test_*.py` by default and nothing else, so the stub
 # package the suite runs against - a fake `anthropic` module and a recorded
@@ -32,7 +36,7 @@ recursive-include tests *.py *.json
 # `tests/test_workflow_cost.py` reads these to assert no workflow can spend
 # Actions minutes without someone asking. Shipping the test without the files
 # it reads makes the check an error rather than a guarantee.
-recursive-include .github *.yml *.yaml *.md
+recursive-include .github *.yml *.md
 include .github/CODEOWNERS
 
 # The protocol surveys are cited by name from the README and pinned by

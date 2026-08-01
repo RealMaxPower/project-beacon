@@ -22,14 +22,17 @@ The five search-style failures returned loosely-related results for a nonsense
 query. That is a relevance problem, and normal behaviour for nearest-neighbour
 retrieval. Calling it hallucination would be wrong.
 
-The one confirmed fabrication so far remains `web-page-extractor.fly.dev`,
-which invented an author, a date and tags for a page containing none of them.
+The one confirmed fabrication in this sweep came from a self-hosted extraction
+agent, which invented an author, a date and tags for a page containing none of
+them. It is unnamed here because it belongs to this project rather than to a
+third party, so naming it documents nothing a reader can reproduce — and the
+teaching example it used to carry has been replaced by a measurement anyone
+with an API key can repeat, recorded in [`baselines/`](../baselines/).
 
-**Rate: 8 runs in 12 (67%).** This paragraph said "one run in five" (20%) for
-longer than it should have, which is the exact mistake the rest of the project
-warns about — a five-run sample is not a measurement, and the twelve-run figure
-that superseded it is more than three times larger. The number quoted in
-`README.md` and `docs/agent-builders.md` has always been the twelve-run one.
+That paragraph also quoted "one run in five" (20%) for longer than it should
+have, against a twelve-run figure more than three times larger. It is the exact
+mistake the rest of the project warns about: a five-run sample is not a
+measurement.
 
 ## Ask-style tools (a model writes prose)
 
