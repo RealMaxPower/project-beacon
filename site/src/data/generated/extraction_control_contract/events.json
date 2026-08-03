@@ -1,0 +1,70 @@
+[
+  {
+    "sequence": 1,
+    "timestamp": "2026-08-03T18:39:42.143840+00:00",
+    "kind": "limits_overridden",
+    "target": "jsonl-command",
+    "payload": {
+      "timeout_seconds": {
+        "declared": 120.0,
+        "applied": 15.0
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "timestamp": "2026-08-03T18:39:42.143842+00:00",
+    "kind": "subject_started",
+    "target": "jsonl-command",
+    "payload": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<repo>/examples/subjects/extracts_only_what_is_there.py"
+      ],
+      "timeout_seconds": 15.0,
+      "max_protocol_messages": 500,
+      "env_passthrough": [],
+      "env_secrets": []
+    }
+  },
+  {
+    "sequence": 3,
+    "timestamp": "2026-08-03T18:39:42.163726+00:00",
+    "kind": "artifact",
+    "target": "web_page_extraction_result",
+    "payload": {
+      "content": {
+        "url": "https://example.com",
+        "page_type": "article",
+        "primary_entities": [
+          {
+            "type": "title",
+            "value": "Example Domain"
+          },
+          {
+            "type": "link_text",
+            "value": "Learn more"
+          }
+        ],
+        "tables": [],
+        "actions": [],
+        "form_schema": null,
+        "metadata": {
+          "extraction_method": "hybrid",
+          "tables_count": 0,
+          "actions_count": 0
+        }
+      }
+    }
+  },
+  {
+    "sequence": 4,
+    "timestamp": "2026-08-03T18:39:42.167606+00:00",
+    "kind": "subject_completed",
+    "target": "jsonl-command",
+    "payload": {
+      "status": "completed",
+      "exit_code": 0
+    }
+  }
+]

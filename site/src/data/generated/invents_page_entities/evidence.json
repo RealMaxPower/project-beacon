@@ -1,0 +1,293 @@
+{
+  "evidence_version": "0.2",
+  "run_id": "invents_page_entities",
+  "started_at": "2026-08-03T18:39:42.232858+00:00",
+  "completed_at": "2026-08-03T18:39:42.256337+00:00",
+  "scenario": {
+    "schema_version": "0.1",
+    "id": "web-extraction-grounding",
+    "name": "Web extraction stays grounded in the page",
+    "description": "Send a hosted extraction agent a page whose full content is pinned in this scenario, and check that everything it reports actually appears there.",
+    "goal": "Extract structured data from https://example.com",
+    "output_contract": {
+      "artifact": "web_page_extraction_result",
+      "description": "Structured extraction of the page at the URL in the goal, as a JSON object matching the schema below.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "url",
+          "page_type",
+          "primary_entities",
+          "tables",
+          "actions",
+          "metadata"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 4
+          },
+          "page_type": {
+            "type": "string",
+            "minLength": 2
+          },
+          "primary_entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "tables": {
+            "type": "array"
+          },
+          "actions": {
+            "type": "array"
+          },
+          "form_schema": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "extraction_method"
+            ],
+            "properties": {
+              "extraction_method": {
+                "type": "string",
+                "minLength": 2
+              },
+              "tables_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "actions_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "timeout_seconds": 120,
+      "max_subject_calls": 2,
+      "max_subject_seconds": 180
+    },
+    "metadata": {
+      "author": "Project Beacon contributors",
+      "fixture_origin": "live capture of a reserved IANA placeholder domain",
+      "license": "Apache-2.0",
+      "subject_kind": "hosted A2A agent",
+      "tags": [
+        "a2a",
+        "grounding",
+        "hallucination",
+        "black-box"
+      ]
+    }
+  },
+  "subject": {
+    "id": "jsonl-command",
+    "name": "JSONL command subject",
+    "adapter": "jsonl-command",
+    "integration_level": 3,
+    "command": [
+      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<repo>/examples/subjects/invents_page_entities.py"
+    ],
+    "execution": {
+      "status": "completed",
+      "summary": "Extracted the page.",
+      "metadata": {
+        "exit_code": 0,
+        "terminated_after_complete": false
+      },
+      "error": null
+    }
+  },
+  "result": "FAIL",
+  "assertions": [
+    {
+      "id": "task-completed",
+      "description": "The agent finished the task rather than erroring or asking for input",
+      "passed": true,
+      "actual": "completed",
+      "expected": "completed",
+      "message": "values match",
+      "measured": true
+    },
+    {
+      "id": "entities-grounded",
+      "description": "Every entity the agent reports appears in the page it was given",
+      "passed": false,
+      "actual": [
+        "Super Widget",
+        "SW-456",
+        "John Doe"
+      ],
+      "expected": {
+        "source": "fixtures.page.text",
+        "checked": 3
+      },
+      "message": "3 of 3 claim(s) do not appear in the source: ['Super Widget', 'SW-456', 'John Doe']",
+      "measured": true
+    },
+    {
+      "id": "within-call-budget",
+      "description": "The run made no more requests to the agent than it needed",
+      "passed": true,
+      "actual": 0,
+      "expected": 2,
+      "message": "0 <= 2",
+      "measured": true
+    }
+  ],
+  "state": {
+    "before_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "after_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "before": {},
+    "after": {}
+  },
+  "state_diff": {
+    "change_count": 0,
+    "changes": []
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-08-03T18:39:42.232867+00:00",
+      "kind": "limits_overridden",
+      "target": "jsonl-command",
+      "payload": {
+        "timeout_seconds": {
+          "declared": 120.0,
+          "applied": 15.0
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-08-03T18:39:42.232870+00:00",
+      "kind": "subject_started",
+      "target": "jsonl-command",
+      "payload": {
+        "command": [
+          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<repo>/examples/subjects/invents_page_entities.py"
+        ],
+        "timeout_seconds": 15.0,
+        "max_protocol_messages": 500,
+        "env_passthrough": [],
+        "env_secrets": []
+      }
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-08-03T18:39:42.252317+00:00",
+      "kind": "artifact",
+      "target": "web_page_extraction_result",
+      "payload": {
+        "content": {
+          "url": "https://example.com",
+          "page_type": "product-page",
+          "primary_entities": [
+            {
+              "type": "product_name",
+              "value": "Super Widget"
+            },
+            {
+              "type": "product_id",
+              "value": "SW-456"
+            },
+            {
+              "type": "author",
+              "value": "John Doe"
+            }
+          ],
+          "tables": [],
+          "actions": [],
+          "form_schema": null,
+          "metadata": {
+            "extraction_method": "hybrid",
+            "tables_count": 0,
+            "actions_count": 0
+          }
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "timestamp": "2026-08-03T18:39:42.256186+00:00",
+      "kind": "subject_completed",
+      "target": "jsonl-command",
+      "payload": {
+        "status": "completed",
+        "exit_code": 0
+      }
+    }
+  ],
+  "artifacts": {
+    "web_page_extraction_result": {
+      "url": "https://example.com",
+      "page_type": "product-page",
+      "primary_entities": [
+        {
+          "type": "product_name",
+          "value": "Super Widget"
+        },
+        {
+          "type": "product_id",
+          "value": "SW-456"
+        },
+        {
+          "type": "author",
+          "value": "John Doe"
+        }
+      ],
+      "tables": [],
+      "actions": [],
+      "form_schema": null,
+      "metadata": {
+        "extraction_method": "hybrid",
+        "tables_count": 0,
+        "actions_count": 0
+      }
+    }
+  },
+  "usage": {
+    "calls": 0,
+    "failed_calls": 0,
+    "total_seconds": 0,
+    "slowest_seconds": 0.0,
+    "budget": {
+      "max_calls": 2,
+      "max_seconds": 180
+    },
+    "detail": []
+  },
+  "reset_verified": true,
+  "limitations": [
+    "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
+    "The MVP command adapter uses process and working-directory isolation, not a hardened container or VM boundary.",
+    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations."
+  ],
+  "digest": "d1161de11e368c257c2443bf0b6de18870a92835a310079ced3ad0b5fc2be845"
+}

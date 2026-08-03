@@ -53,5 +53,13 @@ prune .beacon
 prune build
 prune dist
 
+# The marketing site and playground. `[tool.setuptools] packages` is an
+# explicit list, so `site/` was never going to be collected as a package, but
+# it holds a React application, four woff2 files and the recorded evidence the
+# playground replays - none of which belongs in `pip install project-beacon`.
+# `site/tools/build_fixtures.py` imports beacon rather than the other way
+# round, so nothing in the wheel needs it.
+prune site
+
 global-exclude *.py[cod]
 global-exclude __pycache__

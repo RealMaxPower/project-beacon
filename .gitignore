@@ -10,7 +10,17 @@ __pycache__/
 .coverage
 dist/
 build/
+.DS_Store
 
+
+# The site builds with npm. Its recorded fixtures under src/data/generated/
+# are committed on purpose - they are evidence, not build output.
+site/node_modules/
+site/dist/
+site/.smoke/
+site/.lint/
+site/.visual/
+site/tsconfig.tsbuildinfo
 
 # Conformance harnesses install their own dependencies.
 conformance/a2a-js/node_modules/

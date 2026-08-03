@@ -14,6 +14,37 @@ TESTS = ROOT / "tests"
 # has to survive into the source distribution.
 ROOT_REFERENCE = re.compile(r'ROOT\s*/\s*"([^"]+)"')
 
+# A module-level binding of a directory to a name, so the skip guard below can
+# be matched against that same name. Written without an example of the pattern
+# it matches: this file is itself scanned, and a sample in a comment would be
+# read as a real dependency — which is how this line got its own bug.
+NAMED_REFERENCE = re.compile(r'^(\w+)\s*=\s*ROOT\s*/\s*"([^"]+)"', re.M)
+
+
+def _optional_directories(source: str) -> set[str]:
+    """
+    Directories a test file reads but is written to run without.
+
+    There is a third category between "the sdist must carry this" and "no test
+    touches it": a directory that is part of the repository but not part of the
+    distribution, whose tests skip cleanly when it is absent. `site/` is the
+    first — it holds a React application and four woff2 files, which have no
+    business inside `pip install project-beacon`, but its numbers are pinned by
+    the Python suite because that is what stops them drifting.
+
+    The exemption is deliberately narrow. It is granted only to a directory the
+    file both binds to a name and guards with `skipUnless(NAME.is_dir())` —
+    mentioning a skip somewhere in the file is not enough. A test that reads a
+    directory unconditionally still requires it to be packaged, which is the
+    original guarantee and the one that matters.
+    """
+    optional: set[str] = set()
+    for variable, directory in NAMED_REFERENCE.findall(source):
+        guard = rf"skipUnless\(\s*{re.escape(variable)}\.is_dir\(\)"
+        if re.search(guard, source):
+            optional.add(directory)
+    return optional
+
 
 def _directories_the_suite_needs() -> set[str]:
     """
@@ -22,12 +53,16 @@ def _directories_the_suite_needs() -> set[str]:
     Derived rather than listed, so a new test that depends on a new directory
     is covered the moment it is written, the same way `_action_required_count`
     derives its expectation from the fixture instead of restating it.
+
+    A directory is required if *any* file reads it without a skip guard, so one
+    unguarded test is enough to put it back on the list.
     """
     needed: set[str] = set()
     for path in TESTS.rglob("*.py"):
-        for name in ROOT_REFERENCE.findall(path.read_text(encoding="utf-8")):
-            candidate = ROOT / name
-            if candidate.is_dir():
+        source = path.read_text(encoding="utf-8")
+        skippable = _optional_directories(source)
+        for name in ROOT_REFERENCE.findall(source):
+            if (ROOT / name).is_dir() and name not in skippable:
                 needed.add(name)
     return needed
 
@@ -78,6 +113,36 @@ class SourceDistributionTests(unittest.TestCase):
         self.assertIn("examples", needed)
         self.assertIn("schemas", needed)
         self.assertGreaterEqual(len(needed), 3)
+
+    def test_the_skip_guard_exemption_is_real(self) -> None:
+        """
+        An escape hatch nobody checks is a hole.
+
+        `_optional_directories` lets a test read a directory the sdist does not
+        carry, provided it skips when the directory is absent. That is only
+        sound while the guard it looks for is the guard the test actually has,
+        so this asserts both halves against the one file using it.
+        """
+        site_test = TESTS / "test_site_claims.py"
+        if not site_test.exists():
+            self.skipTest("nothing uses the exemption")
+
+        source = site_test.read_text(encoding="utf-8")
+        self.assertIn("site", _optional_directories(source))
+        self.assertRegex(source, r"skipUnless\(\s*SITE\.is_dir\(\)")
+        self.assertNotIn("site", _directories_the_suite_needs())
+
+    def test_an_unguarded_read_is_still_required(self) -> None:
+        """The exemption must not be granted to a file that merely mentions one."""
+        self.assertEqual(_optional_directories('X = ROOT / "docs"'), set())
+        self.assertEqual(
+            _optional_directories('X = ROOT / "docs"\n# skipUnless(Y.is_dir())'),
+            set(),
+        )
+        self.assertEqual(
+            _optional_directories('X = ROOT / "docs"\n@unittest.skipUnless(X.is_dir(), "")'),
+            {"docs"},
+        )
 
     def test_every_directory_the_suite_reads_is_packaged(self) -> None:
         directives = _manifest_directives()

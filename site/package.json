@@ -1,0 +1,32 @@
+{
+  "name": "beacon-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Marketing site and evidence playground for Project Beacon.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "smoke": "vite build --ssr tools/smoke.tsx --outDir .smoke --logLevel warn && node .smoke/smoke.js",
+    "fixtures": "python3 tools/build_fixtures.py",
+    "fixtures:check": "python3 tools/build_fixtures.py --check",
+    "lint:render": "vite build --ssr tools/lint.tsx --outDir .lint --logLevel warn && node .lint/lint.js",
+    "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check",
+    "visual": "vite preview --port 4173 & sleep 2 && node tools/visual.mjs; kill %1"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.0.0",
+    "playwright": "^1.62.1",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}

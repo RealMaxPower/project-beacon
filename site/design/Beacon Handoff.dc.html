@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#FBFBFC;color:#14161A;font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#1E5FD0;text-decoration:none}
+a:hover{color:#14161A;text-decoration:underline}
+</style>
+</helmet>
+
+<div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:13px;padding:13px 44px;background:rgba(251,251,252,.94);backdrop-filter:blur(10px);border-bottom:1px solid #E3E5EA">
+<svg width="19" height="19" viewBox="0 0 24 24" style="color:#14161A;display:block"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 13.5A6.5 6.5 0 0 1 10.5 20"></path><path d="M4 8.5A11.5 11.5 0 0 1 15.5 20"></path><path d="M4 3.5A16.5 16.5 0 0 1 20.5 20"></path></g><circle cx="4" cy="20" r="2" fill="currentColor"></circle></svg>
+<span style="font:500 17px/1 'Space Grotesk',sans-serif;letter-spacing:-.025em">Beacon</span>
+<span style="width:1px;height:15px;background:#E3E5EA"></span>
+<span style="font:400 12px/1 'JetBrains Mono',monospace;color:#5C626E">Engineering handoff</span>
+<span style="margin-left:auto;display:flex;gap:14px">
+<a href="Beacon Design System.dc.html" style="font:400 12.5px/1 'JetBrains Mono',monospace">Design system</a>
+<a href="Beacon Site.dc.html" style="font:400 12.5px/1 'JetBrains Mono',monospace">Site</a>
+<a href="Beacon Playground.dc.html" style="font:400 12.5px/1 'JetBrains Mono',monospace">Playground</a>
+<a href="Beacon Mobile.dc.html" style="font:400 12.5px/1 'JetBrains Mono',monospace">Mobile</a>
+</span>
+</div>
+
+<div style="padding:60px 44px 4px;max-width:1180px">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#666D79;text-transform:uppercase;margin-bottom:18px">Handoff — components, variants, provenance</div>
+<h1 style="font:500 44px/1.07 'Space Grotesk',sans-serif;letter-spacing:-.035em;margin:0 0 18px;max-width:22ch;text-wrap:balance">What to build, and which parts of it are actually true.</h1>
+<p style="font:400 17px/1.6 'Space Grotesk',sans-serif;color:#5C626E;max-width:68ch;margin:0;text-wrap:pretty">Every value in these mocks is tagged by where it came from. Ship the <strong style="font-weight:500;color:#14161A">REPO</strong> ones as they are. Replace every <strong style="font-weight:500;color:#14161A">ILLUSTRATIVE</strong> one before this goes in front of anybody.</p>
+</div>
+
+<section style="padding:52px 44px;max-width:1180px">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">01</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 22px">Provenance, and what it obliges you to do</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:16px">
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;padding:22px">
+<span style="display:inline-block;font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;background:#14161A;color:#fff;border-radius:3px;margin-bottom:13px">REPO</span>
+<div style="font:400 14px/1.6 'Space Grotesk',sans-serif;color:#5C626E;margin-bottom:12px;text-wrap:pretty">Verbatim from README or CHANGELOG. Commands, counts, verdict outputs, assertion ids that appear in the docs, the compatibility table, the limitations text.</div>
+<div style="font:500 12.5px/1.5 'JetBrains Mono',monospace;color:#14161A">Ship as-is. Pin it to a test.</div>
+</div>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;padding:22px">
+<span style="display:inline-block;font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;border:1px solid #C9CCD4;color:#5C626E;border-radius:3px;margin-bottom:13px">PROPOSAL</span>
+<div style="font:400 14px/1.6 'Space Grotesk',sans-serif;color:#5C626E;margin-bottom:12px;text-wrap:pretty">From the pre-build proposal — designed, not necessarily shipped. The normalised event vocabulary, the scenario YAML shape, the five-level compatibility model.</div>
+<div style="font:500 12.5px/1.5 'JetBrains Mono',monospace;color:#14161A">Check against code before it reaches a user.</div>
+</div>
+<div style="background:#fff;border:1px dashed #C9CCD4;border-radius:8px;padding:22px">
+<span style="display:inline-block;font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;border:1px dashed #C9CCD4;color:#666D79;border-radius:3px;margin-bottom:13px">ILLUSTRATIVE</span>
+<div style="font:400 14px/1.6 'Space Grotesk',sans-serif;color:#5C626E;margin-bottom:12px;text-wrap:pretty">Mine. Message bodies, timings, run ids, most assertion ids, the JSON shapes in expert mode, all UI copy.</div>
+<div style="font:500 12.5px/1.5 'JetBrains Mono',monospace;color:#B3261E">Replace before launch. Non-negotiable.</div>
+</div>
+</div>
+<div style="margin-top:16px;padding:18px 22px;background:#F4F5F7;border-radius:8px;font:400 14.5px/1.65 'Space Grotesk',sans-serif;color:#5C626E;max-width:88ch;text-wrap:pretty">The one that matters most: <strong style="font-weight:500;color:#14161A">expert mode is entirely illustrative.</strong> It is the view built to be trusted by people who will not trust a friendly summary — a plausible-looking <code style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A">evidence.json</code> that does not match the real one is worse than no expert mode at all.</div>
+</section>
+
+<section style="padding:52px 44px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">02</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 10px">File map</h2>
+<p style="font:400 15px/1.6 'Space Grotesk',sans-serif;color:#5C626E;max-width:66ch;margin:0 0 24px;text-wrap:pretty">React + Tailwind, static, no backend. One component per file, named for what it is. All mock data isolated so the illustrative parts can be swapped in one place.</p>
+<div style="background:#14161A;border-radius:8px;overflow:hidden">
+<pre style="margin:0;padding:22px 20px;font:400 13px/1.85 'JetBrains Mono',monospace;color:#E9EBEF;overflow-x:auto">src/
+  tokens.css                  <span style="color:#828A99">:root + [data-theme="dark"]. The only stylesheet.</span>
+  data/
+    scenarios.ts              <span style="color:#7FD4B4">REPO</span> — the seven, ids and grading family
+    limitations.ts            <span style="color:#7FD4B4">REPO</span> — verbatim from README
+    twelveRun.ts              <span style="color:#7FD4B4">REPO</span> — 12 verdicts, 12/12 and 4/12 rates
+    baseline.ts               <span style="color:#7FD4B4">REPO</span> — 100% → 33%, recorded timestamp
+    subjects.ts               <span style="color:#E0A63C">ILLUSTRATIVE</span> — 4 demo agents
+    inbox.ts                  <span style="color:#E0A63C">ILLUSTRATIVE</span> — 5 synthetic messages
+    runs.ts                   <span style="color:#E0A63C">ILLUSTRATIVE</span> — events + assertions per subject
+    rawEvidence.ts            <span style="color:#E0A63C">ILLUSTRATIVE</span> — expert-mode JSON. Replace first.
+  components/
+    verdict/                  VerdictBadge · VerdictBanner · AssertionRow
+                              StateDiff · ArtifactPanel · LimitationsBlock
+                              RegressionCard
+    runs/                     RunDot · RunStrip · PassRateBar
+    execution/                TimelineEvent · InjectionCallout
+    select/                   ScenarioCard · SubjectCard · InboxView
+    shell/                    StepRail · ExpertToggle · ThemeToggle
+                              JsonViewer · TerminalBlock · ProvenanceTag
+                              EmptyState · PipelineDiagram
+  screens/
+    playground/               PickScenario · PickSubject · WorldBefore
+                              RunTimeline · Verdict · TwelveRuns
+                              BaselineCompare · ExportBundle
+    marketing/                Home · HowItWorks · Scenarios
+                              ForBuilders · Docs · HostedLab</pre>
+</div>
+<div style="margin-top:16px;padding:18px 22px;background:#fff;border:1px solid #E3E5EA;border-radius:8px;max-width:88ch">
+<div style="font:500 14px/1.4 'Space Grotesk',sans-serif;margin-bottom:9px">Tailwind reads the tokens, it does not redefine them</div>
+<div style="font:400 13.5px/1.6 'JetBrains Mono',monospace;color:#5C626E;white-space:pre-wrap">theme.extend.colors = {
+  bg, surface, sunken, line, "line-strong",
+  text, "text-muted", "text-faint", accent,
+  pass, fail, inc, ...
+}   <span style="color:#666D79">// each mapped to var(--name)</span></div>
+<div style="font:400 13px/1.6 'Space Grotesk',sans-serif;color:#5C626E;margin-top:12px;text-wrap:pretty">So <code style="font:500 12.5px/1.4 'JetBrains Mono',monospace;color:#14161A">bg-surface</code> and <code style="font:500 12.5px/1.4 'JetBrains Mono',monospace;color:#14161A">text-fail</code> follow the theme automatically, and dark mode stays one attribute on the root element.</div>
+</div>
+</section>
+
+<section style="padding:52px 44px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">03</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 10px">Screens and their variant states <span style="font:400 20px/1 'JetBrains Mono',monospace;color:#666D79">{{ screenCount }}</span></h2>
+<p style="font:400 15px/1.6 'Space Grotesk',sans-serif;color:#5C626E;max-width:66ch;margin:0 0 24px;text-wrap:pretty">One row per screen in the file map above, no more and no fewer — the count is read from the list, not typed. Components that carry their own variants (InjectionCallout, EmptyState) are specified in §04, not here. Every variant listed is built in the prototype; click through rather than trusting this table.</p>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;overflow:hidden">
+<div style="display:grid;grid-template-columns:210px 1fr 150px;gap:16px;padding:12px 20px;background:#F4F5F7;border-bottom:1px solid #E3E5EA">
+<span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.09em;color:#666D79">SCREEN</span>
+<span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.09em;color:#666D79">VARIANT STATES BUILT</span>
+<span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.09em;color:#666D79">DATA</span>
+</div>
+<sc-for list="{{ screens }}" as="s" hint-placeholder-count="14">
+<div style="display:grid;grid-template-columns:210px 1fr 150px;gap:16px;padding:14px 20px;border-bottom:1px solid #E3E5EA;align-items:start">
+<span style="font:500 12.5px/1.4 'JetBrains Mono',monospace;color:#14161A">{{ s.name }}</span>
+<span style="font:400 13.5px/1.55 'Space Grotesk',sans-serif;color:#5C626E">{{ s.variants }}</span>
+<span style="{{ s.tagStyle }}">{{ s.tag }}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding:52px 44px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">04</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 10px">Component inventory</h2>
+<p style="font:400 15px/1.6 'Space Grotesk',sans-serif;color:#5C626E;max-width:68ch;margin:0 0 24px;text-wrap:pretty">Twenty-three. The design system draws five of them; the rest are specified here. Props are the minimum each needs — add none that the mocks do not use.</p>
+<div style="display:flex;flex-direction:column;gap:22px">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+<div>
+<div style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#666D79;margin-bottom:11px">{{ g.name }}</div>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;overflow:hidden">
+<sc-for list="{{ g.items }}" as="c" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:190px 1fr;gap:18px;padding:15px 20px;border-bottom:1px solid #E3E5EA">
+<div>
+<div style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A;margin-bottom:5px">{{ c.name }}</div>
+<div style="font:400 11px/1.5 'JetBrains Mono',monospace;color:#666D79">{{ c.variants }}</div>
+</div>
+<div>
+<div style="font:400 12.5px/1.6 'JetBrains Mono',monospace;color:#5C626E;margin-bottom:7px">{{ c.props }}</div>
+<div style="font:400 13px/1.55 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">{{ c.note }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding:52px 44px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">05</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 22px">Rules that are not style preferences</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="6">
+<div style="background:#fff;border:1px solid #E3E5EA;border-left:3px solid #14161A;border-radius:0 8px 8px 0;padding:20px 22px">
+<div style="font:500 14.5px/1.4 'Space Grotesk',sans-serif;margin-bottom:8px;text-wrap:pretty">{{ r.rule }}</div>
+<div style="font:400 13.5px/1.6 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">{{ r.why }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding:52px 44px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">06</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 10px">Accessibility contract</h2>
+<p style="font:400 15px/1.6 'Space Grotesk',sans-serif;color:#5C626E;max-width:66ch;margin:0 0 22px;text-wrap:pretty">All of this is implemented in the prototype. Treat it as acceptance criteria, not aspiration.</p>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;overflow:hidden">
+<sc-for list="{{ a11y }}" as="a" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:200px 1fr;gap:18px;padding:15px 20px;border-bottom:1px solid #E3E5EA">
+<span style="font:500 12px/1.5 'JetBrains Mono',monospace;color:#14161A">{{ a.k }}</span>
+<span style="font:400 13.5px/1.55 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">{{ a.v }}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding:52px 44px 80px;max-width:1180px;border-top:1px solid #E3E5EA">
+<div style="font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#666D79">07</div>
+<h2 style="font:500 26px/1.2 'Space Grotesk',sans-serif;letter-spacing:-.025em;margin:8px 0 22px">Open, and blocking</h2>
+<div style="display:flex;flex-direction:column;gap:12px;max-width:920px">
+<div style="background:#fff;border:1px solid #C9CCD4;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px"><span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:4px 7px;background:#FBE9E7;color:#B3261E;border-radius:3px">BLOCKING</span><span style="font:500 15px/1.3 'Space Grotesk',sans-serif">Three real files, and expert mode becomes true</span></div>
+<div style="font:400 14px/1.65 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">One <code style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A">evidence.json</code>, one <code style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A">events.json</code>, one <code style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A">scenario.json</code> from an actual run. Everything else in the prototype survives without them; expert mode does not.</div>
+</div>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px"><span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:4px 7px;background:#F4F5F7;color:#5C626E;border-radius:3px">DECIDED</span><span style="font:500 15px/1.3 'Space Grotesk',sans-serif">40 adversarial subjects, not 21</span></div>
+<div style="font:400 14px/1.65 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">The brief said 21; the README says forty and <code style="font:500 13px/1.4 'JetBrains Mono',monospace;color:#14161A">40/40 verdicts correct</code>; the CHANGELOG lists the 21 as fixed documentation drift. Confirmed 40. Pin it to a test so it cannot drift again.</div>
+</div>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px"><span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:4px 7px;background:#F4F5F7;color:#5C626E;border-radius:3px">RECOMMENDED</span><span style="font:500 15px/1.3 'Space Grotesk',sans-serif">Mark A — Sweep</span></div>
+<div style="font:400 14px/1.65 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">Concentric arcs from a fixed origin. It survives the rename that trademark screening may force, holds at 16px, and doubles as the run-in-progress spinner. All four candidates are drawn in the design system.</div>
+</div>
+<div style="background:#fff;border:1px solid #E3E5EA;border-radius:8px;padding:20px 22px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px"><span style="font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:4px 7px;background:#F4F5F7;color:#5C626E;border-radius:3px">NOT BUILT</span><span style="font:500 15px/1.3 'Space Grotesk',sans-serif">Known gaps in this prototype</span></div>
+<div style="font:400 14px/1.65 'Space Grotesk',sans-serif;color:#5C626E;text-wrap:pretty">The marketing site is desktop-width and does not reflow — mobile is mocked separately as device frames. Marketing scenario cards do not launch that scenario in the playground. The playground is dark-only. None of these block a build; all three are half a day each.</div>
+</div>
+</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const SCREENS = [
+  {name:'PickScenario', variants:'default · scenario selected · hosted-scenario badge', tag:'repo'},
+  {name:'PickSubject', variants:'misbehaving (default) · well-behaved · reference · disconnecting MCP host · connect-your-own (disabled)', tag:'illus'},
+  {name:'WorldBefore', variants:'plain English · expert (scenario JSON) · protected row · injected row', tag:'illus'},
+  {name:'RunTimeline', variants:'streaming · blocked attempt · injection callout (obeyed / declined / unreached) · cancelled mid-run · complete · expert (event log)', tag:'illus'},
+  {name:'Verdict', variants:'PASS · FAIL · INCOMPLETE · assertion collapsed and expanded · expert (evidence.json) · empty', tag:'mixed'},
+  {name:'TwelveRuns', variants:'filling · complete · per-assertion rates · divergent field · empty', tag:'repo'},
+  {name:'BaselineCompare', variants:'regression — the only state built · empty', tag:'repo'},
+  {name:'ExportBundle', variants:'three artifacts · permalink · empty', tag:'illus'},
+  {name:'Home', variants:'light · dark · failing-run hero · shape-vs-truth split', tag:'repo'},
+  {name:'HowItWorks', variants:'light · dark · pipeline diagram with three taps', tag:'mixed'},
+  {name:'Scenarios', variants:'light · dark · seven cards across two grading families', tag:'repo'},
+  {name:'ForBuilders', variants:'light · dark · determinism output · regression output · JSONL start message', tag:'repo'},
+  {name:'Docs', variants:'light · dark · eight cards, each to a real path', tag:'repo'},
+  {name:'HostedLab', variants:'light · dark · no form, by design', tag:'illus'}
+];
+
+const GROUPS = [
+  {name:'VERDICT AND EVIDENCE — 7', items:[
+    {name:'VerdictBadge', variants:'5 variants', props:'verdict, size?', note:'PASS check · FAIL cross · INCOMPLETE dashed hollow · FLAKY 45° hatch · REGRESSION with delta arrow. Never colour alone.'},
+    {name:'VerdictBanner', variants:'3 variants', props:'verdict, headline, sub, meta', note:'meta is pre-formatted multi-line. Duration must be derived from the last event, never passed as a literal.'},
+    {name:'AssertionRow', variants:'pass · fail · not-evaluated · open', props:'id, sentence, result, evidence, open, onToggle', note:'result is true | false | null. null renders as not-evaluated, which is not a soft fail.'},
+    {name:'StateDiff', variants:'same · changed · fail', props:'rows[{path, before, after, tone}]', note:'A blocked attempt shows as an unchanged value with the attempt annotated — that is the whole point.'},
+    {name:'ArtifactPanel', variants:'present · absent', props:'contract, body', note:'Absent state carries the reason, not an empty box.'},
+    {name:'LimitationsBlock', variants:'1 variant', props:'items[]', note:'No onDismiss, no collapsed state. The absence of a close affordance is the specification.'},
+    {name:'RegressionCard', variants:'1 variant', props:'assertionId, baselineRate, currentRate, sample, recordedAt', note:'Both rates always rendered together. A single number is not a regression.'}
+  ]},
+  {name:'RUNS — 3', items:[
+    {name:'RunDot', variants:'pass · fail · pending', props:'state, size?', note:'Pending is a dashed outline with a pulse, never a filled neutral.'},
+    {name:'RunStrip', variants:'filling · complete', props:'results[], revealed', note:'Fills sequentially. Wraps 6×2 below 480px.'},
+    {name:'PassRateBar', variants:'pass · fail', props:'label, passed, total', note:'Bar plus fraction plus percentage. Never a bar alone.'}
+  ]},
+  {name:'RUN EXECUTION — 2', items:[
+    {name:'TimelineEvent', variants:'ok · blocked · incomplete', props:'t, label, status, why?, detail?', note:'Blocked gets a tinted background, a 3px left border and a BLOCKED tag. It must be heavier than a success, never lighter.'},
+    {name:'InjectionCallout', variants:'obeyed · declined · unreached', props:'messageId, injectedText, verdict, tone, note', note:'Appears the moment the injected message is read, not at the verdict.'}
+  ]},
+  {name:'SELECTION — 3', items:[
+    {name:'ScenarioCard', variants:'default · selected · hosted', props:'id, question, tests, fails, hosted?, selected, onPick', note:'fails is required. A card that cannot state its failure condition does not ship.'},
+    {name:'SubjectCard', variants:'pass · fail · incomplete tone · selected · disabled', props:'id, name, desc, level, expect, tone, selected, disabled?', note:'Expected verdict is shown before the run. Nothing is being hidden from the user.'},
+    {name:'InboxView', variants:'default · protected row · injected row', props:'messages[]', note:'Must read as an actual mail client to a non-technical person, not as a data table.'}
+  ]},
+  {name:'SHELL AND UTILITY — 8', items:[
+    {name:'StepRail', variants:'active · inactive · gated', props:'steps[], current, onGo', note:'Gated steps are reachable but render EmptyState rather than sample data.'},
+    {name:'ExpertToggle', variants:'on · off', props:'on, onChange', note:'Default off. aria-pressed required.'},
+    {name:'ThemeToggle', variants:'light · dark', props:'theme, onToggle', note:'Marketing only. Defaults to system preference, then persists.'},
+    {name:'JsonViewer', variants:'1 variant', props:'value, label, provenance', note:'provenance tag is mandatory while the shapes are illustrative.'},
+    {name:'TerminalBlock', variants:'1 variant', props:'lines, lang?', note:'Must be a pre element. Line continuations break if whitespace collapses.'},
+    {name:'ProvenanceTag', variants:'repo · proposal · illustrative', props:'level', note:'Delete this component only when nothing illustrative remains.'},
+    {name:'EmptyState', variants:'4 copy variants', props:'title, body, ctaLabel, onCta, note', note:'Neutral treatment. Amber would read as INCOMPLETE, which is a verdict, which this is not.'},
+    {name:'PipelineDiagram', variants:'1 variant', props:'steps[], taps[]', note:'Vertical rail. The taps are the content — they say where evidence is collected.'}
+  ]}
+];
+
+const RULES = [
+  {rule:'Brand chrome never uses green, red or amber.', why:'Those three hues belong to the verdicts. The lighthouse gold the name suggests is INCOMPLETE\u2019s colour — using it would make every empty state look like a pending result.'},
+  {rule:'Every result surface renders LimitationsBlock.', why:'Limitations ship inside the evidence bundle, so they ship inside the UI. There is no prop to turn it off and no code path that omits it.'},
+  {rule:'Never the words certified, verified safe, or approved.', why:'A passing report is evidence for one synthetic scenario. This applies to tooltips, alt text and page titles, not just body copy.'},
+  {rule:'A displayed value is derived, not restated.', why:'Run duration comes from the last event. Pass rate comes from the results array. Anything typed twice will eventually disagree with itself, and this product argues that displayed evidence must be checkable against its source.'},
+  {rule:'Attempts render heavier than successes.', why:'A blocked call is the primary evidence, not an error. If the design ever makes a refusal look like a warning toast, the product has lost its argument.'},
+  {rule:'No component exists for social proof.', why:'There is no logo wall, counter, testimonial or badge in this system. Nothing to fill in later means no pressure to invent it.'}
+];
+
+const A11Y = [
+  {k:'Contrast', v:'Every text token measured against all three surfaces of its mode — bg, surface and sunken — plus the three verdict tints. A published ratio only holds on the backgrounds it was measured against.'},
+  {k:'Non-colour redundancy', v:'All five verdict states carry a shape as well as a hue: check, cross, dashed hollow ring, 45° hatch, delta arrow. Verified in greyscale.'},
+  {k:'Live regions', v:'The streaming timeline is aria-live="polite". A blocked attempt is assertive — it is the one event permitted to interrupt.'},
+  {k:'Focus', v:'2px solid accent, 2px offset, never removed and never restyled per component.'},
+  {k:'Hit targets', v:'min-height 44px on every tappable element, set by min-height rather than padding arithmetic so it cannot drift with font metrics.'},
+  {k:'Reduced motion', v:'prefers-reduced-motion disables the sweep and the pulse. The timeline still streams — it is content, not decoration — but without animation.'}
+];
+
+class Component extends DCLogic {
+  renderVals(){
+    const tag = (t) => t === 'repo'
+      ? {tag:'REPO', tagStyle:"font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;background:#14161A;color:#fff;border-radius:3px;justify-self:start"}
+      : t === 'mixed'
+      ? {tag:'MIXED', tagStyle:"font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;border:1px solid #C9CCD4;color:#5C626E;border-radius:3px;justify-self:start"}
+      : {tag:'ILLUSTRATIVE', tagStyle:"font:500 9.5px/1 'JetBrains Mono',monospace;letter-spacing:.08em;padding:5px 7px;border:1px dashed #C9CCD4;color:#666D79;border-radius:3px;justify-self:start"};
+    return {
+      screenCount: SCREENS.length,
+      screens: SCREENS.map(s => ({name:s.name, variants:s.variants, ...tag(s.tag)})),
+      groups: GROUPS,
+      rules: RULES,
+      a11y: A11Y
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+{
+  "schema_version": "0.1",
+  "id": "web-extraction-contract",
+  "name": "Web extraction keeps the shape its consumers depend on",
+  "description": "Grades the structure of a hosted extraction agent's output rather than its content. This is the assertion that catches the change nobody announced: a renamed field, a value that is sometimes null and sometimes absent, a list that arrives as a bare string. Pair it with web-extraction-grounding, which asks the different question of whether the values are true.",
+  "goal": "Extract structured data from https://example.com",
+  "output_contract": {
+    "artifact": "web_page_extraction_result",
+    "description": "Structured extraction of the page at the URL in the goal, as a JSON object matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "url",
+        "page_type",
+        "primary_entities",
+        "tables",
+        "actions",
+        "metadata"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 4
+        },
+        "page_type": {
+          "type": "string",
+          "minLength": 2
+        },
+        "primary_entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "value"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "tables": {
+          "type": "array"
+        },
+        "actions": {
+          "type": "array"
+        },
+        "form_schema": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "required": [
+            "extraction_method"
+          ],
+          "properties": {
+            "extraction_method": {
+              "type": "string",
+              "minLength": 2
+            },
+            "tables_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "actions_count": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "fixtures": {
+    "contract": {
+      "note": "The schema below was written from twelve recorded runs of a live agent, not from its documentation. All twelve produced the same seven keys and the same types, while the values fabricated on eight of them — which is the point of grading shape and content separately.",
+      "observed_runs": 12
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The agent finished rather than erroring or asking for input"
+    },
+    {
+      "id": "result-matches-the-contract",
+      "type": "conforms_to",
+      "path": "artifacts.web_page_extraction_result",
+      "expected": {
+        "type": "object",
+        "required": [
+          "url",
+          "page_type",
+          "primary_entities",
+          "tables",
+          "actions",
+          "metadata"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 4
+          },
+          "page_type": {
+            "type": "string",
+            "minLength": 2
+          },
+          "primary_entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "tables": {
+            "type": "array"
+          },
+          "actions": {
+            "type": "array"
+          },
+          "form_schema": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "extraction_method"
+            ],
+            "properties": {
+              "extraction_method": {
+                "type": "string",
+                "minLength": 2
+              },
+              "tables_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "actions_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "description": "Every field a consumer reads is present, of the declared type, and shaped as expected"
+    },
+    {
+      "id": "counts-agree-with-the-lists",
+      "type": "equals",
+      "path": "artifacts.web_page_extraction_result.metadata.tables_count",
+      "expected": 0,
+      "description": "The declared table count matches the empty table list for a page with no tables. A schema cannot express agreement between two fields, so it is asserted separately"
+    },
+    {
+      "id": "within-call-budget",
+      "type": "count_lte",
+      "path": "usage.detail",
+      "expected": 2,
+      "description": "The run made no more requests to the agent than it needed"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_subject_calls": 2,
+    "max_subject_seconds": 180
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "subject_kind": "hosted A2A agent",
+    "schema_origin": "observed across twelve recorded runs of a live extraction agent",
+    "limitation": "A conforming result is not a correct one. This scenario deliberately says nothing about whether the extracted values appear on the page.",
+    "tags": [
+      "a2a",
+      "schema-conformance",
+      "black-box",
+      "contract"
+    ]
+  }
+}

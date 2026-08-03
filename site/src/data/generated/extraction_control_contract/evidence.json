@@ -1,0 +1,288 @@
+{
+  "evidence_version": "0.2",
+  "run_id": "extraction_control_contract",
+  "started_at": "2026-08-03T18:39:42.143833+00:00",
+  "completed_at": "2026-08-03T18:39:42.167752+00:00",
+  "scenario": {
+    "schema_version": "0.1",
+    "id": "web-extraction-contract",
+    "name": "Web extraction keeps the shape its consumers depend on",
+    "description": "Grades the structure of a hosted extraction agent's output rather than its content. This is the assertion that catches the change nobody announced: a renamed field, a value that is sometimes null and sometimes absent, a list that arrives as a bare string. Pair it with web-extraction-grounding, which asks the different question of whether the values are true.",
+    "goal": "Extract structured data from https://example.com",
+    "output_contract": {
+      "artifact": "web_page_extraction_result",
+      "description": "Structured extraction of the page at the URL in the goal, as a JSON object matching the schema below.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "url",
+          "page_type",
+          "primary_entities",
+          "tables",
+          "actions",
+          "metadata"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 4
+          },
+          "page_type": {
+            "type": "string",
+            "minLength": 2
+          },
+          "primary_entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "tables": {
+            "type": "array"
+          },
+          "actions": {
+            "type": "array"
+          },
+          "form_schema": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "extraction_method"
+            ],
+            "properties": {
+              "extraction_method": {
+                "type": "string",
+                "minLength": 2
+              },
+              "tables_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "actions_count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "timeout_seconds": 120,
+      "max_subject_calls": 2,
+      "max_subject_seconds": 180
+    },
+    "metadata": {
+      "author": "Project Beacon contributors",
+      "license": "Apache-2.0",
+      "subject_kind": "hosted A2A agent",
+      "schema_origin": "observed across twelve recorded runs of a live extraction agent",
+      "limitation": "A conforming result is not a correct one. This scenario deliberately says nothing about whether the extracted values appear on the page.",
+      "tags": [
+        "a2a",
+        "schema-conformance",
+        "black-box",
+        "contract"
+      ]
+    }
+  },
+  "subject": {
+    "id": "jsonl-command",
+    "name": "JSONL command subject",
+    "adapter": "jsonl-command",
+    "integration_level": 3,
+    "command": [
+      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<repo>/examples/subjects/extracts_only_what_is_there.py"
+    ],
+    "execution": {
+      "status": "completed",
+      "summary": "Extracted the page.",
+      "metadata": {
+        "exit_code": 0,
+        "terminated_after_complete": false
+      },
+      "error": null
+    }
+  },
+  "result": "PASS",
+  "assertions": [
+    {
+      "id": "task-completed",
+      "description": "The agent finished rather than erroring or asking for input",
+      "passed": true,
+      "actual": "completed",
+      "expected": "completed",
+      "message": "values match",
+      "measured": true
+    },
+    {
+      "id": "result-matches-the-contract",
+      "description": "Every field a consumer reads is present, of the declared type, and shaped as expected",
+      "passed": true,
+      "actual": [],
+      "expected": "{url: string, page_type: string, primary_entities: array of {type: string, value: string}, tables: array of any, actions: array of any, form_schema?: ['object', 'null'], metadata: {extraction_method: string, tables_count?: integer, actions_count?: integer}}",
+      "message": "output matches the declared shape",
+      "measured": true
+    },
+    {
+      "id": "counts-agree-with-the-lists",
+      "description": "The declared table count matches the empty table list for a page with no tables. A schema cannot express agreement between two fields, so it is asserted separately",
+      "passed": true,
+      "actual": 0,
+      "expected": 0,
+      "message": "values match",
+      "measured": true
+    },
+    {
+      "id": "within-call-budget",
+      "description": "The run made no more requests to the agent than it needed",
+      "passed": true,
+      "actual": 0,
+      "expected": 2,
+      "message": "0 <= 2",
+      "measured": true
+    }
+  ],
+  "state": {
+    "before_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "after_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "before": {},
+    "after": {}
+  },
+  "state_diff": {
+    "change_count": 0,
+    "changes": []
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-08-03T18:39:42.143840+00:00",
+      "kind": "limits_overridden",
+      "target": "jsonl-command",
+      "payload": {
+        "timeout_seconds": {
+          "declared": 120.0,
+          "applied": 15.0
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-08-03T18:39:42.143842+00:00",
+      "kind": "subject_started",
+      "target": "jsonl-command",
+      "payload": {
+        "command": [
+          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<repo>/examples/subjects/extracts_only_what_is_there.py"
+        ],
+        "timeout_seconds": 15.0,
+        "max_protocol_messages": 500,
+        "env_passthrough": [],
+        "env_secrets": []
+      }
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-08-03T18:39:42.163726+00:00",
+      "kind": "artifact",
+      "target": "web_page_extraction_result",
+      "payload": {
+        "content": {
+          "url": "https://example.com",
+          "page_type": "article",
+          "primary_entities": [
+            {
+              "type": "title",
+              "value": "Example Domain"
+            },
+            {
+              "type": "link_text",
+              "value": "Learn more"
+            }
+          ],
+          "tables": [],
+          "actions": [],
+          "form_schema": null,
+          "metadata": {
+            "extraction_method": "hybrid",
+            "tables_count": 0,
+            "actions_count": 0
+          }
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "timestamp": "2026-08-03T18:39:42.167606+00:00",
+      "kind": "subject_completed",
+      "target": "jsonl-command",
+      "payload": {
+        "status": "completed",
+        "exit_code": 0
+      }
+    }
+  ],
+  "artifacts": {
+    "web_page_extraction_result": {
+      "url": "https://example.com",
+      "page_type": "article",
+      "primary_entities": [
+        {
+          "type": "title",
+          "value": "Example Domain"
+        },
+        {
+          "type": "link_text",
+          "value": "Learn more"
+        }
+      ],
+      "tables": [],
+      "actions": [],
+      "form_schema": null,
+      "metadata": {
+        "extraction_method": "hybrid",
+        "tables_count": 0,
+        "actions_count": 0
+      }
+    }
+  },
+  "usage": {
+    "calls": 0,
+    "failed_calls": 0,
+    "total_seconds": 0,
+    "slowest_seconds": 0.0,
+    "budget": {
+      "max_calls": 2,
+      "max_seconds": 180
+    },
+    "detail": []
+  },
+  "reset_verified": true,
+  "limitations": [
+    "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
+    "The MVP command adapter uses process and working-directory isolation, not a hardened container or VM boundary.",
+    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations."
+  ],
+  "digest": "32d84055834aa064363ccbe6f96b86ef1bd1a64282d2aa48e43c963218a63a56"
+}

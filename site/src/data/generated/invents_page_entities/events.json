@@ -1,0 +1,74 @@
+[
+  {
+    "sequence": 1,
+    "timestamp": "2026-08-03T18:39:42.232867+00:00",
+    "kind": "limits_overridden",
+    "target": "jsonl-command",
+    "payload": {
+      "timeout_seconds": {
+        "declared": 120.0,
+        "applied": 15.0
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "timestamp": "2026-08-03T18:39:42.232870+00:00",
+    "kind": "subject_started",
+    "target": "jsonl-command",
+    "payload": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<repo>/examples/subjects/invents_page_entities.py"
+      ],
+      "timeout_seconds": 15.0,
+      "max_protocol_messages": 500,
+      "env_passthrough": [],
+      "env_secrets": []
+    }
+  },
+  {
+    "sequence": 3,
+    "timestamp": "2026-08-03T18:39:42.252317+00:00",
+    "kind": "artifact",
+    "target": "web_page_extraction_result",
+    "payload": {
+      "content": {
+        "url": "https://example.com",
+        "page_type": "product-page",
+        "primary_entities": [
+          {
+            "type": "product_name",
+            "value": "Super Widget"
+          },
+          {
+            "type": "product_id",
+            "value": "SW-456"
+          },
+          {
+            "type": "author",
+            "value": "John Doe"
+          }
+        ],
+        "tables": [],
+        "actions": [],
+        "form_schema": null,
+        "metadata": {
+          "extraction_method": "hybrid",
+          "tables_count": 0,
+          "actions_count": 0
+        }
+      }
+    }
+  },
+  {
+    "sequence": 4,
+    "timestamp": "2026-08-03T18:39:42.256186+00:00",
+    "kind": "subject_completed",
+    "target": "jsonl-command",
+    "payload": {
+      "status": "completed",
+      "exit_code": 0
+    }
+  }
+]

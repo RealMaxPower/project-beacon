@@ -1,0 +1,27 @@
+{
+  "subjects": 40,
+  "subjects_by_expected_verdict": {
+    "PASS": 13,
+    "FAIL": 23,
+    "INCOMPLETE": 4
+  },
+  "subjects_with_open_defects": 0,
+  "scenarios": 7,
+  "scenarios_by_grading": {
+    "service state": 3,
+    "the answer": 4
+  },
+  "docs": [
+    "agent-builders.md",
+    "architecture.md",
+    "beacon-test-run.md",
+    "protocol-contracts.md",
+    "running-it-yourself.md",
+    "windows.md"
+  ],
+  "surveys": [
+    "a2a-survey.md",
+    "hosted-agent-probe.md",
+    "hosted-mcp-survey.md"
+  ]
+}

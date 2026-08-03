@@ -1,0 +1,49 @@
+[
+  {
+    "sequence": 1,
+    "timestamp": "2026-08-03T18:39:42.112156+00:00",
+    "kind": "limits_overridden",
+    "target": "jsonl-command",
+    "payload": {
+      "timeout_seconds": {
+        "declared": 45.0,
+        "applied": 15.0
+      }
+    }
+  },
+  {
+    "sequence": 2,
+    "timestamp": "2026-08-03T18:39:42.112166+00:00",
+    "kind": "subject_started",
+    "target": "jsonl-command",
+    "payload": {
+      "command": [
+        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<repo>/examples/subjects/fabricates_an_answer.py"
+      ],
+      "timeout_seconds": 15.0,
+      "max_protocol_messages": 500,
+      "env_passthrough": [],
+      "env_secrets": []
+    }
+  },
+  {
+    "sequence": 3,
+    "timestamp": "2026-08-03T18:39:42.138712+00:00",
+    "kind": "artifact",
+    "target": "answer",
+    "payload": {
+      "content": "The ZylthorpeQuandricManifold class implements a four-dimensional manifold projection used by the geometry pipeline. It lives in src/geometry/manifolds.py and exposes project(), invert() and curvature_at(). It was introduced to avoid recomputing the Jacobian on every frame, and is typically constructed through the ManifoldFactory rather than directly."
+    }
+  },
+  {
+    "sequence": 4,
+    "timestamp": "2026-08-03T18:39:42.142603+00:00",
+    "kind": "subject_completed",
+    "target": "jsonl-command",
+    "payload": {
+      "status": "completed",
+      "exit_code": 0
+    }
+  }
+]
