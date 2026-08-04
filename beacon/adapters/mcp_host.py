@@ -27,6 +27,27 @@ class MCPHostError(RuntimeError):
     """Raised when an MCP host subject cannot be run."""
 
 
+def _write_config(path: Path, config: dict[str, Any]) -> None:
+    """
+    Write the client config so only this user can read it.
+
+    The file carries the run's bearer token, and that token is the only thing
+    between another local account and the scenario's tool facade — including
+    `beacon_submit`, which decides the recorded verdict. `write_text` alone
+    creates the file 0644 under the usual umask, and the redaction that
+    protects evidence.json does not reach a sibling file.
+
+    POSIX only, in effect: on Windows the mode is not expressible and the file
+    is left to the ACLs it inherits from the run directory.
+    """
+    body = json.dumps(config, indent=2, ensure_ascii=False) + "\n"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        handle.write(body)
+    # O_CREAT leaves the mode alone on a file that already existed.
+    os.chmod(path, 0o600)
+
+
 class MCPHostAdapter:
     """
     Runs an MCP-speaking agent host against a scenario's tool surface.
@@ -102,10 +123,7 @@ class MCPHostAdapter:
             }
         }
         path = workspace / "mcp-config.json"
-        path.write_text(
-            json.dumps(config, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        _write_config(path, config)
         return path
 
     def _resolve_command(self, **substitutions: str) -> tuple[str, ...]:
@@ -321,10 +339,7 @@ class MCPServeAdapter:
             }
         }
         config_path = context.workspace / "mcp-config.json"
-        config_path.write_text(
-            json.dumps(config, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        _write_config(config_path, config)
         context.recorder.record(
             "subject_started",
             self.descriptor["id"],

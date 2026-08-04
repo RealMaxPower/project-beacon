@@ -6,7 +6,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from typing import Any
+from typing import Any, Sequence
 
 
 class A2AError(RuntimeError):
@@ -21,6 +21,154 @@ JSONRPC_METHODS = {
     # A2A 1.x renamed the JSON-RPC methods.
     "1": "SendMessage",
 }
+
+DEFAULT_PORTS = {"http": 80, "https": 443}
+"""The schemes Beacon will speak to an agent over, and their default ports."""
+
+ALLOW_ORIGIN_FLAG = "--allow-agent-origin"
+"""The operator's opt-in, named in the refusal so the way forward is visible."""
+
+ORIGIN_POLICY_ATTRIBUTE = "_beacon_origin_policy"
+"""
+Where the policy rides on the Request object.
+
+The redirect handler is given only the request, so the policy has to travel
+with it; a request that arrives without one is refused rather than followed.
+"""
+
+
+def _origin(url: str) -> tuple[str, str, int] | None:
+    """
+    Reduce a URL to the (scheme, host, port) triple that identifies its origin.
+
+    Anything that is not http or https with a host has no origin at all, and
+    None is returned: `file:`, `ftp:` and `data:` can then never match an
+    allowed origin, whatever the operator typed.
+
+    The port is always explicit, so `https://host:443` and `https://host` are
+    one origin while `http://host:0` — which a card can write to smuggle past
+    a naive `port or default` — is not `http://host`.
+    """
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        # A malformed authority: an unbracketed IPv6 address, a port that is
+        # not a number or is out of range.
+        return None
+    scheme = parsed.scheme.lower()
+    if scheme not in DEFAULT_PORTS:
+        return None
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return None
+    return (scheme, host, DEFAULT_PORTS[scheme] if port is None else port)
+
+
+def _format_origin(origin: tuple[str, str, int]) -> str:
+    scheme, host, port = origin
+    if port == DEFAULT_PORTS[scheme]:
+        return f"{scheme}://{host}"
+    return f"{scheme}://{host}:{port}"
+
+
+class _OriginPolicy:
+    """
+    Which origins Beacon may open a socket to, and which one holds the token.
+
+    The Agent Card is data published by the party under evaluation, and the
+    interface URL inside it is where `message/send` is POSTed — with the
+    operator's Authorization header attached. Adopted verbatim, that lets the
+    evaluated party choose the scheme, host and port of a credentialed request
+    made from the operator's machine: a collector that harvests the bearer
+    token, a plaintext downgrade, an address only the CI runner can reach, or
+    a `file:` URL that reads local JSON into the run.
+
+    So a card may only move Beacon within origins the operator named, and the
+    credential is attached to the base URL's origin and to nothing else.
+    """
+
+    def __init__(self, base_url: str, allowed_origins: Sequence[str] = ()) -> None:
+        base = _origin(base_url)
+        if base is None:
+            raise ValueError(f"A2A base URL has no http or https origin: {base_url}")
+        self.base_origin = base
+        self.allowed = {base}
+        for extra in allowed_origins:
+            origin = _origin(extra)
+            if origin is None:
+                raise ValueError(
+                    f"an allowed A2A origin must be an http or https URL: {extra}"
+                )
+            self.allowed.add(origin)
+
+    def check(self, url: str) -> tuple[str, str, int]:
+        """Return the origin of `url`, or raise before anything is opened."""
+        origin = _origin(url)
+        if origin is None:
+            raise A2AError(
+                f"refusing to request {url}: an A2A endpoint must be an http "
+                f"or https URL"
+            )
+        if origin not in self.allowed:
+            raise A2AError(
+                f"refusing to request {url}: {_format_origin(origin)} is not "
+                f"{_format_origin(self.base_origin)}, and the Agent Card does "
+                f"not get to choose where Beacon sends the operator's "
+                f"credential; pass {ALLOW_ORIGIN_FLAG} "
+                f"{_format_origin(origin)} to permit it"
+            )
+        return origin
+
+    def carries_credential(self, url: str) -> bool:
+        """
+        Whether the Authorization header belongs on a request to `url`.
+
+        Only the origin of the operator's own base URL. An extra origin the
+        operator allowed is somewhere Beacon may reach, not somewhere the
+        operator's token was issued for.
+        """
+        return _origin(url) == self.base_origin
+
+
+class _PinnedRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """
+    Run every redirect hop through the same policy as the first request.
+
+    Checking only the URL Beacon chose would be a check in name only: an
+    allowed host answers with a 302 to anywhere, and urllib follows it,
+    copying every header across — Authorization included, since urllib does
+    not strip credentials on a cross-host redirect.
+
+    The credential is re-attached exactly when the hop lands back on the base
+    origin. Dropping it on every redirect instead looks safe and is not: an
+    auth-gated card behind an ordinary same-origin 301 then gets an
+    unauthenticated retry, and the agent reads as refusing Beacon.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        policy = getattr(req, ORIGIN_POLICY_ATTRIBUTE, None)
+        if policy is None:
+            # Fail closed. Nothing else closes `fp` once this raises.
+            fp.close()
+            raise A2AError(
+                f"refusing to follow a redirect to {newurl}: the request "
+                f"carries no origin policy"
+            )
+        try:
+            policy.check(newurl)
+        except A2AError:
+            fp.close()
+            raise
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is None:
+            return None
+        setattr(new, ORIGIN_POLICY_ATTRIBUTE, policy)
+        authorization = req.get_header("Authorization")
+        new.remove_header("Authorization")
+        if authorization and policy.carries_credential(newurl):
+            new.add_header("Authorization", authorization)
+        return new
 
 
 def _ssl_context() -> ssl.SSLContext | None:
@@ -44,6 +192,39 @@ def _ssl_context() -> ssl.SSLContext | None:
     return ssl.create_default_context(cafile=certifi.where())
 
 
+def _build_opener() -> urllib.request.OpenerDirector:
+    """
+    Assemble the handler chain by hand, holding no handler Beacon cannot use.
+
+    `build_opener()` will not do: it re-adds every default handler it was not
+    passed a subclass of, and FileHandler and FTPHandler are among them — so
+    an Agent Card naming `file:///etc/passwd` would still be opened by a chain
+    that was meant to be locked down. Only http, https and the unknown-scheme
+    handler that turns anything else into a clean error are registered.
+    """
+    opener = urllib.request.OpenerDirector()
+    for handler in (
+        urllib.request.ProxyHandler(),
+        urllib.request.UnknownHandler(),
+        urllib.request.HTTPHandler(),
+        urllib.request.HTTPSHandler(context=_ssl_context()),
+        urllib.request.HTTPDefaultErrorHandler(),
+        urllib.request.HTTPErrorProcessor(),
+        _PinnedRedirectHandler(),
+    ):
+        opener.add_handler(handler)
+    return opener
+
+
+def _open(request: urllib.request.Request, *, timeout: float) -> Any:
+    """
+    The one place an A2A socket is opened, so the policy cannot be bypassed.
+
+    Every request goes through here, and the tests patch this seam.
+    """
+    return _build_opener().open(request, timeout=timeout)
+
+
 class A2AClient:
     """
     Small A2A v1.0 discovery and HTTP+JSON client.
@@ -58,10 +239,15 @@ class A2AClient:
         timeout_seconds: float = 10,
         protocol_version: str = "1.0",
         authorization: str | None = None,
+        allowed_origins: Sequence[str] = (),
     ) -> None:
         if not base_url.startswith(("http://", "https://")):
             raise ValueError("A2A base URL must use http or https")
         self.base_url = base_url.rstrip("/")
+        self.allowed_origins = tuple(allowed_origins)
+        # Fixed at construction, from what the operator passed and nothing the
+        # remote party will later say.
+        self._policy = _OriginPolicy(self.base_url, self.allowed_origins)
         self.timeout_seconds = timeout_seconds
         self.protocol_version = protocol_version
         self.authorization = authorization
@@ -95,6 +281,16 @@ class A2AClient:
             return (self.base_url,)
         return tuple(f"{self.base_url}{path}" for path in self.WELL_KNOWN_PATHS)
 
+    def _target_origin(self, url: str) -> tuple[str, str, int]:
+        """
+        The origin `url` would be requested from, refused if unallowed.
+
+        Discovery URLs are built from the operator's own base URL and always
+        pass; the URL that has to be checked is the one `send_message` takes
+        from the Agent Card, which is written by the party under evaluation.
+        """
+        return self._policy.check(url)
+
     def _request(
         self,
         url: str,
@@ -104,6 +300,8 @@ class A2AClient:
         content_type: str = "application/json",
         version: str | None = None,
     ) -> dict[str, Any]:
+        # First, before a header is built or a socket is opened.
+        self._target_origin(url)
         headers = {
             "Accept": "application/a2a+json, application/json",
             "A2A-Version": version or self.protocol_version,
@@ -116,7 +314,7 @@ class A2AClient:
         if body is not None:
             data = json.dumps(body, separators=(",", ":")).encode("utf-8")
             headers["Content-Type"] = content_type
-        if self.authorization:
+        if self.authorization and self._policy.carries_credential(url):
             headers["Authorization"] = self.authorization
         request = urllib.request.Request(
             url,
@@ -124,12 +322,11 @@ class A2AClient:
             headers=headers,
             method=method,
         )
+        # The redirect handler sees only the request, so the policy travels
+        # with it rather than being looked up from anywhere global.
+        setattr(request, ORIGIN_POLICY_ATTRIBUTE, self._policy)
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=self.timeout_seconds,
-                context=_ssl_context(),
-            ) as response:
+            with _open(request, timeout=self.timeout_seconds) as response:
                 payload = response.read().decode("utf-8")
         except (urllib.error.URLError, urllib.error.HTTPError) as exc:
             raise A2AError(f"A2A request failed for {url}: {exc}") from exc

@@ -482,6 +482,23 @@ The current spike supports the A2A v1.0 HTTP+JSON and JSON-RPC message paths.
 Authentication can be supplied with `--authorization`; credentials are never
 written into evidence by the protocol inspector.
 
+The Agent Card names the URL Beacon sends to, and the card is written by the
+party being graded. So requests are pinned to the origin you typed: a card that
+points its interface at another host, or at anything that is not http(s), is
+refused rather than followed, and `--authorization` is attached only to that
+one origin. An agent that legitimately serves its card and its endpoint from
+different hosts needs those origins named:
+
+```bash
+python3 -m beacon a2a-inspect \
+  https://agent.example \
+  --allow-agent-origin https://rpc.agent.example
+```
+
+The flag is repeatable and works on `beacon run` too. An allowed extra origin
+is reached but never receives the credential — it is permission to talk to a
+second host, not permission to hand it your token.
+
 ## Compatibility model
 
 | Level | Interface | Evidence available |

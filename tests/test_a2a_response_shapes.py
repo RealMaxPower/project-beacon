@@ -86,7 +86,7 @@ class MessageShapedReplyTests(unittest.TestCase):
             return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": result})
 
         patcher = mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         )
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -203,7 +203,7 @@ class OneDotXCardTests(unittest.TestCase):
             return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": MESSAGE_REPLY})
 
         with mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         ):
             A2AClient("http://fixture.invalid", timeout_seconds=5).send_message("hi")
         return sent[0]
@@ -268,7 +268,7 @@ class TransportDefaultTests(unittest.TestCase):
             return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
 
         with mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         ):
             A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
         return sent[0]
@@ -329,7 +329,7 @@ class VersionNegotiationTests(unittest.TestCase):
             return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
 
         with mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         ):
             A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
         return seen["header"], seen["method"]
@@ -369,7 +369,7 @@ class VersionNegotiationTests(unittest.TestCase):
             return _FakeResponse({"jsonrpc": "2.0", "id": "1", "result": {}})
 
         with mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         ):
             A2AClient("https://fixture.invalid", timeout_seconds=3).send_message("x")
         return seen["header"], seen["method"]
@@ -444,7 +444,7 @@ class VersionNegotiationTests(unittest.TestCase):
             return _FakeResponse(CARD_1X)
 
         with mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         ):
             A2AClient("https://fixture.invalid", timeout_seconds=3).discover()
         self.assertEqual(seen, ["1.0"])
@@ -483,7 +483,7 @@ class WellKnownPathTests(unittest.TestCase):
             raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
 
         patcher = mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         )
         patcher.start()
         self.addCleanup(patcher.stop)

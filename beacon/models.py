@@ -75,6 +75,45 @@ def canonical_digest(value: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+MAX_STRUCTURE_DEPTH = 64
+DEPTH_MARKER = f"[truncated by Beacon: nested deeper than {MAX_STRUCTURE_DEPTH} levels]"
+
+
+def bound_depth(value: Any, limit: int = MAX_STRUCTURE_DEPTH) -> tuple[Any, bool]:
+    """
+    A copy of `value` with anything nested past `limit` replaced by a marker,
+    and whether that happened.
+
+    Everything the subject sends is walked again later by `dataclasses.asdict`
+    and by the pure-Python JSON encoder, both of which spend more stack per
+    level than the C decoder that accepted it. So a structure Beacon can parse
+    is not necessarily one it can write, and a subject that nests a few hundred
+    deep can raise `RecursionError` out of the evidence write — after it has
+    already acted, taking the record of what it did with it.
+
+    Truncating rather than rejecting keeps the run: the artifact is still
+    recorded, the marker says what was dropped, and the verdict still lands.
+    """
+    if limit <= 0:
+        return DEPTH_MARKER, True
+    if isinstance(value, dict):
+        truncated = False
+        bounded = {}
+        for key, item in value.items():
+            bounded[key], hit = bound_depth(item, limit - 1)
+            truncated = truncated or hit
+        return bounded, truncated
+    if isinstance(value, (list, tuple)):
+        truncated = False
+        bounded = []
+        for item in value:
+            item_value, hit = bound_depth(item, limit - 1)
+            bounded.append(item_value)
+            truncated = truncated or hit
+        return bounded, truncated
+    return value, False
+
+
 @dataclass(frozen=True)
 class AssertionSpec:
     id: str
@@ -402,12 +441,18 @@ class EventRecorder:
         target: str,
         payload: dict[str, Any] | None = None,
     ) -> Event:
+        # Payloads carry whatever the subject sent — tool arguments, log
+        # lines, artifact bodies — so their nesting is the subject's choice,
+        # and every one of them is walked again by `asdict` and the JSON
+        # encoder when the bundle is written. Bounding here covers every
+        # recorded event at once, rather than each caller remembering to.
+        bounded, _ = bound_depth(payload or {})
         event = Event(
             sequence=len(self._events) + 1,
             timestamp=utc_now(),
             kind=kind,
             target=target,
-            payload=payload or {},
+            payload=bounded,
         )
         self._events.append(event)
         return event

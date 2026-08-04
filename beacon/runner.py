@@ -185,7 +185,7 @@ def run_scenario(
     # here dies after the subject has already done the work, discarding the
     # evidence for it. A Beacon-side failure is an INCOMPLETE to be recorded,
     # never an exception that loses the run.
-    limitations = list(DEFAULT_LIMITATIONS)
+    limitations = list(DEFAULT_LIMITATIONS) + list(context.limitations)
     try:
         assertion_results = evaluate_all(
             scenario.assertions,
@@ -230,6 +230,19 @@ def run_scenario(
         "change_count": len(changes),
         "changes": changes,
     }
+    # Same rule as the evaluator above: the event log is built from what the
+    # subject sent, and a bundle with no events still records the verdict,
+    # the state diff and what went wrong. Losing the run instead would hand
+    # a subject a way to erase the record of what it just did.
+    try:
+        events_payload = [event.to_dict() for event in recorder.events]
+    except Exception as exc:
+        events_payload = []
+        limitations.append(
+            "Beacon could not serialise this run's event log, so the bundle "
+            f"records no events: {type(exc).__name__}: {exc}"
+        )
+
     evidence = Evidence(
         evidence_version="0.2",
         run_id=actual_run_id,
@@ -244,7 +257,7 @@ def run_scenario(
         assertions=[item.to_dict() for item in assertion_results],
         state=state_payload,
         state_diff=diff_payload,
-        events=[event.to_dict() for event in recorder.events],
+        events=events_payload,
         artifacts=context.artifacts,
         usage=context.usage.summary(),
         reset_verified=reset_verified,

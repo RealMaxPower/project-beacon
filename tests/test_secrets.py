@@ -152,7 +152,7 @@ class A2ACredentialTests(unittest.TestCase):
             )
 
         patcher = mock.patch(
-            "beacon.protocols.a2a.urllib.request.urlopen", side_effect=fake_urlopen
+            "beacon.protocols.a2a._open", side_effect=fake_urlopen
         )
         patcher.start()
         self.addCleanup(patcher.stop)

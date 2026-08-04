@@ -44,6 +44,39 @@ def _fenced(content: Any) -> str:
     return f"{fence}\n{text}\n{fence}"
 
 
+def _code_span(value: Any) -> str:
+    """
+    A name in a code span long enough to survive its own contents.
+
+    `_fenced` for a single line. An artifact's *name* is chosen by the subject
+    just as its content is, and the heading above the fence interpolated that
+    name raw — so a subject could end the heading and write its own verdict
+    heading, its own passing assertion row, or its own evidence digest into the
+    document people are asked to read and share. Escaping a list of characters
+    is not enough here: a heading has no code fence around it, so raw HTML in a
+    name (`<h2>`, `<table>`) renders as structure in GitHub's viewer and in a
+    browser. A code span takes the name out of inline parsing entirely, so
+    markup, HTML, links and images inside it are text.
+
+    The span is one backtick longer than the longest run inside the name, which
+    is the rule CommonMark defines for exactly this, so no name can terminate
+    it early. Line endings become spaces because an ATX heading ends at the
+    first one — and a padding space is added where CommonMark would otherwise
+    read the name's own leading or trailing backtick as part of the delimiter.
+    """
+    text = re.sub(r"\r\n|[\r\n]", " ", str(value))
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    ticks = "`" * (longest + 1)
+    padded = (
+        not text
+        or text.startswith("`")
+        or text.endswith("`")
+        or (text.startswith(" ") and text.endswith(" ") and text.strip(" ") != "")
+    )
+    pad = " " if padded else ""
+    return f"{ticks}{pad}{text}{pad}{ticks}"
+
+
 def _display(value: Any) -> str:
     if isinstance(value, (dict, list)):
         text = json.dumps(value, ensure_ascii=False, sort_keys=True)
@@ -109,7 +142,7 @@ def render_markdown(evidence: Evidence) -> str:
     lines.extend(["", "## Artifacts", ""])
     if evidence.artifacts:
         for name, content in evidence.artifacts.items():
-            lines.extend([f"### {name}", "", _fenced(content), ""])
+            lines.extend([f"### {_code_span(name)}", "", _fenced(content), ""])
     else:
         lines.append("- No artifacts.")
 

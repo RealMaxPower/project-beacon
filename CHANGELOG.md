@@ -57,6 +57,30 @@ against a clean environment, so the first tag will publish.
   assertion table already escaped for this reason; the artifact section did
   not. Artifacts are now fenced, with a fence longer than any backtick run
   inside them.
+- **The same forgery was still open through the artifact's name.** Fencing the
+  content left the heading above it — `### {name}` — interpolating a string the
+  subject also chooses: a JSONL subject sends the name, and a remote A2A agent
+  names its own artifacts. A name carrying a line ending, or `<h2>` and
+  `<table>` carrying none, put a second Assertions section and a forged PASS
+  row back into `report.md`. The name is now rendered in a code span longer
+  than any backtick run inside it, which is `_fenced` for a single line and
+  takes the name out of inline parsing entirely. `evidence.json` still records
+  the name exactly as it was sent.
+- **A subject could delete the record of what it had just done.** `json.loads`
+  accepts nesting that `dataclasses.asdict` cannot walk — the C decoder spends
+  less stack per level than the Python walk that follows it — so a subject
+  could act, then send one artifact nested past about 1200 levels and take
+  `RecursionError` out through the evidence write. `RecursionError` is a
+  `RuntimeError`, which the CLI did not catch, so the run ended in a traceback
+  with no `evidence.json`, no `report.md` and no `events.json`: an empty run
+  directory instead of a record of a subject that had already deleted
+  documents. Structures the subject controls — artifact content, completion
+  metadata, and every recorded event payload — are now bounded on the way in,
+  with the deepest levels replaced by a marker and the truncation stated in
+  the bundle's limitations rather than passed off as what was sent. The event
+  log has its own guard as well: if it cannot be serialised, the bundle is
+  written without it and says so, because a verdict and a state diff with no
+  events still beats losing the run.
 - **A failed MCP handshake leaked the server process.** `MCPStdioClient.start`
   raised with the child still running and its three pipes open, and the caller
   had no handle to close because it never received one. The documented test

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -331,6 +333,29 @@ class HostAdapterTests(unittest.TestCase):
                 with self.subTest(file=name):
                     text = (run_dir / name).read_text(encoding="utf-8")
                     self.assertNotIn(token, text)
+
+    @unittest.skipIf(
+        os.name == "nt",
+        "Windows has no POSIX mode to assert: os.chmod there only toggles the "
+        "read-only bit, and the file's protection comes from directory ACLs.",
+    )
+    def test_the_config_holding_the_token_is_not_world_readable(self) -> None:
+        """
+        Redaction covers the bundle, not the config file beside it. That file
+        holds the only credential guarding the tool facade — including
+        `beacon_submit`, which decides the recorded verdict — so a second
+        account on the machine must not be able to read it.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                MCPHostAdapter([sys.executable, str(HOST)], timeout_seconds=30),
+                output_dir=directory,
+                run_id="mcp-config-mode",
+            )
+            config = outcome.json_path.parent / "workspace" / "mcp-config.json"
+            mode = stat.S_IMODE(config.stat().st_mode)
+            self.assertEqual(mode, 0o600, f"config is {oct(mode)}, not 0600")
 
 
 if __name__ == "__main__":

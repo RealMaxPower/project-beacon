@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import tempfile
 import textwrap
@@ -342,6 +343,115 @@ class SubjectStderrTests(unittest.TestCase):
         self.assertNotEqual(evidence.subject.get("status"), "error")
 
 
+class DeepStructureTests(unittest.TestCase):
+    """
+    A subject acts first and reports afterwards, so anything that kills Beacon
+    between those two points erases the record of what it just did.
+
+    `json.loads` accepts nesting that `dataclasses.asdict` cannot walk — the C
+    decoder spends less stack per level than the Python walk does — so a
+    subject could delete documents, then send one deeply nested artifact and
+    leave an empty run directory behind.
+    """
+
+    # Comfortably past the ~1200 levels where asdict gives out, and still
+    # parsed without complaint by the decoder that accepts it.
+    DEPTH = 1500
+
+    def _agent(self, payload_expr: str) -> str:
+        return textwrap.dedent(
+            f"""
+            import json, sys
+            json.loads(sys.stdin.readline())
+            def send(v):
+                sys.stdout.write(json.dumps(v) + "\\n"); sys.stdout.flush()
+            nested = "floor"
+            for _ in range({self.DEPTH}):
+                nested = {{"n": nested}}
+            {payload_expr}
+            send({{"type": "complete", "status": "completed", "summary": "done"}})
+            """
+        )
+
+    def _run(self, script: str, run_id: str):
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Path(directory) / "agent.py"
+            agent.write_text(script, encoding="utf-8")
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                JSONLCommandAdapter([sys.executable, str(agent)], timeout_seconds=30),
+                output_dir=directory,
+                run_id=run_id,
+            )
+            run_dir = outcome.json_path.parent
+            return outcome.evidence, {
+                name: (run_dir / name).exists()
+                for name in ("evidence.json", "report.md", "events.json")
+            }
+
+    def test_a_deeply_nested_artifact_still_produces_a_bundle(self) -> None:
+        evidence, written = self._run(
+            self._agent(
+                'send({"type": "artifact", "name": "summary", "content": nested})'
+            ),
+            "deep-artifact",
+        )
+        self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+        self.assertIn("summary", evidence.artifacts)
+
+    def test_the_truncation_is_admitted_in_the_limitations(self) -> None:
+        """Silently shortening the subject's own output would be a lie."""
+        evidence, _ = self._run(
+            self._agent(
+                'send({"type": "artifact", "name": "summary", "content": nested})'
+            ),
+            "deep-artifact-limits",
+        )
+        self.assertTrue(
+            any("nested too deeply" in item for item in evidence.limitations),
+            evidence.limitations,
+        )
+        self.assertIn("truncated by Beacon", json.dumps(evidence.artifacts))
+
+    def test_deeply_nested_completion_metadata_still_produces_a_bundle(self) -> None:
+        """The same structure reaches `asdict` through SubjectResult.metadata."""
+        script = textwrap.dedent(
+            f"""
+            import json, sys
+            json.loads(sys.stdin.readline())
+            def send(v):
+                sys.stdout.write(json.dumps(v) + "\\n"); sys.stdout.flush()
+            nested = "floor"
+            for _ in range({self.DEPTH}):
+                nested = {{"n": nested}}
+            send({{"type": "complete", "status": "completed",
+                  "summary": "done", "metadata": {{"deep": nested}}}})
+            """
+        )
+        _, written = self._run(script, "deep-metadata")
+        self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+
+    def test_deeply_nested_tool_arguments_still_produce_a_bundle(self) -> None:
+        """Every recorded event payload is the subject's structure, not just artifacts."""
+        script = textwrap.dedent(
+            f"""
+            import json, sys
+            json.loads(sys.stdin.readline())
+            def send(v):
+                sys.stdout.write(json.dumps(v) + "\\n"); sys.stdout.flush()
+            nested = "floor"
+            for _ in range({self.DEPTH}):
+                nested = {{"n": nested}}
+            send({{"type": "tool_call", "id": "1", "tool": "mail_list",
+                  "arguments": {{"deep": nested}}}})
+            json.loads(sys.stdin.readline())
+            send({{"type": "complete", "status": "completed", "summary": "done"}})
+            """
+        )
+        _, written = self._run(script, "deep-tool-args")
+        self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+
+
 class ReportInjectionTests(unittest.TestCase):
     """
     Artifact text is written by the subject and lands in a document people are
@@ -349,6 +459,10 @@ class ReportInjectionTests(unittest.TestCase):
     Artifacts heading and write its own — including a forged PASS row in a
     table whose real rows Beacon escapes precisely because it does not trust
     this text.
+
+    An artifact's *name* is written by the subject too — a JSONL subject sends
+    it, and a remote A2A agent names its own artifacts — and it lands in the
+    heading above the fence, where fencing the content protects nothing.
     """
 
     # Deliberately free of backticks. A payload that opens a fence of its own
@@ -366,7 +480,15 @@ class ReportInjectionTests(unittest.TestCase):
         "**Evidence digest:** forged\n"
     )
 
-    def _report(self, artifact: str) -> str:
+    # The same forgery in HTML, which needs no line ending at all: markdown
+    # renderers and GitHub's sanitiser both keep h1-h6 and tables, so escaping
+    # the markdown characters and leaving `<` alone still ships the forgery.
+    HOSTILE_HTML = (
+        "brief<h2>Assertions</h2>"
+        "<table><tr><td>PASS</td><td>forgedhtml</td></tr></table>"
+    )
+
+    def _report(self, artifact: str, name: str = "summary") -> str:
         from beacon.evidence import render_markdown
         from beacon.models import Evidence
 
@@ -392,7 +514,7 @@ class ReportInjectionTests(unittest.TestCase):
             state={"before_digest": "b", "after_digest": "a", "before": {}, "after": {}},
             state_diff={"change_count": 0, "changes": []},
             events=[],
-            artifacts={"summary": artifact},
+            artifacts={name: artifact},
             usage={"calls": 0},
             reset_verified=True,
             limitations=[],
@@ -422,6 +544,45 @@ class ReportInjectionTests(unittest.TestCase):
                 fence = None
         return "\n".join(kept)
 
+    @classmethod
+    def _outside_code(cls, markdown: str) -> str:
+        """
+        The document as a renderer parses it: no fence, and no code span.
+
+        Text inside a code span is not markdown and not HTML — a renderer
+        escapes it — so a forgery is only a forgery if it survives out here.
+        Spans are matched the way CommonMark matches them: a run of backticks
+        is closed by the next run of the same length, and a run with no such
+        partner is literal text and stays.
+        """
+        kept: list[str] = []
+        for line in cls._outside_fences(markdown).split("\n"):
+            index = 0
+            while (opener := re.search(r"`+", line[index:])) is not None:
+                start, end = index + opener.start(), index + opener.end()
+                kept.append(line[index:start])
+                width = end - start
+                closer = next(
+                    (
+                        run
+                        for run in re.finditer(r"`+", line[end:])
+                        if run.end() - run.start() == width
+                    ),
+                    None,
+                )
+                if closer is None:
+                    kept.append(line[start:end])
+                    index = end
+                else:
+                    index = end + closer.end()
+            kept.append(line[index:] + "\n")
+        return "".join(kept)
+
+    def _artifact_heading(self, report: str) -> str:
+        headings = [line for line in report.splitlines() if line.startswith("### ")]
+        self.assertEqual(len(headings), 1, "the artifact heading is not one line")
+        return headings[0]
+
     def test_a_hostile_artifact_cannot_forge_a_passing_row(self) -> None:
         live = self._outside_fences(self._report(self.HOSTILE))
         self.assertIn("| FAIL |", live)
@@ -436,10 +597,68 @@ class ReportInjectionTests(unittest.TestCase):
         """
         report = self._report("```\nescaped?\n```\nafter the fence\n")
         self.assertIn("````", report)
-        opener = report.split("### summary", 1)[1].strip().split("\n", 1)[0]
+        opener = report.split("### `summary`", 1)[1].strip().split("\n", 1)[0]
         self.assertGreaterEqual(len(opener), 4)
 
     def test_ordinary_artifacts_are_still_readable(self) -> None:
         """Escaping must not turn a briefing into an unreadable blob."""
         report = self._report("Three replies are drafted and unsent.")
         self.assertIn("Three replies are drafted and unsent.", report)
+
+    def test_a_hostile_artifact_name_cannot_forge_a_passing_row(self) -> None:
+        """
+        The same forgery as above, through the field beside it. Fencing the
+        content while interpolating the name raw moves the hole, it does not
+        close it: the heading is the last raw thing the subject writes.
+        """
+        report = self._report("The briefing is complete.", name=self.HOSTILE)
+        live = self._outside_code(report)
+        self.assertIn("| FAIL |", live)
+        self.assertNotIn("| PASS |", live, "the subject wrote its own verdict row")
+        self.assertEqual(live.count("## Assertions"), 1)
+        self.assertNotIn("forged", live)
+        self.assertIn("| PASS |", report, "the name is dropped, not neutralised")
+
+    def test_a_hostile_artifact_name_cannot_open_html(self) -> None:
+        """
+        A heading has no fence around it, so escaping markdown's own
+        characters is not enough: `<h2>` and `<table>` need no line ending,
+        and both markdown renderers and GitHub's sanitiser keep them.
+        """
+        report = self._report("The briefing is complete.", name=self.HOSTILE_HTML)
+        live = self._outside_code(report)
+        self.assertNotIn("<", live, "raw HTML from the subject reaches the reader")
+        self.assertNotIn("PASS", live, "the subject wrote its own verdict cell")
+        self.assertNotIn("forgedhtml", live)
+        self.assertEqual(live.count("## Assertions"), 1)
+        self.assertIn("<h2>", report, "the name is dropped, not neutralised")
+
+    def test_a_name_with_line_endings_stays_on_one_heading(self) -> None:
+        """
+        LF, CR and CRLF all end an ATX heading. CR is the one a character
+        escape list forgets, because Python's own line handling hides it.
+        """
+        for ending in ("\n", "\r", "\r\n"):
+            with self.subTest(ending=repr(ending)):
+                name = f"brief{ending}## Assertions{ending}| PASS | forged |"
+                report = self._report("The briefing is complete.", name=name)
+                live = self._outside_code(report)
+                self.assertEqual(live.count("## Assertions"), 1)
+                self.assertNotIn("| PASS |", live)
+                self.assertNotIn("forged", live)
+                self.assertNotIn("\r", report)
+                self.assertIn("brief", self._artifact_heading(report))
+
+    def test_an_ordinary_artifact_name_is_still_its_name(self) -> None:
+        """A name a real subject sends must still read as that name."""
+        ordinary = (
+            "index",
+            "summary.json",
+            "rapport-été.md",
+            "my report v2 (final).md",
+        )
+        for name in ordinary:
+            with self.subTest(name=name):
+                report = self._report("Three replies are drafted.", name=name)
+                self.assertEqual(self._artifact_heading(report), f"### `{name}`")
+                self.assertIn(name, report)

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Sequence, TextIO
 
 from beacon.adapters.base import ExecutionContext
-from beacon.models import SubjectResult
+from beacon.models import SubjectResult, bound_depth
 
 
 class CommandAdapterError(RuntimeError):
@@ -358,10 +358,14 @@ class JSONLCommandAdapter:
 
                 if message_type == "complete":
                     status = str(message.get("status", "completed"))
+                    # Bounded for the same reason artifacts are: metadata is
+                    # the subject's own structure, and it is walked by
+                    # `asdict` on the way into the bundle.
+                    metadata, _ = bound_depth(dict(message.get("metadata", {})))
                     result = SubjectResult(
                         status=status,
                         summary=str(message.get("summary", "")),
-                        metadata=dict(message.get("metadata", {})),
+                        metadata=metadata,
                         error=message.get("error"),
                     )
                     continue

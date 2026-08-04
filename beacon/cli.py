@@ -107,6 +107,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Complete Authorization header value for --adapter a2a.",
     )
     run.add_argument(
+        "--allow-agent-origin",
+        action="append",
+        default=[],
+        metavar="ORIGIN",
+        help=(
+            "Also let the Agent Card send Beacon to this origin, such as "
+            "https://host:8443. By default only --agent-url's own origin is "
+            "requested, because the card is written by the agent under "
+            "evaluation. An allowed extra origin never receives "
+            "--authorization. Repeatable."
+        ),
+    )
+    run.add_argument(
         "--output",
         type=Path,
         default=Path(".beacon/runs"),
@@ -306,6 +319,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--authorization",
         help="Complete Authorization header value, such as 'Bearer ...'.",
     )
+    a2a.add_argument(
+        "--allow-agent-origin",
+        action="append",
+        default=[],
+        metavar="ORIGIN",
+        help=(
+            "Also let the Agent Card send Beacon to this origin, such as "
+            "https://host:8443. By default only the given URL's own origin is "
+            "requested. An allowed extra origin never receives "
+            "--authorization. Repeatable."
+        ),
+    )
     return parser
 
 
@@ -438,6 +463,7 @@ def _run(args: argparse.Namespace) -> int:
             args.agent_url,
             timeout_seconds=args.timeout,
             authorization=args.authorization,
+            allowed_origins=args.allow_agent_origin,
         )
     elif args.adapter == "mcp-host":
         if not args.command:
@@ -603,6 +629,7 @@ def _a2a_inspect(args: argparse.Namespace) -> int:
         args.url,
         timeout_seconds=args.timeout,
         authorization=args.authorization,
+        allowed_origins=args.allow_agent_origin,
     )
     output = {"agent_card": client.discover()}
     if args.send:

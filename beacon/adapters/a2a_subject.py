@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 
 from beacon.adapters.base import ExecutionContext
 from beacon.models import SubjectResult
@@ -70,12 +70,15 @@ class A2ASubjectAdapter:
         timeout_seconds: float | None = None,
         authorization: str | None = None,
         artifact_name: str | None = None,
+        allowed_origins: Sequence[str] = (),
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._name = name or base_url
         self._timeout_seconds = timeout_seconds
         self._authorization = authorization
         self._artifact_name = artifact_name
+        # Extra origins the Agent Card may point at, named by the operator.
+        self._allowed_origins = tuple(allowed_origins)
 
     @property
     def descriptor(self) -> dict[str, Any]:
@@ -172,6 +175,7 @@ class A2ASubjectAdapter:
             self._base_url,
             timeout_seconds=timeout,
             authorization=self._authorization,
+            allowed_origins=self._allowed_origins,
         )
 
         try:
