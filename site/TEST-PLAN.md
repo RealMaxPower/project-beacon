@@ -48,7 +48,12 @@ Go to `http://localhost:5173/`.
 - The run strip shows **12 dots, all amber**, numbered 01–12.
 - The badge top-right of that card reads **`INCOMPLETE 12 (100%)`**.
 - The two rates read **`result matches contract 2/12`** and
-  **`entities grounded 0/12`**, both amber.
+  **`entities grounded 0/12`**, both amber — each with its scenario beneath it
+  on the left, and **`pass rate`** / **`never measured`** beneath it on the
+  right.
+
+**It is a bug if** the two figures carry the same qualifier. They are not the
+same kind of fact: one is a rate, the other is the absence of one.
 
 **It is a bug if** any of those figures is red. Neither baseline recorded a
 single FAIL — the runs resolved INCOMPLETE — and red would have the page
@@ -57,11 +62,25 @@ was *not* failed.
 
 ### 1.2 Home — shape and truth
 
-- Two cards: **`2 / 12`** and **`0 / 12`**, both amber, both dashed-bordered.
-- The `0 / 12` card has **no coloured bar at all**.
+- The lede says **twelve runs against *each* of two scenarios** — not "the same
+  twelve runs". There are twenty-four; two baselines of twelve.
+- Two dashed amber cards, each headed by its scenario id and then by the
+  question it asks in plain English: *Does the reply have the shape a consumer
+  can parse?* and *Are the values in that reply actually on the page?*
+- The left card reads **`2 / 12`** with a short filled bar.
+- The right card reads **`measured 0 / 12`** — the word is part of the figure —
+  and has **no bar and no empty bar track**.
+- Each caption stands on its own. Neither begins mid-sentence, and neither
+  needs the other card to make sense.
 
-**It is a bug if** the zero card draws a sliver of colour. It would be showing
-progress that was never made.
+**It is a bug if** the right-hand card shows a bare `0 / 12`, or draws an empty
+trough where the left card's bar is. Both say *zero out of twelve failed*. The
+check never ran: there was no structured reply to read a value out of, so
+nothing was compared. Publishing that as a rate invents a measurement.
+
+**It is a bug if** either caption reads as half a sentence. They used to be one
+sentence split across two boxes, which fell apart the moment the grid stacked
+or a reader looked at the big number first.
 
 ### 1.3 Home — content can give orders
 

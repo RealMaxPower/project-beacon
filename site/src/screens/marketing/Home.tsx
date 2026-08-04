@@ -1,5 +1,5 @@
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
-import { baselines, facts, scenarios, verdictVector } from "@/data/fixtures";
+import { baselines, facts, scenarios, verdictVector, wasEvaluated } from "@/data/fixtures";
 import type { Baseline, Verdict } from "@/data/types";
 import type { Route } from "@/router";
 
@@ -104,6 +104,19 @@ export function Home({ onGo }: Props) {
   const contractRate = contract?.assertion_pass_rates["result-matches-the-contract"] ?? 0;
   const groundingRate = grounding?.assertion_pass_rates["entities-grounded"] ?? 0;
 
+  /*
+   * Whether the check ran at all, from the one helper that decides it.
+   *
+   * Both figures appear twice on this page. Deciding "measured" separately
+   * in each place is how the hero came to print a bare 0/12 beside a real
+   * pass rate while the card below it explained that the same number was not
+   * one.
+   */
+  const contractMeasured = contract
+    ? wasEvaluated(contract, "result-matches-the-contract")
+    : false;
+  const groundingMeasured = grounding ? wasEvaluated(grounding, "entities-grounded") : false;
+
   const badgeTone: Record<Verdict, string> = {
     PASS: "bg-pass-tint border-pass/30 text-pass",
     FAIL: "bg-fail-tint border-fail/30 text-fail",
@@ -197,6 +210,7 @@ export function Home({ onGo }: Props) {
                       label: "result matches contract",
                       scenario: contract?.scenario,
                       rate: contractRate,
+                      measured: contractMeasured,
                       runs: contract?.runs,
                       failed: (contract?.verdicts.FAIL ?? 0) > 0,
                     },
@@ -204,6 +218,7 @@ export function Home({ onGo }: Props) {
                       label: "entities grounded",
                       scenario: grounding.scenario,
                       rate: groundingRate,
+                      measured: groundingMeasured,
                       runs: grounding.runs,
                       failed: (grounding.verdicts.FAIL ?? 0) > 0,
                     },
@@ -220,8 +235,18 @@ export function Home({ onGo }: Props) {
                             grounding's. */}
                         <span className="text-[10.5px] text-text-faint">{row.scenario}</span>
                       </span>
-                      <span className={row.failed ? "font-medium text-fail" : "font-medium text-inc"}>
-                        {Math.round(row.rate * (row.runs ?? 0))}/{row.runs}
+                      {/* A bare 0/12 beside a real pass rate reads as one.
+                          The second line is what stops the two being the
+                          same kind of fact. */}
+                      <span
+                        className={`flex flex-col items-end ${row.failed ? "font-medium text-fail" : "font-medium text-inc"}`}
+                      >
+                        <span>
+                          {Math.round(row.rate * (row.runs ?? 0))}/{row.runs}
+                        </span>
+                        <span className="text-[10.5px] font-normal text-text-faint">
+                          {row.measured ? "pass rate" : "never measured"}
+                        </span>
                       </span>
                     </div>
                   ))}
@@ -237,9 +262,24 @@ export function Home({ onGo }: Props) {
           <h2 className="mb-3.5 max-w-[22ch] text-[clamp(1.6rem,4.5vw,2.125rem)] leading-[1.15] font-medium tracking-[-0.03em] text-balance">
             Shape and truth are different checks.
           </h2>
-          <p className="mb-8 max-w-[64ch] text-[17px] leading-relaxed text-text-muted text-pretty">
-            An agent can hold its output contract perfectly while inventing what goes inside it.
-            Same agent, same twelve runs, two scenarios.
+          {/*
+            * The lede said "same twelve runs", and there are twenty-four: two
+            * baselines of twelve, one per scenario. The agent and the prompt
+            * really are identical — the two scenario files carry the same goal
+            * string, and differ only in what they assert — so that is what it
+            * claims now.
+            *
+            * It also promised an agent holding its contract while inventing
+            * the contents, which is a real failure mode and not the one in
+            * this sample: the shape failed first, ten times in twelve, and
+            * took the grounding check down with it. Claiming the more
+            * dramatic story over evidence for a quieter one is the habit this
+            * whole site argues against.
+            */}
+          <p className="mb-8 max-w-[66ch] text-[17px] leading-relaxed text-text-muted text-pretty">
+            The same agent and the same prompt, twelve runs against each of two scenarios. One
+            grades the shape of the reply. The other grades whether what is inside it is really
+            on the page — and it never got the chance.
           </p>
 
           {/*
@@ -254,42 +294,92 @@ export function Home({ onGo }: Props) {
             {[
               {
                 name: contract.scenario,
+                asks: "Does the reply have the shape a consumer can parse?",
                 value: Math.round(contractRate * contract.runs),
                 total: contract.runs,
+                measured: contractMeasured,
                 failed: (contract.verdicts.FAIL ?? 0) > 0,
-                body: "Two runs in twelve produced a result with the fields a consumer parses. The other ten never held their shape at all.",
+                body: "Two replies in twelve arrived with the fields a consumer reads. The other ten came back as prose with the data written out in the middle of a sentence.",
               },
               {
                 name: grounding.scenario,
-                value: Math.round(groundingRate * grounding.runs),
+                asks: "Are the values in that reply actually on the page?",
+                /*
+                 * Zero, and not a pass rate.
+                 *
+                 * This check reads values out of the structured reply. Where
+                 * there is no structured reply there is no value to read, so
+                 * Beacon records the assertion as unmeasured and the run as
+                 * INCOMPLETE. Rendering that as "0 / 12" in the same type as
+                 * the card beside it published a fabrication rate nobody
+                 * measured — the caption said "it was not failed" while the
+                 * number said otherwise, and at 44px the number wins.
+                 * `PassRateBar` already had the answer; this card was not
+                 * using it.
+                 */
+                value: 0,
                 total: grounding.runs,
+                measured: groundingMeasured,
                 failed: (grounding.verdicts.FAIL ?? 0) > 0,
-                body: "And where the shape does not hold, this cannot be measured. It was not failed — there was nothing to compare it against.",
+                body: "Never ran. There was no structured reply to read a value out of, so there was nothing to compare against the page. Not a fabrication rate — an unanswered question.",
               },
             ].map((card) => {
               const tone = card.failed ? "fail" : "inc";
-              const filled = (card.value / card.total) * 100;
+              const filled = card.measured ? (card.value / card.total) * 100 : 0;
               return (
                 <div
                   key={card.name}
                   className={`rounded-card border bg-surface p-6 ${card.failed ? "border-fail/30" : "border-inc/40 border-dashed"}`}
                 >
-                  <p className="mb-4 font-mono text-[12.5px] text-text-faint">{card.name}</p>
-                  <p
-                    className={`mb-3.5 font-mono text-[44px] leading-none font-medium ${tone === "fail" ? "text-fail" : "text-inc"}`}
-                  >
-                    {card.value} / {card.total}
+                  <p className="mb-1.5 font-mono text-[12.5px] text-text-faint">{card.name}</p>
+                  {/* Each card says what it asks. The pair used to read as one
+                      sentence split across two boxes, so the right-hand card
+                      opened with "And where the shape does not hold, this
+                      cannot be measured" — a fragment whose "this" was named
+                      only in the card beside it, and not at all once the grid
+                      stacks on a phone. */}
+                  <p className="mb-4 text-[14px] leading-snug font-medium text-pretty">
+                    {card.asks}
                   </p>
-                  <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-sunken">
-                    {/* No minimum width: a sliver of colour for a zero would
-                        draw progress that was never made. */}
-                    {filled > 0 && (
-                      <div
-                        className={`h-full ${tone === "fail" ? "bg-fail" : "bg-inc"}`}
-                        style={{ width: `${filled}%` }}
-                      />
+                  <p
+                    className={`mb-3.5 font-mono leading-none font-medium ${tone === "fail" ? "text-fail" : "text-inc"}`}
+                  >
+                    {card.measured ? (
+                      <span className="text-[44px]">
+                        {card.value} / {card.total}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="mr-2 align-middle text-[15px] tracking-[0.02em]">
+                          measured
+                        </span>
+                        <span className="align-middle text-[44px]">0 / {card.total}</span>
+                      </>
                     )}
-                  </div>
+                  </p>
+                  {/*
+                    * No track at all where nothing was measured.
+                    *
+                    * Removing the coloured fill was not enough: an empty
+                    * trough beside a filled one is still a progress bar, and
+                    * it reads as zero progress rather than as no measurement.
+                    * The space is held so the two captions stay on the same
+                    * line — the absence is the point, a ragged grid is not.
+                    */}
+                  {card.measured ? (
+                    <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-sunken">
+                      {/* No minimum width: a sliver of colour for a zero would
+                          draw progress that was never made. */}
+                      {filled > 0 && (
+                        <div
+                          className={`h-full ${tone === "fail" ? "bg-fail" : "bg-inc"}`}
+                          style={{ width: `${filled}%` }}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-4 h-2.5" aria-hidden="true" />
+                  )}
                   <p className="text-[14.5px] leading-relaxed text-text-muted text-pretty">
                     {card.body}
                   </p>
@@ -298,8 +388,17 @@ export function Home({ onGo }: Props) {
             })}
           </div>
 
+          {/*
+            * This said "either check alone reports a different agent than the
+            * one that exists", which is a good line about a sample this is
+            * not: one of the two checks here reports nothing at all. What the
+            * runs actually show is the order the questions have to be asked
+            * in, and what a zero is allowed to mean.
+            */}
           <p className="mt-4 max-w-[74ch] rounded-card bg-sunken px-5 py-4.5 text-[15px] leading-relaxed text-pretty">
-            Either check alone reports a different agent than the one that exists.
+            You cannot ask whether an answer is true until you can find the answer. A check that
+            never ran is not a check that failed — and reporting this zero as a fabrication rate
+            would be inventing a measurement, on a page about not doing that.
           </p>
         </section>
       )}

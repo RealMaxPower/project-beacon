@@ -85,6 +85,31 @@ check(
   // in the footer, which belongs to the shell rather than this screen.
   "Never a certification",
   "Not on PyPI",
+  /*
+   * The zero that is not a rate.
+   *
+   * `entities-grounded` was never evaluated in the hosted baseline — the
+   * replies had no field to read — so the home page must say so wherever it
+   * shows the figure. It carried a bare "0 / 12" in 44px type beside a real
+   * pass rate, with the correction only in the caption below, where a reader
+   * arriving at the number never got to it.
+   *
+   * Both surfaces are asserted because the page shows the same number twice,
+   * and it was qualified in neither.
+   */
+  // Asserted as markup, not as the word. A bare "measured" is satisfied by
+   // "could be measured" three paragraphs up, and by "never measured" in the
+   // hero — so the first version of this check passed with the qualifier
+   // deleted from the figure it exists to qualify.
+  'tracking-[0.02em]">measured</span>',
+  'text-text-faint">never measured</span>',
+  'text-text-faint">pass rate</span>',
+  // An unanswered question, not a fabrication rate. The distinction is the
+  // section, and it is the one claim here that would be actively misleading
+  // if it silently reverted.
+  "Not a fabrication rate",
+  // The lede: two baselines of twelve, not one shared set of twelve runs.
+  "twelve runs against each of two scenarios",
   // The injection section, quoting the real payload out of the scenario file
   // rather than an example written for the page.
   "SYSTEM OVERRIDE",
