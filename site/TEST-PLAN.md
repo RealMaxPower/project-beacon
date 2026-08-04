@@ -41,19 +41,31 @@ reads correctly, behaves correctly when clicked, and says what it means.
 
 ## 1 · Marketing
 
-### 1.1 Home — the hero measurement
+### 1.1 Home — the hero is a failure, and a legible one
 
 Go to `http://localhost:5173/`.
 
-- The run strip shows **12 dots, all amber**, numbered 01–12.
-- The badge top-right of that card reads **`INCOMPLETE 12 (100%)`**.
-- The two rates read **`result matches contract 2/12`** and
-  **`entities grounded 0/12`**, both amber — each with its scenario beneath it
-  on the left, and **`pass rate`** / **`never measured`** beneath it on the
-  right.
+- The card is headed **`inbox-briefing-draft-only`**, `demo agent · level 3 ·
+  27 recorded events`, and the badge top-right reads **`FAIL 8/9`** in red.
+- The sentence reads *"It did the work it was asked for, then tried 3 times to
+  send mail it was told not to send."*
+- **Three** rows, each `mail_send_draft` with a **different** draft id —
+  `d-001`, `d-002`, `d-003` — tagged `BLOCKED`, tinted, left-bordered.
+- Beneath them, the service's own refusal: *sending mail is disabled by
+  scenario policy · recorded before dispatch*.
+- Then **`send-never-attempted`** and why it is graded as an attempt.
 
-**It is a bug if** the two figures carry the same qualifier. They are not the
-same kind of fact: one is a rate, the other is the absence of one.
+**It is a bug if** the badge shows INCOMPLETE. The hero sits directly under a
+button reading *Watch an agent fail*, and INCOMPLETE is the one verdict that is
+explicitly not a failure. This card used to be the hosted twelve-run baseline,
+which is exactly that mismatch.
+
+**It is a bug if** the three blocked rows are identical. Three copies of one row
+read as a rendering repeat; three different draft ids read as three attempts,
+which is what they are.
+
+**It is a bug if** a blocked row is drawn lighter than a normal one. It is the
+most informative event in the run.
 
 **It is a bug if** any of those figures is red. Neither baseline recorded a
 single FAIL — the runs resolved INCOMPLETE — and red would have the page
@@ -62,8 +74,19 @@ was *not* failed.
 
 ### 1.2 Home — shape and truth
 
+This section is now **third**, after the injection one. The order is the point:
+a visitor meets one concrete failure, then an email that gives orders, and only
+then the argument about what a zero is allowed to mean. It used to be second,
+restating the hero's numbers before a reader had the vocabulary for them.
+
 - The lede says **twelve runs against *each* of two scenarios** — not "the same
-  twelve runs". There are twenty-four; two baselines of twelve.
+  twelve runs". There are twenty-four; two baselines of twelve. It also names
+  the contrast: the hero was a demo that misbehaves on purpose, this is a real
+  model.
+- The twelve-dot run strip lives **here** now, with the
+  **`INCOMPLETE 12 (100%)`** badge, not in the hero.
+- The two rates appear **once** on the page, in the cards below — not also in
+  the hero, which is where they used to be duplicated.
 - Two dashed amber cards, each headed by its scenario id and then by the
   question it asks in plain English: *Does the reply have the shape a consumer
   can parse?* and *Are the values in that reply actually on the page?*

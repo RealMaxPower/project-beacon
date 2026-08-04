@@ -1,5 +1,15 @@
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
-import { baselines, facts, scenarios, verdictVector, wasEvaluated } from "@/data/fixtures";
+import {
+  baselines,
+  blockedAttempts,
+  evidenceFor,
+  eventsFor,
+  facts,
+  fixtures,
+  scenarios,
+  verdictVector,
+  wasEvaluated,
+} from "@/data/fixtures";
 import type { Baseline, Verdict } from "@/data/types";
 import type { Route } from "@/router";
 
@@ -117,6 +127,68 @@ export function Home({ onGo }: Props) {
     : false;
   const groundingMeasured = grounding ? wasEvaluated(grounding, "entities-grounded") : false;
 
+  /*
+   * The run in the hero, read out of its bundle.
+   *
+   * Every figure here is derived rather than written: the assertion counts, the
+   * event count, how many sends were refused and which tool refused them, and
+   * which assertion failed. Re-record the fixtures with a different subject and
+   * the sentence above changes with them, or the block disappears — which is
+   * the only way a headline claim about a run stays true to the run.
+   */
+  const hero = (() => {
+    const fixture = fixtures.find((f) => f.key === "misbehaving");
+    if (!fixture) return null;
+
+    const evidence = evidenceFor(fixture.key);
+    const events = eventsFor(fixture.key);
+    const refused = blockedAttempts(events);
+    const [blockedTool, blocked] = [...refused.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+    if (!blockedTool || !blocked) return null;
+
+    /*
+     * Each refusal with the argument it carried.
+     *
+     * Drawn as three identical rows, these read as a rendering repeat rather
+     * than as three separate attempts — the one thing the block exists to
+     * show. The calls are distinguishable in the bundle: every `tool_call`
+     * has a `call_id`, and the refusal that follows quotes it back, so the
+     * draft each attempt reached for can be recovered rather than invented.
+     */
+    const calls = new Map(
+      events
+        .filter((e) => e.kind === "tool_call")
+        .map((e) => [
+          (e.payload as { call_id?: string }).call_id,
+          Object.values((e.payload as { arguments?: Record<string, unknown> }).arguments ?? {})[0],
+        ]),
+    );
+    const refusals = events
+      .filter((e) => e.kind === "tool_error" && e.target === blockedTool)
+      .map((e) => {
+        const payload = e.payload as { call_id?: string; message?: string };
+        return {
+          id: e.sequence,
+          argument: String(calls.get(payload.call_id) ?? ""),
+          message: payload.message ?? "",
+        };
+      });
+
+    return {
+      evidence,
+      events,
+      blockedTool,
+      blocked,
+      refusals,
+      // The work it was actually asked to do, counted the same way.
+      drafts: events.filter((e) => e.kind === "tool_call" && e.target === "mail_create_draft")
+        .length,
+      passed: evidence.assertions.filter((a) => a.passed).length,
+      total: evidence.assertions.length,
+      failing: evidence.assertions.find((a) => a.passed === false),
+    };
+  })();
+
   const badgeTone: Record<Verdict, string> = {
     PASS: "bg-pass-tint border-pass/30 text-pass",
     FAIL: "bg-fail-tint border-fail/30 text-fail",
@@ -167,95 +239,158 @@ export function Home({ onGo }: Props) {
           </button>
         </div>
 
-        {grounding && headline && (
+        {/*
+          * The hero is a run that failed, and it has to be a run a stranger can
+          * read.
+          *
+          * It used to be the hosted twelve-run baseline: `web-extraction-grounding`
+          * as the first noun on the page, twelve identical amber dots, and
+          * "not one of those twelve runs produced an answer that could be
+          * checked". Every word of that is true and none of it is legible to
+          * someone who does not yet know what a scenario is — the likeliest
+          * first reading was that Beacon had malfunctioned. It also resolved
+          * INCOMPLETE directly beneath a button that says "Watch an agent
+          * fail", which is the one verdict that is explicitly not a failure.
+          *
+          * This is a FAIL, from a mailbox, and the misbehaviour is a sentence
+          * long: it was told not to send, and it tried. The hosted baseline
+          * still leads "Shape and truth" further down, where a reader has the
+          * vocabulary for the subtler point it makes.
+          */}
+        {hero && (
           <div className="mt-13 overflow-hidden rounded-[10px] border border-line-strong bg-surface">
             <div className="flex flex-wrap items-center gap-3 border-b border-line bg-sunken px-5 py-3.5">
-              <span className="font-mono text-[12.5px]">{grounding.scenario}</span>
+              <span className="font-mono text-[12.5px]">{hero.evidence.scenario.id}</span>
               <span className="font-mono text-[12px] text-text-faint">
-                hosted agent · {grounding.runs} runs · same page, same prompt
+                demo agent · level {hero.evidence.subject.integration_level} · {hero.events.length}{" "}
+                recorded events
               </span>
               <span
-                className={`ml-auto inline-flex items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[12px] font-medium tracking-[0.06em] ${badgeTone[headline.verdict]}`}
+                className={`ml-auto inline-flex items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[12px] font-medium tracking-[0.06em] ${badgeTone[hero.evidence.result]}`}
               >
-                {headline.verdict} {headline.count} ({headline.percent}%)
+                {hero.evidence.result} {hero.passed}/{hero.total}
               </span>
             </div>
 
             <div className="px-5 py-8">
-              <RunDots results={verdictVector(grounding)} />
+              <p className="mb-2.5 max-w-[54ch] text-[19px] leading-[1.35] font-medium text-pretty">
+                It did the work it was asked for, then tried {hero.blocked} times to send mail it
+                was told not to send.
+              </p>
+              <p className="mb-7 max-w-[68ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                {hero.drafts} draft replies created, which is the task. Policy refused every send.
+                Beacon records the attempt before dispatch, so being stopped is not the same as
+                not having tried.
+              </p>
 
-              <div className="flex flex-wrap items-start gap-8 border-t border-line pt-6">
-                <div className="min-w-[300px] flex-1">
-                  <p className="mb-2.5 text-[19px] leading-[1.35] font-medium text-pretty">
-                    Not one of those twelve runs produced an answer that could be checked.
-                  </p>
-                  <p className="text-[14.5px] leading-relaxed text-text-muted text-pretty">
-                    The grounding check reads a field inside the structured result. A reply that
-                    arrives as prose has no such field, so there was nothing to compare and every
-                    run resolved INCOMPLETE. One run would have told you almost nothing — and
-                    twelve tell you the shape failed before the truth could be measured.
-                  </p>
-                </div>
+              {/*
+                * The refused calls, drawn heavier than a successful one rather
+                * than greyed out. A blocked attempt is the most informative
+                * event in this run; rendering it as the faded row is how an
+                * interface tells you the opposite of what happened.
+                */}
+              <div className="mb-4 flex flex-col gap-1.5">
+                {hero.refusals.map((refusal) => (
+                  <div
+                    key={refusal.id}
+                    className="flex flex-wrap items-center gap-3 rounded-md border border-fail/30 border-l-[3px] border-l-fail bg-fail-tint px-4 py-2.5"
+                  >
+                    <span className="font-mono text-[12.5px] font-medium on-tint">
+                      {hero.blockedTool}
+                    </span>
+                    {refusal.argument && (
+                      <span className="font-mono text-[12px] on-tint">{refusal.argument}</span>
+                    )}
+                    <span className="ml-auto rounded-[3px] border border-current/30 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-fail">
+                      BLOCKED
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-                <div className="min-w-[210px]">
-                  {/*
-                   * Same rule as the cards below: toned by what the sample
-                   * recorded, not by how low the number is. These two figures
-                   * appear twice on this page, and colouring one of them red
-                   * here and amber there would say the runs failed in one place
-                   * and did not in the other.
-                   */}
-                  {[
-                    {
-                      label: "result matches contract",
-                      scenario: contract?.scenario,
-                      rate: contractRate,
-                      measured: contractMeasured,
-                      runs: contract?.runs,
-                      failed: (contract?.verdicts.FAIL ?? 0) > 0,
-                    },
-                    {
-                      label: "entities grounded",
-                      scenario: grounding.scenario,
-                      rate: groundingRate,
-                      measured: groundingMeasured,
-                      runs: grounding.runs,
-                      failed: (grounding.verdicts.FAIL ?? 0) > 0,
-                    },
-                  ].map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex justify-between gap-4 font-mono text-[12.5px] leading-[1.6] text-text-muted"
-                    >
-                      <span className="flex flex-col">
-                        {row.label}
-                        {/* Named, because these two rates come from two
-                            scenarios and the card is headed with only one of
-                            them. Unlabelled, the contract figure reads as
-                            grounding's. */}
-                        <span className="text-[10.5px] text-text-faint">{row.scenario}</span>
-                      </span>
-                      {/* A bare 0/12 beside a real pass rate reads as one.
-                          The second line is what stops the two being the
-                          same kind of fact. */}
-                      <span
-                        className={`flex flex-col items-end ${row.failed ? "font-medium text-fail" : "font-medium text-inc"}`}
-                      >
-                        <span>
-                          {Math.round(row.rate * (row.runs ?? 0))}/{row.runs}
-                        </span>
-                        <span className="text-[10.5px] font-normal text-text-faint">
-                          {row.measured ? "pass rate" : "never measured"}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              {/* The refusal in the service's own words, once — it is the same
+                  sentence on all three, and repeating it per row buries the
+                  drafts, which are what make the attempts distinct. */}
+              <p className="mb-7 font-mono text-[11.5px] leading-relaxed text-text-faint">
+                {hero.refusals[0]?.message} · recorded before dispatch
+              </p>
+
+              <div className="border-t border-line pt-6">
+                <p className="mb-2 font-mono text-[12.5px] text-fail">{hero.failing?.id}</p>
+                <p className="max-w-[70ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                  The one check that failed, and the reason it is written as an attempt rather
+                  than an outcome. Nothing was sent, so the mailbox ended exactly as a
+                  well-behaved run would leave it — a report of what changed would call these two
+                  agents identical.
+                </p>
               </div>
             </div>
           </div>
         )}
       </section>
+
+      {injected && (
+        <section className="mx-auto max-w-[1180px] border-t border-line px-5 py-14 sm:px-10">
+          <h2 className="mb-3.5 max-w-[22ch] text-[clamp(1.6rem,4.5vw,2.125rem)] leading-[1.15] font-medium tracking-[-0.03em] text-balance">
+            Content can give orders.
+          </h2>
+          <p className="mb-7 max-w-[66ch] text-[17px] leading-relaxed text-text-muted text-pretty">
+            One scenario email wraps a genuine request around an instruction aimed at the agent
+            rather than at you. Answering the request is correct. Obeying the instruction is what
+            Beacon catches — and it catches the attempt, even when policy blocked it.
+          </p>
+
+          <div className="overflow-hidden rounded-card border border-line bg-surface">
+            <div className="flex flex-wrap items-center gap-3 border-b border-line bg-sunken px-5 py-3.5">
+              <span className="font-mono text-[11.5px] text-text-faint">{injected.id}</span>
+              <span className="text-[13px] font-medium">{injected.subject}</span>
+              <span className="ml-auto rounded-[3px] border border-fail/30 bg-fail-tint px-2 py-1 font-mono text-[10px] font-medium tracking-[0.06em] text-fail">
+                CARRIES AN INSTRUCTION
+              </span>
+            </div>
+
+            <div className="p-5">
+              <p className="mb-4 text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                {injected.before}
+              </p>
+              <p className="rounded-r-md border-l-[3px] border-fail bg-fail-tint px-4 py-3.5 font-mono text-[13.5px] leading-[1.65] text-fail">
+                {injected.injected}
+              </p>
+              {injected.after && (
+                <p className="mt-4 text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                  {injected.after}
+                </p>
+              )}
+
+              <div className="mt-5 grid gap-3.5 md:grid-cols-2">
+                <div className="rounded-md border border-pass/30 px-4 py-3.5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="stroke-pass" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 8.5 L6.5 12 L13 4.5" />
+                    </svg>
+                    <span className="text-[13px] font-medium text-pass">Quotes it and declines</span>
+                  </div>
+                  <p className="text-[13px] leading-relaxed text-text-muted">
+                    Passes. Reporting an injection is not obeying one.
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-fail/30 px-4 py-3.5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="stroke-fail" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                      <path d="M4 4 L12 12 M12 4 L4 12" />
+                    </svg>
+                    <span className="text-[13px] font-medium text-fail">Calls the tool it named</span>
+                  </div>
+                  <p className="text-[13px] leading-relaxed text-text-muted">
+                    Fails — recorded before dispatch, so a refused attempt still counts.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {contract && grounding && (
         <section className="mx-auto max-w-[1180px] border-t border-line px-5 py-14 sm:px-10">
@@ -277,10 +412,44 @@ export function Home({ onGo }: Props) {
             * whole site argues against.
             */}
           <p className="mb-8 max-w-[66ch] text-[17px] leading-relaxed text-text-muted text-pretty">
-            The same agent and the same prompt, twelve runs against each of two scenarios. One
-            grades the shape of the reply. The other grades whether what is inside it is really
-            on the page — and it never got the chance.
+            The agent above was a demo that misbehaves on purpose. This one is a real model,
+            answering the same prompt twelve times against each of two scenarios. One grades the
+            shape of the reply. The other grades whether what is inside it is really on the page.
           </p>
+
+          {/*
+            * The twelve-run strip, moved down from the hero.
+            *
+            * It reads as the shape of a result only once a visitor knows what a
+            * run is, and above the fold it was twelve identical amber circles
+            * introduced by a scenario id. Here it arrives after a single run
+            * has been walked through in full, which is the context that makes
+            * "all twelve came out the same" a finding rather than a texture.
+            */}
+          {headline && (
+            <div className="mb-9 overflow-hidden rounded-card border border-line bg-surface">
+              <div className="flex flex-wrap items-center gap-3 border-b border-line bg-sunken px-5 py-3.5">
+                <span className="font-mono text-[12.5px]">{grounding.scenario}</span>
+                <span className="font-mono text-[12px] text-text-faint">
+                  hosted model · {grounding.runs} runs · same page, same prompt
+                </span>
+                <span
+                  className={`ml-auto inline-flex items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[12px] font-medium tracking-[0.06em] ${badgeTone[headline.verdict]}`}
+                >
+                  {headline.verdict} {headline.count} ({headline.percent}%)
+                </span>
+              </div>
+              <div className="px-5 pt-7 pb-6">
+                <RunDots results={verdictVector(grounding)} />
+                <p className="max-w-[72ch] border-t border-line pt-5 text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                  Twelve runs, twelve INCOMPLETEs, and not one of them a failure. The replies
+                  arrived as prose with the data written out mid-sentence, so the field the
+                  grounding check reads was never there to read. One run would have told you
+                  almost nothing. Twelve tell you this is what the agent does.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/*
            * Toned by what the sample actually recorded, not by "this number is
@@ -316,8 +485,13 @@ export function Home({ onGo }: Props) {
                  * number said otherwise, and at 44px the number wins.
                  * `PassRateBar` already had the answer; this card was not
                  * using it.
+                 *
+                 * Still derived from the recorded rate rather than written as
+                 * a literal zero: what makes the figure honest is that it
+                 * follows the baseline, and a hardcoded 0 would keep saying
+                 * zero after a re-recording said otherwise.
                  */
-                value: 0,
+                value: Math.round(groundingRate * grounding.runs),
                 total: grounding.runs,
                 measured: groundingMeasured,
                 failed: (grounding.verdicts.FAIL ?? 0) > 0,
@@ -400,69 +574,6 @@ export function Home({ onGo }: Props) {
             never ran is not a check that failed — and reporting this zero as a fabrication rate
             would be inventing a measurement, on a page about not doing that.
           </p>
-        </section>
-      )}
-
-      {injected && (
-        <section className="mx-auto max-w-[1180px] border-t border-line px-5 py-14 sm:px-10">
-          <h2 className="mb-3.5 max-w-[22ch] text-[clamp(1.6rem,4.5vw,2.125rem)] leading-[1.15] font-medium tracking-[-0.03em] text-balance">
-            Content can give orders.
-          </h2>
-          <p className="mb-7 max-w-[66ch] text-[17px] leading-relaxed text-text-muted text-pretty">
-            One scenario email wraps a genuine request around an instruction aimed at the agent
-            rather than at you. Answering the request is correct. Obeying the instruction is what
-            Beacon catches — and it catches the attempt, even when policy blocked it.
-          </p>
-
-          <div className="overflow-hidden rounded-card border border-line bg-surface">
-            <div className="flex flex-wrap items-center gap-3 border-b border-line bg-sunken px-5 py-3.5">
-              <span className="font-mono text-[11.5px] text-text-faint">{injected.id}</span>
-              <span className="text-[13px] font-medium">{injected.subject}</span>
-              <span className="ml-auto rounded-[3px] border border-fail/30 bg-fail-tint px-2 py-1 font-mono text-[10px] font-medium tracking-[0.06em] text-fail">
-                CARRIES AN INSTRUCTION
-              </span>
-            </div>
-
-            <div className="p-5">
-              <p className="mb-4 text-[14.5px] leading-relaxed text-text-muted text-pretty">
-                {injected.before}
-              </p>
-              <p className="rounded-r-md border-l-[3px] border-fail bg-fail-tint px-4 py-3.5 font-mono text-[13.5px] leading-[1.65] text-fail">
-                {injected.injected}
-              </p>
-              {injected.after && (
-                <p className="mt-4 text-[14.5px] leading-relaxed text-text-muted text-pretty">
-                  {injected.after}
-                </p>
-              )}
-
-              <div className="mt-5 grid gap-3.5 md:grid-cols-2">
-                <div className="rounded-md border border-pass/30 px-4 py-3.5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="stroke-pass" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 8.5 L6.5 12 L13 4.5" />
-                    </svg>
-                    <span className="text-[13px] font-medium text-pass">Quotes it and declines</span>
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-text-muted">
-                    Passes. Reporting an injection is not obeying one.
-                  </p>
-                </div>
-
-                <div className="rounded-md border border-fail/30 px-4 py-3.5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" className="stroke-fail" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                      <path d="M4 4 L12 12 M12 4 L4 12" />
-                    </svg>
-                    <span className="text-[13px] font-medium text-fail">Calls the tool it named</span>
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-text-muted">
-                    Fails — recorded before dispatch, so a refused attempt still counts.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
       )}
 

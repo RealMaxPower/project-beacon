@@ -86,30 +86,33 @@ check(
   "Never a certification",
   "Not on PyPI",
   /*
+   * The hero is a run that failed, and a legible one.
+   *
+   * It led with the hosted twelve-run baseline, which resolves INCOMPLETE —
+   * the one verdict that is explicitly not a failure — directly beneath a
+   * button reading "Watch an agent fail". These pin the replacement: a FAIL,
+   * the refused calls, and the assertion that caught it.
+   */
+  "send-never-attempted",
+  "BLOCKED",
+  "recorded before dispatch",
+  /*
    * The zero that is not a rate.
    *
    * `entities-grounded` was never evaluated in the hosted baseline — the
-   * replies had no field to read — so the home page must say so wherever it
-   * shows the figure. It carried a bare "0 / 12" in 44px type beside a real
-   * pass rate, with the correction only in the caption below, where a reader
-   * arriving at the number never got to it.
-   *
-   * Both surfaces are asserted because the page shows the same number twice,
-   * and it was qualified in neither.
+   * replies had no field to read — so the figure must say so where it is
+   * shown. Asserted as markup, not as the word: a bare "measured" is
+   * satisfied by "could be measured" elsewhere on the page, and the first
+   * version of this check passed with the qualifier deleted from the very
+   * figure it exists to qualify.
    */
-  // Asserted as markup, not as the word. A bare "measured" is satisfied by
-   // "could be measured" three paragraphs up, and by "never measured" in the
-   // hero — so the first version of this check passed with the qualifier
-   // deleted from the figure it exists to qualify.
   'tracking-[0.02em]">measured</span>',
-  'text-text-faint">never measured</span>',
-  'text-text-faint">pass rate</span>',
+  // Two baselines of twelve, not one shared set of twelve runs.
+  "twelve times against each of two scenarios",
   // An unanswered question, not a fabrication rate. The distinction is the
   // section, and it is the one claim here that would be actively misleading
   // if it silently reverted.
   "Not a fabrication rate",
-  // The lede: two baselines of twelve, not one shared set of twelve runs.
-  "twelve runs against each of two scenarios",
   // The injection section, quoting the real payload out of the scenario file
   // rather than an example written for the page.
   "SYSTEM OVERRIDE",
