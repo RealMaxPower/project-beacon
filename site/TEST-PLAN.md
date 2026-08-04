@@ -30,6 +30,7 @@ nothing:
 | `npm run smoke` | Every screen renders without throwing, against real fixtures. |
 | `npm run lint:render` | 139 rendered screens: `undefined` / `NaN` / `[object Object]` on screen, empty headings, duplicate ids, `aria-controls` pointing at nothing, unlabelled buttons, nested interactive elements, duplicate `main` / `banner` / `contentinfo` landmarks, and 35 JSON panels hashed against the files they name. Every page is rendered **inside the app shell** as well as on its own, because a landmark collision only exists in the combination. |
 | `npm run visual` | Text overlapping text, horizontal overflow, clipped text, tap targets under 44px — 7 pages × 4 widths, in Chrome. Needs `npm run preview` running. |
+| `npm run headers` | Serves `dist/` with the real headers from `vercel.json` and walks every page under them. A Content-Security-Policy cannot be reviewed by reading it: `style-src 'self'` looks like it forbids the `style={{ width }}` on the pass-rate bars and does not, because React sets those through the CSSOM. Too strict and the bars vanish; too loose and the header is decorative. `vite preview` serves no custom headers, so it cannot see any of this. |
 
 `npm run check` runs the first two plus fixture reproducibility.
 

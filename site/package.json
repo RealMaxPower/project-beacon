@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
   "description": "Marketing site and evidence playground for Project Beacon.",
   "scripts": {
     "dev": "vite",
@@ -13,7 +16,8 @@
     "fixtures:check": "python3 tools/build_fixtures.py --check",
     "lint:render": "vite build --ssr tools/lint.tsx --outDir .lint --logLevel warn && node .lint/lint.js",
     "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check",
-    "visual": "vite preview --port 4173 & sleep 2 && node tools/visual.mjs; kill %1"
+    "visual": "vite preview --port 4173 & sleep 2 && node tools/visual.mjs; kill %1",
+    "headers": "npm run build && node tools/headers.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",
