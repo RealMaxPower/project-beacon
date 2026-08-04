@@ -1,1 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="#14161A" stroke-width="1.8" stroke-linecap="round"><path d="M4 13.5A6.5 6.5 0 0 1 10.5 20"/><path d="M4 8.5A11.5 11.5 0 0 1 15.5 20"/><path d="M4 3.5A16.5 16.5 0 0 1 20.5 20"/></g><circle cx="4" cy="20" r="2" fill="#14161A"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="1.2 1.5 21.6 21.6">
+  <!--
+    The tab icon. Same geometry as `src/components/shell/Mark.tsx`, drawn for
+    16 pixels rather than for a header.
+
+    Two things differ from the component, both deliberate. The stroke is
+    heavier, because the component already bumps 1.8 to 2.2 below 16px and a
+    favicon is never larger than that. And the colour follows the browser's
+    theme instead of being the near-black text token of light mode, which on a
+    dark tab strip was dark grey on dark grey. A browser that ignores the media
+    query gets the light-mode value, which is what shipped before, so this can
+    only be an improvement.
+
+    Nothing in this comment may contain two consecutive hyphens: XML forbids
+    them inside a comment, and an SVG that names the CSS custom property it
+    replaced does not parse at all. It fails as a broken-image icon rather than
+    as a wrong colour, which is at least loud.
+
+    The viewBox is cropped to the geometry's own bounds. The original
+    `0 0 24 24` left two units of empty margin on every side, which at 16px is
+    a sixth of the icon spent on nothing.
+  -->
+  <style>
+    :root { color: #14161a }
+    @media (prefers-color-scheme: dark) { :root { color: #e9ebef } }
+  </style>
+  <g fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <path d="M4 13.5A6.5 6.5 0 0 1 10.5 20"/>
+    <path d="M4 8.5A11.5 11.5 0 0 1 15.5 20"/>
+    <path d="M4 3.5A16.5 16.5 0 0 1 20.5 20"/>
+  </g>
+  <circle cx="4" cy="20" r="2.2" fill="currentColor"/>
+</svg>

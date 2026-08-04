@@ -305,6 +305,63 @@ class LimitationTests(unittest.TestCase):
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class MarkTests(unittest.TestCase):
+    """
+    The tab icon, against the component it is a copy of.
+
+    `public/mark.svg` is a hand-maintained duplicate of `Mark.tsx` — the
+    favicon is a file the browser fetches, so it cannot be the component. That
+    makes it the one asset in the site that drifts silently: it shipped with a
+    hardcoded near-black fill and the component's large-size stroke weight,
+    which on a dark tab strip was dark grey on dark grey, and nothing rendered
+    wrongly anywhere a test was looking.
+    """
+
+    SVG = SRC.parent / "public" / "mark.svg"
+    COMPONENT = SRC / "components" / "shell" / "Mark.tsx"
+
+    def _paths(self, source: str) -> list[str]:
+        return re.findall(r'd="([^"]+)"', source)
+
+    def test_the_icon_is_well_formed_xml(self) -> None:
+        """
+        Two consecutive hyphens are illegal inside an XML comment, and an SVG
+        that explains itself by naming a CSS custom property contains a pair.
+        The failure is a broken-image icon in the tab, not a wrong colour.
+        """
+        from xml.dom.minidom import parseString
+
+        parseString(self.SVG.read_text(encoding="utf-8"))
+
+    def test_the_icon_and_the_component_draw_the_same_mark(self) -> None:
+        svg = self._paths(self.SVG.read_text(encoding="utf-8"))
+        component = self._paths(self.COMPONENT.read_text(encoding="utf-8"))
+        self.assertEqual(len(svg), 3, "the icon should have three arcs")
+        self.assertEqual(
+            svg,
+            component,
+            "the favicon and the wordmark have drifted apart",
+        )
+
+    def test_the_icon_follows_the_browser_theme(self) -> None:
+        """
+        Not a style preference. A fixed dark fill is invisible on a dark tab
+        strip, which is where this started.
+        """
+        source = self.SVG.read_text(encoding="utf-8")
+        self.assertIn("prefers-color-scheme: dark", source)
+        self.assertIn("currentColor", source)
+        # A literal colour outside the two <style> declarations means some part
+        # of the mark cannot follow the theme.
+        without_style = re.sub(r"<style>.*?</style>", "", source, flags=re.S)
+        self.assertEqual(
+            re.findall(r"#[0-9a-fA-F]{3,8}", without_style),
+            [],
+            "a hardcoded colour cannot invert with the tab strip",
+        )
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
 class AssertionCopyTests(unittest.TestCase):
     """
     The plain-English sentence shown for each assertion, pinned to the
