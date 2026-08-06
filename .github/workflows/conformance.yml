@@ -1,29 +1,25 @@
 name: Conformance (external targets)
 
-# Manual only, on purpose.
+# Manual only, and permanently so.
 #
-# Two reasons, and the second outlives the first. Actions minutes are billed
-# on a private repository. And this sweep calls other people's running
-# services, so it should stay rare and deliberate however little it costs us.
+# This was one of two reasons once. The other was that Actions minutes are
+# billed on a private repository, and publication ended it. This one does not
+# expire: the sweep calls other people's running services — third-party MCP
+# servers and hosted A2A agents that belong to strangers who did not ask to be
+# measured. Free minutes changed what a weekly cron costs us. They changed
+# nothing about what it costs them.
 #
-# So the automatic triggers are commented out rather than deleted. Nothing
-# here runs unless someone starts it from the Actions tab, and while the
-# repository stays private that is the correct setting.
+# There is deliberately no commented-out trigger below to restore. A `#
+# schedule:` sitting under "uncomment when the repository is public" is an
+# instruction, and the repository is public now; the next person to read it
+# would be following orders rather than making a decision. Adding a trigger
+# here should mean typing one, having read this paragraph first.
 #
-# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
-# and uncommenting the block below restores the automatic runs at no cost.
+# `tests/test_workflow_triggers.py` asserts that this file's only trigger is
+# `workflow_dispatch`, and that no commented-out one reappears.
 
 on:
   workflow_dispatch:
-  # Uncomment when the repository is public. The schedule is deliberately
-  # weekly rather than per-push: this sweep calls other people's running
-  # services, so it should stay rare whatever it costs us.
-  # schedule:
-  #   - cron: "0 6 * * 1"
-  # push:
-  #   paths:
-  #     - "beacon/protocols/**"
-  #     - "conformance/**"
 
 permissions:
   contents: read

@@ -93,9 +93,9 @@ These are enforced by `tests/test_site_claims.py`, not by convention:
 ## Deploying
 
 Vercel, root directory `site`, build `npm run build`, output `dist`. It builds
-on Vercel's infrastructure, so no GitHub Actions minutes are billed and
-`tests/test_workflow_cost.py` needs no exception. Do not add a deploy workflow:
-that test fails any workflow with an uncommented `push:` trigger.
+on Vercel's infrastructure, so there is no deploy workflow here. Do not add
+one: `tests/test_workflow_triggers.py` is default-deny on workflow files, and a
+new one fails the suite until someone classifies what may start it.
 
 ## Pages
 

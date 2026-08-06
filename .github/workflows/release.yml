@@ -1,17 +1,17 @@
 name: release
 
-# Manual only, on purpose.
+# Started by hand, plus one automatic path: pushing a `v*` tag publishes.
 #
-# Actions minutes are billed on a private repository, and there is nothing to
-# release from one: publishing to PyPI from a repository nobody can read would
-# put a package on the index whose source is not there to check.
+# It was manual-only while the repository was private, for a reason beyond the
+# billed minutes — publishing to PyPI from a repository nobody can read would
+# put a package on the index whose source is not there to check. Publication
+# settled both.
 #
-# So the automatic triggers are commented out rather than deleted. Nothing
-# here runs unless someone starts it from the Actions tab, and while the
-# repository stays private that is the correct setting.
-#
-# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
-# and uncommenting the block below restores the automatic runs at no cost.
+# The tag filter is the whole safety property here, and it is the reason this
+# is `tags:` rather than `branches:`. A push trigger on a branch would build
+# every commit on main inside a job that holds a PyPI id-token, and the
+# publish gate below would not stop the build from happening — it would only
+# stop the upload. `tests/test_workflow_triggers.py` asserts the filter stays.
 
 on:
   workflow_dispatch:
@@ -20,11 +20,9 @@ on:
         description: "Publish to PyPI (otherwise build and check only)"
         type: boolean
         default: false
-  # Uncomment when the repository is public, so that tagging a version
-  # publishes it:
-  # push:
-  #   tags:
-  #     - "v*"
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: read

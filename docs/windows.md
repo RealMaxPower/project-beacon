@@ -108,18 +108,17 @@ fields. They are excluded from the `--repeat` determinism comparison, so
 cross-platform runs still compare cleanly on verdict, state digests, and
 assertion results.
 
-## What CI would cover, and why it is not running
+## What CI covers on Windows
 
-**No workflow runs automatically today.** Every one triggers on
-`workflow_dispatch` only, because Actions minutes are billed on a private
-repository and macOS bills at 10x — see CONTRIBUTING.md. So on Windows the
-suite is only as covered as the last person to run it locally.
-
-The matrix is still in the file and still correct: the `test` job would run the
+CI runs on every push to `main` and every pull request. The `test` job runs the
 full suite on Windows, macOS, and Linux across Python 3.11–3.13, and the
-`vertical-slice` job would run the CLI on Windows and Linux — including the
+`vertical-slice` job runs the CLI on Windows and Linux — including the
 `--command` path, which the unit tests never reach because they launch subjects
 with `sys.executable` and absolute paths.
+
+It was manual-only while the repository was private, because Actions minutes
+are billed there and macOS bills at 10x — see CONTRIBUTING.md. During that
+period Windows was only as covered as the last person to run the suite on it.
 
 That gap is not theoretical. Two tests spawned subjects with a literal
 `python3` — the Store alias stub described above — and passed for weeks on

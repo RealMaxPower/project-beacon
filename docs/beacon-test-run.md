@@ -111,6 +111,7 @@ browser with no GitHub session. `github.com/RealMaxPower` resolves, so the repo
 is private or not yet pushed under that name. Every path is correct and present
 on local `main` — this is repo visibility, not a broken link. Flagging it
 because §1.7 asks for exactly this check and the honest answer is "no".
+Publishing the repository resolves every one of them without touching a link.
 
 **N3 · `m-999` shows the word "protected" twice.** In *The world*, the fixture
 label chip (`protected`) sits next to the protected-flag chip (`protected`).

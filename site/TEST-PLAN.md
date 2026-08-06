@@ -471,8 +471,9 @@ Please do not report these:
   device-frame designs in `design/Beacon Mobile.dc.html` are not built.
 - **`<repo>` in the recorded command.** That is the one edit made to a bundle,
   to keep the recording machine's home directory off a public site.
-- **Links to the repository 404 when signed out.** It is private. That is a
-  decision, not a broken link.
+- **Links to the repository 404 when signed out.** It was private when this
+  was written. That is a decision, not a broken link, and it resolves itself
+  the moment the repository is published.
 
 ---
 

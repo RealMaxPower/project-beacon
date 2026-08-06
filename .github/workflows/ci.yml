@@ -1,30 +1,30 @@
 name: CI
 
-# Manual only, on purpose.
+# Runs on every push to main and every pull request.
 #
-# Actions minutes are billed on a private repository, and the runner
-# multipliers are not uniform: Linux 1x, Windows 2x, macOS 10x. The matrix
-# below is three operating systems by three Python versions, which measured
-# at ~104 billed minutes per push — nineteen pushes against the 2,000-minute
-# free allowance, with macOS alone accounting for 77% of it.
+# It did not, for the first months of this project. Actions minutes are billed
+# on a private repository and the runner multipliers are not uniform: Linux 1x,
+# Windows 2x, macOS 10x. The matrix below is three operating systems by three
+# Python versions, which measured at ~104 billed minutes per push — nineteen
+# pushes against the 2,000-minute free allowance, with macOS alone accounting
+# for 77% of it. That was discovered by pushing twice and reading the bill.
 #
-# So the automatic triggers are commented out rather than deleted. Nothing
-# here runs unless someone starts it from the Actions tab, and while the
-# repository stays private that is the correct setting.
+# Publication ended that reason: Actions is free on a public repository. The
+# matrix was kept through the manual period rather than trimmed, precisely so
+# turning it back on would be a one-line change. `tests/test_workflow_triggers.py`
+# now asserts the three runners stay in it, which is the invariant that
+# outlived the cost.
 #
-# WHEN THE REPOSITORY GOES PUBLIC: Actions is free on public repositories,
-# and uncommenting the block below restores the automatic runs at no cost.
-#
-# Until then the local equivalent is two commands and about a minute:
+# The local equivalent is still two commands and about a minute, and is still
+# the faster answer while you are working:
 #   python3 -W error::ResourceWarning -m unittest discover -s tests
 #   python3 examples/subjects/run_suite.py
 
 on:
   workflow_dispatch:
-  # Uncomment when the repository is public:
-  # push:
-  #   branches: [main]
-  # pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 permissions:
   contents: read
