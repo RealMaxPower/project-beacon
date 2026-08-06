@@ -37,17 +37,25 @@ patches shaped around a single library.
 | Official `a2a-go` v2.4.0 | local reference server | 1 defect |
 | Official `a2a-java` 1.0.0.Alpha3 | local reference server | none |
 | Official `A2A` .NET 1.0.0-preview2 | local reference server | none |
-| `web-page-extractor.fly.dev` | live, read-only | already worked |
-| `searchopti.cloud` | live, read-only, 8 skills | already worked |
-| `api.upmoltwork.mingles.ai` | live, discovery only | **undiscoverable** |
-| `agent-chat.…azurecontainerapps.io` | live, discovery only | **undiscoverable** |
-| `agent.ai` | live, discovery only, auth-gated | **wrong transport** |
+| This project's own extraction agent | live, read-only | already worked |
+| `agent-2` | live, read-only, 8 skills | already worked |
+| `agent-3` | live, discovery only | **undiscoverable** |
+| `agent-4` | live, discovery only | **undiscoverable** |
+| `agent-5` | live, discovery only, auth-gated | **wrong transport** |
 
-The last three were discovered but not driven. `UpMoltWork` publishes a
-`task-marketplace` skill and `ConferenceHaven` publishes
-`send_calendar_invite`; both can change someone's state, and neither belongs
-to us. `agent.ai` is gated behind oauth2 or an API key. Fetching a card costs
-one request and is what the card is for. Sending a message is not.
+**The live third parties are not named.** The official SDKs are, because they
+are open-source libraries whose defect reports belong upstream, and because
+anyone can stand the same servers up from `conformance/` and see the same
+shapes. The deployments cannot be re-run by a reader without sending traffic
+to somebody who did not ask for it, so naming them buys no reproducibility and
+publishes a verdict on a service instead. The first row is this project's own
+agent, which is why it is the one identified.
+
+The last three were discovered but not driven. One publishes a
+`task-marketplace` skill and another a `send_calendar_invite`; both can change
+someone's state, and neither belongs to us. `agent-5` is gated behind oauth2
+or an API key. Fetching a card costs one request and is what the card is for.
+Sending a message is not.
 
 ## Defects found
 
@@ -126,18 +134,18 @@ SaaS products with web UIs, which a protocol client cannot drive at all.
 
 | Directory | Verdict |
 |---|---|
-| `agent.ai` | **A real A2A agent.** 0.3.0 card, 7 skills, oauth2/apiKey |
-| `marketplace.kore.ai` | SPA catch-all — HTML for every path, including `/openapi.json` |
-| `aiagentsdirectory.com` | SaaS product listings; 78 categories, none protocol-related |
+| `directory-A` | **A real A2A agent.** 0.3.0 card, 7 skills, oauth2/apiKey |
+| `directory-B` | SPA catch-all — HTML for every path, including `/openapi.json` |
+| `directory-C` | SaaS product listings; 78 categories, none protocol-related |
 
-The catch-all is worth calling out as a method note: `marketplace.kore.ai`
-answers 200 to `/.well-known/agent-card.json`, `/.well-known/mcp.json` and
-`/openapi.json` alike, and every one of them is the same HTML shell.
-`a2aregistry.org` does the same. A status code proves nothing here; only
-parsing the body does, which is why the sweep checks content rather than
-reachability.
+The catch-all is worth calling out as a method note: `directory-B` answers 200
+to `/.well-known/agent-card.json`, `/.well-known/mcp.json` and `/openapi.json`
+alike, and every one of them is the same HTML shell. The one public A2A
+registry does the same. A status code proves nothing here; only parsing the
+body does, which is why the sweep checks content rather than reachability.
 
-**agent.ai found the fifth defect.** Its card is 0.3.0 with a top-level `url`
+**`directory-A` found the fifth defect** — a defect in Beacon, not in it. Its
+card is 0.3.0 with a top-level `url`
 and no `preferredTransport` at all. The specification declares
 `@default "JSONRPC"` for that field; Beacon defaulted to the REST binding, so
 an omitted transport produced `POST /message:send` against an agent that only
@@ -147,28 +155,27 @@ client to *read* `additionalInterfaces`, and left the default wrong.
 
 ## Can a marketplace supply more agents?
 
-It was worth asking — agent.ai's own card claims thousands of agents — so both
-marketplaces were followed to their listings.
+It was worth asking — `directory-A`'s own card claims thousands of agents — so
+both marketplaces were followed to their listings.
 
-**agent.ai routes everything through one door.** Its card carries a
-non-standard `endpoint` field pointing at `https://mcp.agent.ai/mcp`, a
-Streamable HTTP MCP server, and the description says each agent is exposed
-"as a typed A2A skill and MCP tool". Beacon's MCP client reaches it and gets
-a clean `HTTP 401 invalid_token`. Enumerating the catalogue needs an account.
+**`directory-A` routes everything through one door.** Its card carries a
+non-standard `endpoint` field pointing at a Streamable HTTP MCP server, and the
+description says each agent is exposed "as a typed A2A skill and MCP tool".
+Beacon's MCP client reaches it and gets a clean `HTTP 401 invalid_token`.
+Enumerating the catalogue needs an account.
 
-**Kore's marketplace has no public listing.** It is an Angular application
-whose bundle names `/marketplace/data` — a client-side route that returns the
-shell — and an API at `/api/1.1/` that answers unauthenticated requests with
-a JSON 404. Its agents run inside the Kore platform rather than as separately
-addressable endpoints.
+**`directory-B` has no public listing.** It is an Angular application whose
+bundle names a `/marketplace/data` client-side route that returns the shell,
+and an API that answers unauthenticated requests with a JSON 404. Its agents
+run inside its own platform rather than as separately addressable endpoints.
 
 **And a marketplace is the wrong shape for this job anyway.** A protocol
 client is hardened by *distinct implementations*, not by volume of traffic. A
 thousand agents behind one gateway is one implementation of the protocol
 exercised a thousand times: it would vary the content of the replies and
 nothing about their shape. Every defect in this survey came from a different
-implementation — the official Python SDK, a fly.io deployment, two servers on
-the older card path, and agent.ai's card — and none of them came from
+implementation — the official Python SDK, a container deployment, two servers
+on the older card path, and `directory-A`'s card — and none of them came from
 re-running an implementation already covered.
 
 Where the diversity actually lives is the SDKs. Five official ones exist, each
@@ -189,8 +196,8 @@ up the sample server, point Beacon at it, pin whatever shapes come back.
 ## On finding public A2A agents
 
 There are very few. The MCP registry lists hundreds of hosted servers; the A2A
-equivalent does not meaningfully exist yet — `a2aregistry.org` renders its
-listing client-side and serves the same HTML for every path, so there is no
+equivalent does not meaningfully exist yet — the one public registry renders
+its listing client-side and serves the same HTML for every path, so there is no
 index to fetch. A code search across public repositories for deployed card
 URLs returned thousands of matches and eight distinct hosts, of which five
 were placeholders (`ai.domain.com`, `agent.example`) and one was a dead

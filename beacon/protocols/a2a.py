@@ -385,8 +385,8 @@ class A2AClient:
             return {
                 "url": card["url"],
                 # The specification declares `@default "JSONRPC"` for an
-                # omitted preferredTransport, and omitting it is common —
-                # agent.ai's live card does. Defaulting to the REST binding
+                # omitted preferredTransport, and omitting it is common — a
+                # live card in the survey does. Defaulting to the REST binding
                 # instead sends `POST /message:send` to an agent that only
                 # speaks JSON-RPC, which is the same failure that made every
                 # deployed agent unreachable before, reached another way.

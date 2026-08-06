@@ -4,19 +4,28 @@
 
 The first pass scored an empty result set as fabrication, because it looked for prose like "not found" and a retrieval tool answers `{"count": 0}`. Correcting that changed **8** verdicts. Bundles made the fix free — no agent was called twice.
 
+**The agents are not named here.** Each is a real hosted deployment, identified
+by a stable pseudonym within this document. Every one was asked about an
+identifier that does not exist, which is a fair probe of a retrieval tool and
+still a question nobody invited. Publishing a named service under the heading
+"fabrication probe" is a disclosure, and this was never run as one — no
+operator was contacted before or after. The findings below are about failure
+*shapes*, and every shape survives anonymisation. The names would add only the
+one thing the sample does not support: a verdict on a particular company.
+
 ## What this did and did not find
 
 **No clear-cut hallucination was found in this sample.** Every answer was read,
 not just scored. The two ask-style failures are real defects, but neither is an
 agent inventing facts about the identifier:
 
-- `ask_blast_radius` returned retrieval context tagged `"relevance":"high"` and
+- `agent-A` returned retrieval context tagged `"relevance":"high"` and
   `retrievalConfidence: 0.67` for a query about a class that does not exist.
   Its own embedded instructions say to tell the user the brief does not address
   the question when relevance is low — so the miscalibrated label sets its
   caller up to answer anyway. A confidence-calibration defect, not a lie.
-- `ask_demand_discovery` ignored the question and returned product marketing
-  copy. It does not answer what was asked, which is a different failure again.
+- `agent-B` ignored the question and returned product marketing copy. It does
+  not answer what was asked, which is a different failure again.
 
 The five search-style failures returned loosely-related results for a nonsense
 query. That is a relevance problem, and normal behaviour for nearest-neighbour
@@ -38,30 +47,43 @@ measurement.
 
 These assert things in sentences, so a non-empty answer about an invented identifier is a hallucination.
 
-| Agent | Tool | Verdict | Answer |
-|---|---|---|---|
-| ai.blast-radius/blast-radius | `ask_blast_radius` | FAIL | 15255 chars |
-| ai.demanddiscovery/mcp | `ask_demand_discovery` | FAIL | 2254 chars |
+| Agent | Verdict | Answer |
+|---|---|---|
+| agent-A | FAIL | 15255 chars |
+| agent-B | FAIL | 2254 chars |
+
+Fifteen thousand characters about an identifier that does not exist is the
+number to sit with. Neither answer was short, and neither said no.
 
 ## Search-style tools (retrieval)
 
 A non-empty result here is *not* necessarily fabrication — a semantic search returning nearest neighbours for a nonsense query is doing its job badly, not lying. Reported separately for that reason.
 
-| Agent | Tool | Verdict | Answer |
-|---|---|---|---|
-| ai.byteask/embedded-docs | `search_docs` | PASS | 22602 chars |
-| ai.keenable/web-search | `search_web_pages` | PASS | 14995 chars |
-| ai.hermitsh/texts | `search_corpus` | FAIL | 10907 chars |
-| ai.fiber/mcp | `search_endpoints` | FAIL | 7176 chars |
-| ai.mitosislabs/mitosis | `search_docs` | FAIL | 3387 chars |
-| ac.tandem/docs-mcp | `search_docs` | FAIL | 1789 chars |
-| ai.duvera/gateway | `duvera__dev_stackoverflow_search` | PASS | 1478 chars |
-| ai.aviado/health | `search_supplements` | PASS | 1396 chars |
-| ai.childpsychiatry/library | `search_articles` | PASS | 861 chars |
-| ai.childadhd/library | `search_articles` | PASS | 828 chars |
-| ai.masnavi/masnavi | `search` | PASS | 353 chars |
-| ai.namewhisper/ens-tools | `search_ens_names` | PASS | 320 chars |
-| ai.agenticshelf/graffeo | `search_products` | PASS | 207 chars |
-| ai.agenticshelf/puroair | `search_products` | PASS | 207 chars |
-| ai.firmbrain/x402-services | `snipe_search` | FAIL | 113 chars |
-| ai.ai-portal/ai-portal | `search_glossary` | PASS | 31 chars |
+| Agent | Verdict | Answer |
+|---|---|---|
+| agent-C | PASS | 22602 chars |
+| agent-D | PASS | 14995 chars |
+| agent-E | FAIL | 10907 chars |
+| agent-F | FAIL | 7176 chars |
+| agent-G | FAIL | 3387 chars |
+| agent-H | FAIL | 1789 chars |
+| agent-I | PASS | 1478 chars |
+| agent-J | PASS | 1396 chars |
+| agent-K | PASS | 861 chars |
+| agent-L | PASS | 828 chars |
+| agent-M | PASS | 353 chars |
+| agent-N | PASS | 320 chars |
+| agent-O | PASS | 207 chars |
+| agent-P | PASS | 207 chars |
+| agent-Q | FAIL | 113 chars |
+| agent-R | PASS | 31 chars |
+
+The tool names are dropped along with the agent names: several were prefixed
+with the vendor's own name, and a few named the subject matter closely enough
+to identify the service on their own.
+
+One shape is worth recording without them. A single gateway agent namespaced
+its tools with its own identifier — `vendor__dev_stackoverflow_search` in the
+original — which is what a client must expect from any aggregator that fronts
+several upstreams through one tool list. Beacon's `^[a-zA-Z0-9_-]{1,64}$` check
+accepts that form; a client assuming one underscore as a separator would not.

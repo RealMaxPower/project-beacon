@@ -241,13 +241,14 @@ class TransportDefaultTests(unittest.TestCase):
     that left the field out got `POST /message:send` — a shape a JSON-RPC
     agent has never heard of.
 
-    Found on agent.ai, whose live card is 0.3.0 with a top-level `url` and no
-    transport field at all. It is the same failure that made every deployed
-    agent unreachable before, arrived at from a different direction.
+    Found on a live directory agent — `directory-A` in
+    `conformance/a2a-survey.md` — whose card is 0.3.0 with a top-level `url`
+    and no transport field at all. It is the same failure that made every
+    deployed agent unreachable before, arrived at from a different direction.
     """
 
     CARD_NO_TRANSPORT = {
-        "name": "Agent.ai",
+        "name": "Directory Agent",
         "protocolVersion": "0.3.0",
         "url": "https://fixture.invalid",
         "capabilities": {},
