@@ -4,6 +4,13 @@ Beacon produces evidence about how agents behave. The value of that evidence
 depends entirely on it being trustworthy, so most of the rules below are about
 not overstating what a run proves.
 
+## Conduct
+
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every space this project
+occupies. Reports go to conduct@beaconlab.dev, and to one person, who is also
+the only maintainer — the code of conduct says so plainly and names the
+escalation for a report about that person.
+
 ## Development setup
 
 Beacon targets Python 3.11+ and has **no runtime dependencies**. There is
@@ -53,35 +60,39 @@ must be accurate about its own limits. A passing report is evidence for one
 synthetic scenario and one configuration. It is not a safety certification, and
 no wording should imply otherwise.
 
-## Continuous integration is manual
+## Continuous integration
 
-Every workflow in `.github/workflows/` triggers on `workflow_dispatch` only.
-Nothing runs on a push, a pull request, or a schedule, so this repository
-spends no Actions minutes unless somebody deliberately starts a run.
+Every push to `main` and every pull request runs the full matrix — three
+operating systems by three Python versions — plus the schema-conformance job,
+the CLI vertical slice, and the coverage floor.
 
-That is a cost decision, not a quality one. Actions minutes are billed on
-private repositories and the runner multipliers are uneven — Linux 1x,
-Windows 2x, macOS 10x — and the CI matrix measured at roughly 104 billed
-minutes per push, three quarters of it macOS. Free on a public repository;
-expensive on this one.
+It did not, for the first months of this project. Actions minutes are billed on
+private repositories and the runner multipliers are uneven — Linux 1x, Windows
+2x, macOS 10x — and the matrix measured at roughly 104 billed minutes per push,
+three quarters of it macOS. Free on a public repository; expensive on a private
+one. The matrix was kept through that period rather than trimmed, so restoring
+it was a one-line change.
 
-Run the checks locally instead. They need no dependencies and take about a
-minute:
+`conformance.yml` is still manual, and permanently. It calls third-party MCP
+servers and hosted agents. Free minutes changed what a weekly cron costs us and
+nothing about what it costs them.
+
+Run the checks locally first anyway. They need no dependencies and take about a
+minute, which is less than waiting for a runner:
 
 ```bash
 python3 -W error::ResourceWarning -m unittest discover -s tests
 python3 examples/subjects/run_suite.py
 ```
 
-Between them that is everything CI would have run, minus the operating-system
-matrix. Two Windows-specific defects have been found so far, and both are now
+Between them that is everything CI runs, minus the operating-system matrix.
+Two Windows-specific defects have been found so far, and both are now
 reproduced on every platform — see `GeneratedSourceCompilesTests` — because a
-platform bug that only one runner can catch is a bug nobody catches once the
-runner is switched off.
+platform bug that only one runner can catch is a bug nobody catches when that
+runner is the one not running.
 
-When the repository becomes public, uncomment the trigger block at the top of
-each workflow. Actions is free on public repositories and the full matrix
-costs nothing.
+`tests/test_workflow_triggers.py` is default-deny on workflow files: a new one
+fails the suite until someone writes down what may start it.
 
 ## Code conventions
 
@@ -124,9 +135,9 @@ nothing. `tests/test_contributing_policy.py` checks that this paragraph and
 the requirement above stay together, so the rule cannot go back to being
 stated without being kept.
 
-**No CI runs on a pull request** while this repository is private — see above.
-The two local commands are the gate, and saying in the pull request that you
-ran them is what stands in for a green check.
+**CI runs on your pull request** — see above. Say what you ran locally anyway,
+and what you could not: a green check covers the matrix, not the judgement
+about whether the assertion you added is one that can actually fail.
 
 ## Security
 

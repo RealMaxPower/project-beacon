@@ -551,10 +551,10 @@ python3 examples/subjects/run_suite.py
 
 Over 400 tests, against an enforced floor of 80% branch coverage over
 `beacon/` — a floor rather than a snapshot, because a number in prose goes
-stale the week after it is written and nobody notices. Every workflow is
-manual-only while this repository is private, so run both locally — between
-them they are what CI would have run, minus the operating-system matrix. See
-CONTRIBUTING.md.
+stale the week after it is written and nobody notices. CI runs both on every
+push and pull request, across Linux, macOS and Windows on Python 3.11–3.13.
+Run them locally first: they take about a minute, which is less than a runner
+does. See CONTRIBUTING.md.
 
 Six of them were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).
@@ -590,7 +590,36 @@ docs/             Architecture and protocol contracts
 - Prefer upstream standards and SDKs over proprietary formats.
 - Preserve a useful open core without requiring a hosted account.
 
+## Contributing
+
+[CONTRIBUTING.md](CONTRIBUTING.md) has the setup, the two commands that gate a
+change, and the rules that matter — the falsifiability requirement, the
+hermetic-test rule, and the sign-off. The shortest useful summary of the last
+one: an assertion nobody has watched fail is a claim the evidence does not
+support, and `tests/test_falsifiability.py` will fail a new one that no subject
+can break.
+
+Two issue templates exist because two kinds of report are worth more than the
+rest: [a verdict you think is wrong](.github/ISSUE_TEMPLATE/wrong-verdict.yml),
+and [a protocol mismatch](.github/ISSUE_TEMPLATE/protocol-mismatch.yml) where
+Beacon and a real server disagree. A wrong verdict is the most valuable bug
+this project can receive.
+
+For a vulnerability, do not open a public issue — [SECURITY.md](SECURITY.md)
+describes the private channel and is candid about the known limitations, which
+include the absence of a sandbox.
+
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) is the Contributor Covenant 2.1, with
+one addition: it says out loud that reports reach a single maintainer rather
+than a moderation team, and names the escalation for a report about that
+person.
+
 ## License
 
-Apache License 2.0. All included scenario fixtures are synthetic.
+Apache License 2.0, copyright the Project Beacon contributors. All included
+scenario fixtures are synthetic.
+
+The four woff2 files under `site/public/fonts/` are Space Grotesk and JetBrains
+Mono, redistributed under the SIL Open Font Licence 1.1; that licence ships
+beside them in [`site/public/fonts/OFL.txt`](site/public/fonts/OFL.txt).
 

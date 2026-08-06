@@ -19,6 +19,11 @@ include CONTRIBUTING.md
 include SECURITY.md
 include MANIFEST.in
 
+# `tests/test_contributing_policy.py` reads this one, so leaving it out would
+# make the shipped suite error rather than skip - the same shape of gap this
+# file was written to close.
+include CODE_OF_CONDUCT.md
+
 recursive-include docs *.md
 recursive-include schemas *.json
 recursive-include scenarios *.json
@@ -33,9 +38,11 @@ recursive-include examples *.py *.md *.json
 # extractor response - was missing and three test classes could not run.
 recursive-include tests *.py *.json
 
-# `tests/test_workflow_cost.py` reads these to assert no workflow can spend
-# Actions minutes without someone asking. Shipping the test without the files
-# it reads makes the check an error rather than a guarantee.
+# `tests/test_workflow_triggers.py` reads these to assert what may start each
+# workflow: default-deny on new files, no `pull_request_target` anywhere, and
+# the conformance sweep manual because it calls other people's servers.
+# Shipping the test without the files it reads makes the check an error rather
+# than a guarantee.
 recursive-include .github *.yml *.md
 include .github/CODEOWNERS
 
@@ -59,6 +66,10 @@ prune dist
 # playground replays - none of which belongs in `pip install project-beacon`.
 # `site/tools/build_fixtures.py` imports beacon rather than the other way
 # round, so nothing in the wheel needs it.
+#
+# Pruning the fonts also prunes their licence obligation: the SIL Open Font
+# Licence binds whoever redistributes the files, the sdist redistributes none
+# of them, and `site/public/fonts/OFL.txt` travels with the site instead.
 prune site
 
 global-exclude *.py[cod]

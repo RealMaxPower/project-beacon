@@ -102,5 +102,52 @@ class SignOffPolicyTests(unittest.TestCase):
         )
 
 
+class CodeOfConductTests(unittest.TestCase):
+    """
+    A code of conduct is a rule, and this project's whole argument is that a
+    rule stated without something behind it is worse than no rule.
+
+    The two ways this one fails quietly are both checked here: the template's
+    `[INSERT CONTACT METHOD]` surviving into the published file, and the file
+    existing with nothing linking to it.
+    """
+
+    CONDUCT = ROOT / "CODE_OF_CONDUCT.md"
+
+    def test_it_exists(self) -> None:
+        self.assertTrue(self.CONDUCT.is_file())
+
+    def test_the_reporting_placeholder_was_filled_in(self) -> None:
+        """
+        The template ships `[INSERT CONTACT METHOD]`, which reads as a complete
+        document to anyone skimming and names no channel at all.
+        """
+        self.assertNotIn("[INSERT CONTACT METHOD]", self.CONDUCT.read_text(encoding="utf-8"))
+
+    def test_it_names_an_address_that_can_receive_mail(self) -> None:
+        """
+        A GitHub `users.noreply` address accepts no mail, so naming one would
+        be a reporting channel that silently discards reports.
+        """
+        text = self.CONDUCT.read_text(encoding="utf-8")
+        self.assertRegex(text, r"[\w.+-]+@[\w-]+\.[\w.]+")
+        self.assertNotIn("users.noreply.github.com", text)
+
+    def test_contributing_links_to_it(self) -> None:
+        """GitHub does not link the two, so a file nothing points at is unread."""
+        self.assertIn("CODE_OF_CONDUCT.md", CONTRIBUTING.read_text(encoding="utf-8"))
+
+    def test_it_admits_the_enforcement_body_is_one_person(self) -> None:
+        """
+        The template says "community leaders", plural, and describes an appeals
+        path through them. There is one maintainer. Shipping the plural
+        unqualified would describe a structure that does not exist — the same
+        overstatement the rest of this file exists to prevent.
+        """
+        text = self.CONDUCT.read_text(encoding="utf-8")
+        self.assertIn("only\nmaintainer", text)
+        self.assertIn("report-abuse", text)
+
+
 if __name__ == "__main__":
     unittest.main()
