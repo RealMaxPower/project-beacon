@@ -60,6 +60,10 @@ HEADER = """/*
  *
  * Space Grotesk and JetBrains Mono, both SIL Open Font Licence 1.1, served
  * from this origin rather than a font CDN. See the script for why.
+ *
+ * Licence: public/fonts/OFL.txt, which ships beside the files. The OFL
+ * allows redistribution only with the licence attached, so it is a file in
+ * the repository rather than this sentence.
  */
 """
 
