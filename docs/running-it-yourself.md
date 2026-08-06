@@ -33,6 +33,9 @@ load it yourself first:
 set -a && source .env && set +a
 ```
 
+Copy [`.env.example`](../.env.example) to start from; it lists the three
+variables that exist and says which of them you actually need.
+
 `BEACON_MODEL` picks the model; it defaults to `claude-sonnet-5`. Start with
 `--repeat 1` to confirm the wiring before paying for five.
 

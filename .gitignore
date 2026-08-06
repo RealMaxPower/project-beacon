@@ -29,3 +29,27 @@ conformance/a2a-go/refagent
 conformance/a2a-java/target/
 conformance/a2a-dotnet/bin/
 conformance/a2a-dotnet/obj/
+
+# Local agent, editor and operating-system state. These were ignored on one
+# machine, by that machine's global ignore file, which a clone does not
+# inherit - so the first fork to run a coding agent is offered its local
+# settings to commit. `.claude/` itself is deliberately not ignored: a
+# checked-in `settings.json` is shareable and belongs in review. Only the
+# per-machine files do not.
+.claude/settings.local.json
+.claude/*.local.json
+CLAUDE-SECURITY-*/
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+Thumbs.db
+
+# Coverage writes `.coverage.<host>.<pid>` when run in parallel, which the
+# bare name above does not catch.
+.coverage.*
+htmlcov/
+coverage.xml
+
+# The Vercel CLI, if anyone links the site locally.
+site/.vercel/

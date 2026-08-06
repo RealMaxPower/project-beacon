@@ -31,7 +31,10 @@ dependencies = []
 Homepage = "https://github.com/RealMaxPower/project-beacon"
 Repository = "https://github.com/RealMaxPower/project-beacon"
 Issues = "https://github.com/RealMaxPower/project-beacon/issues"
-Changelog = "https://github.com/RealMaxPower/project-beacon/releases"
+# The releases page is empty until something is tagged, and a PyPI sidebar
+# link to "there are no releases" is a dead promise. Point at the file, which
+# has content now; move it to /releases once a tag exists.
+Changelog = "https://github.com/RealMaxPower/project-beacon/blob/main/CHANGELOG.md"
 
 # The core stays stdlib-only so `python3 -m beacon run` works in an empty
 # environment. Extras add depth, never a requirement: with jsonschema absent

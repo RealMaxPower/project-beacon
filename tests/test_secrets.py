@@ -361,5 +361,49 @@ class CliGuardTests(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class ExampleEnvironmentFileTests(unittest.TestCase):
+    """
+    `.gitignore` ignores `.env` and then whitelists `.env.example` by name.
+
+    That whitelist is a loaded gun: the shortest path from a working setup to a
+    published key is `cp .env .env.example`, and the one rule written to keep
+    secrets out of the repository is the rule that would let it through.
+    """
+
+    EXAMPLE = ROOT / ".env.example"
+
+    def test_the_example_file_exists(self) -> None:
+        """`.gitignore` negates this filename, so it should be a real file."""
+        self.assertTrue(self.EXAMPLE.is_file())
+
+    def test_no_variable_in_it_carries_a_value(self) -> None:
+        for line in self.EXAMPLE.read_text(encoding="utf-8").splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                with self.subTest(line=line):
+                    self.assertEqual(line.split("=", 1)[1], "")
+
+    def test_every_variable_it_names_is_one_something_reads(self) -> None:
+        """
+        An example file listing a variable nothing consumes teaches a setting
+        that does nothing, which is worse than omitting it: the reader sets it,
+        sees no effect, and stops trusting the file.
+        """
+        named = {
+            line.split("=", 1)[0].strip()
+            for line in self.EXAMPLE.read_text(encoding="utf-8").splitlines()
+            if "=" in line and not line.lstrip().startswith("#")
+        }
+        self.assertTrue(named, "the example file declares no variables at all")
+        sources = "".join(
+            path.read_text(encoding="utf-8")
+            for directory in ("beacon", "examples", "docs")
+            for path in (ROOT / directory).rglob("*")
+            if path.suffix in {".py", ".md"}
+        )
+        for variable in sorted(named):
+            with self.subTest(variable=variable):
+                self.assertIn(variable, sources)
+
+
 if __name__ == "__main__":
     unittest.main()
