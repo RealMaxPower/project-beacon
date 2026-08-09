@@ -82,8 +82,25 @@ export function AssertionRow({ assertion, scenarioId, open, onToggle }: Props) {
 
   const state = passed === true ? "passed" : passed === false ? "failed" : "not evaluated";
 
+  /*
+   * The row that did not hold is drawn heavier, not marked with a smaller
+   * glyph.
+   *
+   * Nine rows in one weight, one of them carrying a red cross at 14px, is a
+   * list that asks the reader to find the finding. The same argument the
+   * timeline makes about a blocked call applies here: the informative row is
+   * the one that broke, and rendering it identically to the seven that passed
+   * is an interface understating its own result.
+   */
+  const emphasis =
+    passed === false
+      ? "border-l-[3px] border-l-fail bg-fail-tint"
+      : passed === null
+        ? "border-l-[3px] border-l-inc bg-inc-tint"
+        : "";
+
   return (
-    <div className="border-b border-line last:border-b-0">
+    <div className={`border-b border-line last:border-b-0 ${emphasis}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -92,16 +109,39 @@ export function AssertionRow({ assertion, scenarioId, open, onToggle }: Props) {
         // is not in the document sends a screen reader somewhere there is
         // nothing to go to; `aria-expanded` alone already says the row opens.
         aria-controls={open ? panelId : undefined}
-        className="hit-target flex w-full items-start gap-3 px-5 py-3.5 text-left hover:bg-sunken"
+        // No `hover:bg-sunken` on a tinted row: grey over the verdict colour
+        // reads as the row losing its result under the pointer. A deeper wash
+        // of the row's own hue instead — and `--fail`/`--inc` are theme-aware,
+        // which a literal black or white overlay would not be.
+        className={`hit-target flex w-full items-start gap-3 px-5 py-3.5 text-left ${
+          passed === false
+            ? "hover:bg-fail/10"
+            : passed === null
+              ? "hover:bg-inc/10"
+              : "hover:bg-sunken"
+        }`}
       >
         <span className="mt-0.5 flex-none font-mono text-sm">{mark}</span>
         <span className="flex-1">
-          <span className="block text-[14.5px] leading-snug text-pretty">{sentence}</span>
-          <span className="mt-1 block font-mono text-[11px] text-text-faint">
+          <span
+            className={`block leading-snug text-pretty ${
+              emphasis ? "text-[15px] font-medium" : "text-[14.5px]"
+            }`}
+          >
+            {sentence}
+          </span>
+          {/* `--text-faint` measures 4.40–4.93 on the verdict tints and fails
+              AA on two of the three. `.on-tint` is the token for text there. */}
+          <span
+            className={`mt-1 block font-mono text-[11px] ${emphasis ? "on-tint" : "text-text-faint"}`}
+          >
             {assertion.id} · {state}
           </span>
         </span>
-        <span className="mt-1 flex-none font-mono text-[11px] text-text-faint" aria-hidden="true">
+        <span
+          className={`mt-1 flex-none font-mono text-[11px] ${emphasis ? "on-tint" : "text-text-faint"}`}
+          aria-hidden="true"
+        >
           {open ? "−" : "+"}
         </span>
       </button>

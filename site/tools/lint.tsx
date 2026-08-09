@@ -197,11 +197,11 @@ const screens: [string, () => string][] = [
       [`App shell · #/${route}`, () => shellAt(`#/${route}`)] as [string, () => string],
   ),
   ["Home", () => renderToStaticMarkup(<Home onGo={() => {}} />)],
-  ["HowItWorks", () => renderToStaticMarkup(<HowItWorks />)],
+  ["HowItWorks", () => renderToStaticMarkup(<HowItWorks onGo={() => {}} />)],
   ["Scenarios", () => renderToStaticMarkup(<Scenarios onGo={() => {}} />)],
-  ["ForBuilders", () => renderToStaticMarkup(<ForBuilders />)],
-  ["Docs", () => renderToStaticMarkup(<Docs />)],
-  ["HostedLab", () => renderToStaticMarkup(<HostedLab />)],
+  ["ForBuilders", () => renderToStaticMarkup(<ForBuilders onGo={() => {}} />)],
+  ["Docs", () => renderToStaticMarkup(<Docs onGo={() => {}} />)],
+  ["HostedLab", () => renderToStaticMarkup(<HostedLab onGo={() => {}} />)],
   [
     "PickScenario",
     () =>

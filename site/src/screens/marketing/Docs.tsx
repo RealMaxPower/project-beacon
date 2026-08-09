@@ -1,4 +1,6 @@
+import { NextSteps } from "@/components/shell/NextSteps";
 import { facts } from "@/data/fixtures";
+import type { Go } from "@/router";
 
 /**
  * Every document, linked to the file it is.
@@ -77,8 +79,13 @@ function Card({ path, name }: { path: string; name: string }) {
   );
 }
 
-export function Docs() {
+interface Props {
+  onGo: Go;
+}
+
+export function Docs({ onGo }: Props) {
   return (
+    <>
     <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-11">
       <header className="mb-12">
         <h1 className="mb-4 max-w-[24ch] text-[clamp(1.8rem,5vw,2.5rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
@@ -133,5 +140,17 @@ export function Docs() {
         </div>
       </section>
     </div>
+
+    {/*
+     * No repository card here: every card on this page is already a link into
+     * the repository, and a fourth way to say "go to GitHub" at the bottom of
+     * a page made of GitHub links is noise.
+     */}
+    <NextSteps
+      hideRepo
+      onGo={onGo}
+      lead="Every card above is a file in the repository. If you would rather see the thing working than read about it, the playground replays a run end to end."
+    />
+    </>
   );
 }

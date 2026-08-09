@@ -1,5 +1,8 @@
+import { Disclosure } from "@/components/shell/Disclosure";
+import { NextSteps } from "@/components/shell/NextSteps";
 import { PipelineDiagram } from "@/components/shell/PipelineDiagram";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
+import type { Go } from "@/router";
 
 /**
  * Four things, in order, every time.
@@ -49,8 +52,13 @@ const LEVELS = [
   ["4", "Native runtime adapter", "Runtime configuration, approvals, cost, and richer traces"],
 ];
 
-export function HowItWorks() {
+interface Props {
+  onGo: Go;
+}
+
+export function HowItWorks({ onGo }: Props) {
   return (
+    <>
     <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-11">
       <header className="mb-12">
         <h1 className="mb-4 max-w-[20ch] text-[clamp(1.8rem,5vw,2.5rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
@@ -70,10 +78,13 @@ export function HowItWorks() {
         <h2 className="mb-4 text-[clamp(1.3rem,3.2vw,1.6rem)] leading-tight font-medium tracking-[-0.025em]">
           Why the attempt is what gets graded
         </h2>
-        <p className="mb-6 max-w-[68ch] text-[15px] leading-relaxed text-text-muted text-pretty">
-          Policy blocks sending either way, so a check on the final mailbox would be true
-          however the agent behaved. That is an assertion that cannot fail — and this scenario
-          shipped one until a coverage check found it.
+        {/*
+         * The two cards are the argument; the paragraph was the argument
+         * restated in prose above them. It reads first as a claim you can take
+         * in at a glance, with the reasoning underneath for whoever wants it.
+         */}
+        <p className="mb-6 max-w-[68ch] text-[16px] leading-relaxed font-medium text-pretty">
+          One of these two assertions can never fail. Only the other one measures anything.
         </p>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -102,6 +113,16 @@ export function HowItWorks() {
               The one that means something
             </p>
           </article>
+        </div>
+
+        <div className="mt-4 max-w-[72ch]">
+          <Disclosure question="How does an assertion that cannot fail get shipped?">
+            <p>
+              Policy blocks sending either way, so a check on the final mailbox would be true
+              however the agent behaved. That is an assertion that cannot fail — and this
+              scenario shipped one until a coverage check found it.
+            </p>
+          </Disclosure>
         </div>
       </section>
 
@@ -157,7 +178,11 @@ export function HowItWorks() {
         <h2 className="mb-4 text-[clamp(1.3rem,3.2vw,1.6rem)] leading-tight font-medium tracking-[-0.025em]">
           No bridge code for MCP or A2A
         </h2>
+        <p className="mb-6 max-w-[68ch] text-[16px] leading-relaxed font-medium text-pretty">
+          Point the flag at your agent. Beacon speaks both protocols itself.
+        </p>
         <TerminalBlock
+          copyable
           lines={[
             "# An agent that speaks A2A",
             "python3 -m beacon run scenarios/web-extraction-grounding/scenario.json \\",
@@ -168,14 +193,24 @@ export function HowItWorks() {
             '  --adapter mcp-host --command "your-agent --mcp-config {config}"',
           ]}
         />
-        <p className="mt-4 max-w-[66ch] text-[14px] leading-relaxed text-text-muted text-pretty">
-          MCP has no completion signal, so a client that disconnects looks exactly like one
-          that crashed. Beacon will not call that a pass: the façade offers a{" "}
-          <code className="font-mono text-text">beacon_submit</code> tool, and a session that
-          ends without it resolves to INCOMPLETE — the honest answer when Beacon cannot tell
-          whether the work was done.
-        </p>
+        <div className="mt-4 max-w-[72ch]">
+          <Disclosure question="What happens if an MCP client just disconnects?">
+            <p>
+              MCP has no completion signal, so a client that disconnects looks exactly like one
+              that crashed. Beacon will not call that a pass: the façade offers a{" "}
+              <code className="font-mono text-text">beacon_submit</code> tool, and a session
+              that ends without it resolves to INCOMPLETE — the honest answer when Beacon
+              cannot tell whether the work was done.
+            </p>
+          </Disclosure>
+        </div>
       </section>
     </div>
+
+    <NextSteps
+      onGo={onGo}
+      lead="That is the whole pipeline. The playground walks one run through it end to end; the repository has the seven scenarios that ship, and the command to scaffold your own."
+    />
+    </>
   );
 }

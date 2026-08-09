@@ -1,3 +1,6 @@
+import { NextSteps } from "@/components/shell/NextSteps";
+import type { Go } from "@/router";
+
 /**
  * The commercial section, without a waitlist.
  *
@@ -11,8 +14,13 @@
  * system. Nothing to fill in later means no pressure to invent it.
  */
 
-export function HostedLab() {
+interface Props {
+  onGo: Go;
+}
+
+export function HostedLab({ onGo }: Props) {
   return (
+    <>
     <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-11">
       <header className="mb-10">
         <h1 className="mb-4 max-w-[26ch] text-[clamp(1.8rem,5vw,2.5rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
@@ -72,5 +80,11 @@ export function HostedLab() {
         </p>
       </section>
     </div>
+
+    <NextSteps
+      onGo={onGo}
+      lead="None of that is built. What is built runs on your machine today, and is the thing worth judging the idea on."
+    />
+    </>
   );
 }

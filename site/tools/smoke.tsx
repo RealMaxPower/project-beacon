@@ -121,7 +121,7 @@ check(
 
 check(
   "HowItWorks",
-  () => renderToString(<HowItWorks />),
+  () => renderToString(<HowItWorks onGo={() => {}} />),
   "beacon_submit",
   "ToolPolicyError",
   // The assertion that cannot fail, beside the one that means something.
@@ -139,7 +139,7 @@ check(
 
 check(
   "ForBuilders",
-  () => renderToString(<ForBuilders />),
+  () => renderToString(<ForBuilders onGo={() => {}} />),
   String(facts.subjects),
   String(facts.subjects_by_expected_verdict.FAIL),
   "--baseline",
@@ -148,14 +148,14 @@ check(
 
 check(
   "Docs",
-  () => renderToString(<Docs />),
+  () => renderToString(<Docs onGo={() => {}} />),
   // Every document on disk gets a card, so a renamed file cannot leave a
   // dead link behind.
   ...facts.docs,
   ...facts.surveys,
 );
 
-check("HostedLab", () => renderToString(<HostedLab />), "no form", "discussion");
+check("HostedLab", () => renderToString(<HostedLab onGo={() => {}} />), "no form", "discussion");
 
 check(
   "App shell · every route reachable",

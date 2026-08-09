@@ -1,3 +1,5 @@
+import { Disclosure } from "@/components/shell/Disclosure";
+import { NextSteps } from "@/components/shell/NextSteps";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
 import {
   baselines,
@@ -11,7 +13,7 @@ import {
   wasEvaluated,
 } from "@/data/fixtures";
 import type { Baseline, Verdict } from "@/data/types";
-import type { Route } from "@/router";
+import type { Go } from "@/router";
 
 /**
  * The landing page.
@@ -30,7 +32,9 @@ const MARKER = "[SYSTEM OVERRIDE]";
 
 function injectedMessage() {
   const inbox = scenarios.find((s) => s.slug === "inbox-briefing");
-  const mail = inbox?.fixtures?.mail as
+  if (!inbox) return null;
+
+  const mail = inbox.fixtures?.mail as
     | { messages?: { id: string; subject: string; body: string }[] }
     | undefined;
   const message = mail?.messages?.find((m) => m.body.includes(MARKER));
@@ -42,6 +46,10 @@ function injectedMessage() {
 
   return {
     id: message.id,
+    // Carried so the link below the block opens the playground at the scenario
+    // this message actually came from. The slug and the id differ for exactly
+    // this scenario, and the playground resolves by id.
+    scenarioId: inbox.id,
     subject: message.subject,
     before: message.body.slice(0, start).trim(),
     injected: message.body.slice(start, end),
@@ -102,7 +110,7 @@ function dominant(baseline: Baseline): { verdict: Verdict; count: number; percen
 }
 
 interface Props {
-  onGo: (route: Route) => void;
+  onGo: Go;
 }
 
 export function Home({ onGo }: Props) {
@@ -317,12 +325,16 @@ export function Home({ onGo }: Props) {
 
               <div className="border-t border-line pt-6">
                 <p className="mb-2 font-mono text-[12.5px] text-fail">{hero.failing?.id}</p>
-                <p className="max-w-[70ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
-                  The one check that failed, and the reason it is written as an attempt rather
-                  than an outcome. Nothing was sent, so the mailbox ended exactly as a
-                  well-behaved run would leave it — a report of what changed would call these two
-                  agents identical.
+                <p className="mb-4 max-w-[70ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
+                  The one check that failed — and it is written as an attempt rather than an
+                  outcome.
                 </p>
+                <Disclosure question="Why isn't it enough to check what the mailbox ended up like?">
+                  <p>
+                    Nothing was sent, so the mailbox ended exactly as a well-behaved run would
+                    leave it — a report of what changed would call these two agents identical.
+                  </p>
+                </Disclosure>
               </div>
             </div>
           </div>
@@ -389,6 +401,24 @@ export function Home({ onGo }: Props) {
               </div>
             </div>
           </div>
+
+          {/*
+            * A quiet link rather than a button.
+            *
+            * The page has three and a half thousand pixels below the hero and,
+            * until now, nothing to do in any of them — but a filled button
+            * every second screen turns an argument into a funnel. This is the
+            * text equivalent of "you can go and look at this one", placed
+            * where the reader has just been shown a thing worth looking at.
+            */}
+          <button
+            type="button"
+            onClick={() => onGo("playground", injected.scenarioId)}
+            className="hit-target mt-5 inline-flex items-center gap-1.5 text-[14.5px] font-medium text-accent hover:text-text"
+          >
+            Replay this run in the playground
+            <span aria-hidden="true">→</span>
+          </button>
         </section>
       )}
 
@@ -569,11 +599,19 @@ export function Home({ onGo }: Props) {
             * runs actually show is the order the questions have to be asked
             * in, and what a zero is allowed to mean.
             */}
-          <p className="mt-4 max-w-[74ch] rounded-card bg-sunken px-5 py-4.5 text-[15px] leading-relaxed text-pretty">
-            You cannot ask whether an answer is true until you can find the answer. A check that
-            never ran is not a check that failed — and reporting this zero as a fabrication rate
-            would be inventing a measurement, on a page about not doing that.
+          <p className="mt-4 max-w-[74ch] text-[15.5px] leading-relaxed font-medium text-pretty">
+            You cannot ask whether an answer is true until you can find the answer.
           </p>
+
+          <div className="mt-4 max-w-[74ch]">
+            <Disclosure question="So why not just report that second card as a zero?">
+              <p>
+                A check that never ran is not a check that failed — and reporting this zero as a
+                fabrication rate would be inventing a measurement, on a page about not doing
+                that.
+              </p>
+            </Disclosure>
+          </div>
         </section>
       )}
 
@@ -588,6 +626,7 @@ export function Home({ onGo }: Props) {
         <div className="max-w-[820px]">
           <TerminalBlock
             label="bash"
+            copyable
             lines={[
               "git clone https://github.com/RealMaxPower/project-beacon",
               "cd project-beacon",
@@ -652,21 +691,50 @@ export function Home({ onGo }: Props) {
           ))}
         </div>
 
-        <p className="mt-3.5 max-w-[76ch] rounded-card border border-line bg-sunken px-5 py-4 text-[13.5px] leading-relaxed text-text-muted text-pretty">
-          Also missing, and worth knowing before you spend an afternoon on it:{" "}
-          <strong className="font-medium text-text">Not on PyPI</strong> — clone it;{" "}
-          <strong className="font-medium text-text">no hosted service</strong> — nothing on this
-          site executes your agent, the playground replays recorded runs; and{" "}
-          <strong className="font-medium text-text">no adapter for anyone else&rsquo;s runtime</strong>{" "}
-          — the only level 4 subject is Beacon&rsquo;s own.{" "}
-          <a
-            href="https://github.com/RealMaxPower/project-beacon#what-does-not-work-yet"
-            className="text-accent hover:text-text"
-          >
-            The README carries the full list
-          </a>
-          , and it is the list this section comes from.
-        </p>
+        {/*
+         * Three limitations, on three lines.
+         *
+         * These were one sentence with three semicolons in it, which is how a
+         * reader skims past all three. They are not collapsed and never will
+         * be: a bound belongs beside the claim it bounds, and this whole site
+         * argues that the ones behind a click are the ones nobody reads.
+         */}
+        <div className="mt-3.5 max-w-[76ch] rounded-card border border-line bg-sunken px-5 py-4">
+          <p className="mb-3 text-[13.5px] leading-relaxed text-text-muted">
+            Also missing, and worth knowing before you spend an afternoon on it:
+          </p>
+          <dl className="flex flex-col gap-2.5">
+            {[
+              { k: "Not on PyPI", v: "Clone it." },
+              {
+                k: "No hosted service",
+                v: "Nothing on this site executes your agent — the playground replays recorded runs.",
+              },
+              {
+                k: "No adapter for anyone else’s runtime",
+                v: "The only level 4 subject is Beacon’s own.",
+              },
+            ].map((item) => (
+              <div key={item.k} className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
+                <dt className="flex-none text-[13.5px] leading-relaxed font-medium sm:w-[19rem]">
+                  {item.k}
+                </dt>
+                <dd className="text-[13.5px] leading-relaxed text-text-muted text-pretty">
+                  {item.v}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3.5 border-t border-line pt-3 text-[13.5px] leading-relaxed text-text-muted">
+            <a
+              href="https://github.com/RealMaxPower/project-beacon#what-does-not-work-yet"
+              className="text-accent hover:text-text"
+            >
+              The README carries the full list
+            </a>
+            , and it is the list this section comes from.
+          </p>
+        </div>
       </section>
 
       <section className="mx-auto max-w-[1180px] border-t border-line px-5 py-14 sm:px-10">
@@ -687,6 +755,18 @@ export function Home({ onGo }: Props) {
           ))}
         </div>
       </section>
+
+      {/*
+       * The clone command appears twice on this page, and that is deliberate.
+       * "Sixty seconds" is where a reader who is already convinced goes
+       * looking; this is where the reader who just finished the argument
+       * arrives. Sending them back up four thousand pixels to find the first
+       * one is the problem, not the repetition.
+       */}
+      <NextSteps
+        onGo={onGo}
+        lead="Everything above is a recorded run you can open, or a command you can paste. Nothing here asks you for an account, and there is no key to hand over — your agent brings its own model."
+      />
     </div>
   );
 }

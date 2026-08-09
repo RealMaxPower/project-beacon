@@ -37,18 +37,38 @@ export function Verdict({ evidence, events, expert }: Props) {
     );
   }
 
+  /*
+   * Counted the way the bundle writes it: `measured` decides whether a check
+   * ran, and `passed` is only meaningful once it did.
+   */
+  const measured = evidence.assertions.filter((a) => a.measured !== false);
+  const held = measured.filter((a) => a.passed === true).length;
+  const unmeasured = evidence.assertions.length - measured.length;
+
   return (
     <section className="flex flex-col gap-5">
-      <VerdictBanner evidence={evidence} />
+      <VerdictBanner evidence={evidence} onInspect={setOpen} />
 
       <div className="overflow-hidden rounded-card border border-line bg-surface">
-        <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line bg-sunken px-5 py-3">
-          <h3 className="font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-text-faint">
-            Assertions
-          </h3>
-          <span className="font-mono text-[11px] text-text-muted">
-            open one to see what it compared
-          </span>
+        {/*
+         * A heading that says what the list is, not a label naming its type.
+         * "ASSERTIONS" told a reader who already knew the word what they were
+         * looking at, and everyone else nothing.
+         */}
+        <header className="border-b border-line bg-sunken px-5 py-3.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 className="text-[15px] font-medium">
+              {held} of {measured.length} checks held
+              {unmeasured > 0 && `, ${unmeasured} could not be run`}
+            </h3>
+            <span className="font-mono text-[11px] text-text-muted">
+              open one to see what it compared
+            </span>
+          </div>
+          <p className="mt-1 max-w-[72ch] text-[13px] leading-relaxed text-text-muted text-pretty">
+            Every check this scenario makes, in the order it makes them. Each one is a
+            comparison against the recorded run — no model judges any of this.
+          </p>
         </header>
 
         {evidence.assertions.map((assertion) => (

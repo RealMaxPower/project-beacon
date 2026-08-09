@@ -42,11 +42,11 @@ function screenFor(route: Resolved, param: string | null, go: Go) {
         </div>
       );
     case "how-it-works":
-      return <HowItWorks />;
+      return <HowItWorks onGo={go} />;
     case "scenarios":
       return <Scenarios onGo={go} />;
     case "for-builders":
-      return <ForBuilders />;
+      return <ForBuilders onGo={go} />;
     case "playground":
       /*
        * Keyed on the deep-link target so arriving from a scenario card
@@ -55,9 +55,9 @@ function screenFor(route: Resolved, param: string | null, go: Go) {
        */
       return <Playground key={param ?? ""} scenarioId={param} />;
     case "docs":
-      return <Docs />;
+      return <Docs onGo={go} />;
     case "hosted":
-      return <HostedLab />;
+      return <HostedLab onGo={go} />;
     default:
       return <Home onGo={go} />;
   }

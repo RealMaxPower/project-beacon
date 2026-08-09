@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { ActionBar } from "@/components/shell/ActionBar";
 import { StepRail } from "@/components/shell/StepRail";
 import { ExpertToggle } from "@/components/shell/ExpertToggle";
 import { EmptyState } from "@/components/shell/EmptyState";
@@ -59,6 +60,16 @@ export function Playground({ scenarioId: requested = null }: Props) {
   const go = useCallback((next: StepKey) => {
     setStep(next);
     setReached((seen) => new Set(seen).add(next));
+    /*
+     * The top of the new step, not wherever the old one left you.
+     *
+     * Cards further down a grid are the ones most likely to be clicked — the
+     * scenario picker is seven cards deep — and advancing kept the scroll
+     * position, so you arrived at step three already scrolled past its
+     * heading, with the sticky header covering the step rail. It read as a
+     * page that had half-loaded. The router does this for pages already.
+     */
+    window.scrollTo({ top: 0 });
   }, []);
 
   const evidence = subjectKey ? evidenceFor(subjectKey) : null;
@@ -66,8 +77,106 @@ export function Playground({ scenarioId: requested = null }: Props) {
 
   const onRunDone = useCallback(() => setRan(true), []);
 
+  const restart = useCallback(() => {
+    setScenarioId(null);
+    setSubjectKey(null);
+    setRan(false);
+    setReached(new Set<StepKey>(["scenario"]));
+    setStep("scenario");
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const scenario = scenarioId ? scenarios.find((s) => s.id === scenarioId) : null;
+
+  /*
+   * The bar carries the one action that moves the run forward, and nothing
+   * else. The first two steps have none: choosing a card *is* the action
+   * there, and a bar saying "pick one" below a grid of cards that say "pick
+   * one" is furniture.
+   */
+  const bar = (() => {
+    if (step === "world" && evidence) {
+      return {
+        status: `${scenario?.id ?? ""} · nothing has run yet`,
+        action: (
+          <button
+            type="button"
+            onClick={() => go("run")}
+            className="hit-target inline-flex items-center rounded-row bg-text px-4 text-[13px] font-medium text-bg"
+          >
+            Run it
+          </button>
+        ),
+      };
+    }
+
+    if (step === "run" && evidence) {
+      return {
+        // Disabled rather than absent while the events are still arriving.
+        // A control that appears only once the run finishes gives no warning
+        // that there is a step after this one, which is the reading the whole
+        // rail exists to prevent.
+        status: ran ? `${events.length} events recorded` : "replaying the recorded events…",
+        action: (
+          <button
+            type="button"
+            onClick={() => go("verdict")}
+            disabled={!ran}
+            className="hit-target inline-flex items-center rounded-row bg-text px-4 text-[13px] font-medium text-bg disabled:opacity-40"
+          >
+            See the verdict
+          </button>
+        ),
+      };
+    }
+
+    if (step === "verdict" && evidence) {
+      return {
+        status: `${evidence.result} · one run, one sample`,
+        action: (
+          <button
+            type="button"
+            onClick={() => go("repeat")}
+            className="hit-target inline-flex items-center rounded-row bg-text px-4 text-[13px] font-medium text-bg"
+          >
+            Run it twelve times
+          </button>
+        ),
+      };
+    }
+
+    if (step === "repeat") {
+      return {
+        status: "that is the whole loop",
+        action: (
+          <>
+            <a
+              href="https://github.com/RealMaxPower/project-beacon"
+              className="hit-target hidden items-center rounded-row border border-line-strong px-3.5 font-mono text-[12.5px] text-text-muted hover:text-text sm:inline-flex"
+            >
+              Run it yourself
+            </a>
+            <button
+              type="button"
+              onClick={restart}
+              className="hit-target inline-flex items-center rounded-row bg-text px-4 text-[13px] font-medium text-bg"
+            >
+              Start over
+            </button>
+          </>
+        ),
+      };
+    }
+
+    return null;
+  })();
+
   return (
-    <div className="mx-auto max-w-[1180px] px-5 py-10 sm:px-11">
+    <div
+      // Room for the fixed bar, so the last row of content is never underneath
+      // it. Only when there is one — the picking steps get the space back.
+      className={`mx-auto max-w-[1180px] px-5 pt-10 sm:px-11 ${bar ? "pb-28" : "pb-10"}`}
+    >
       <header className="mb-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -136,18 +245,7 @@ export function Playground({ scenarioId: requested = null }: Props) {
 
         {step === "world" &&
           (evidence ? (
-            <>
-              <WorldBefore evidence={evidence} expert={expert} />
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={() => go("run")}
-                  className="hit-target inline-flex items-center rounded-row bg-text px-4 py-2.5 text-[13px] font-medium text-bg"
-                >
-                  Run it
-                </button>
-              </div>
-            </>
+            <WorldBefore evidence={evidence} expert={expert} />
           ) : (
             <EmptyState
               {...emptyStates.noSubject}
@@ -158,25 +256,12 @@ export function Playground({ scenarioId: requested = null }: Props) {
 
         {step === "run" &&
           (evidence ? (
-            <>
-              <RunTimeline
-                evidence={evidence}
-                events={events}
-                expert={expert}
-                onDone={onRunDone}
-              />
-              {ran && (
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={() => go("verdict")}
-                    className="hit-target inline-flex items-center rounded-row bg-text px-4 py-2.5 text-[13px] font-medium text-bg"
-                  >
-                    See the verdict
-                  </button>
-                </div>
-              )}
-            </>
+            <RunTimeline
+              evidence={evidence}
+              events={events}
+              expert={expert}
+              onDone={onRunDone}
+            />
           ) : (
             <EmptyState
               {...emptyStates.noSubject}
@@ -194,24 +279,23 @@ export function Playground({ scenarioId: requested = null }: Props) {
                * The bridge to the next step. A verdict screen that ends without
                * it invites the reading this whole product argues against — that
                * one run settled something.
+               *
+               * The button that used to live here is in the action bar, where
+               * it is reachable without scrolling past the assertions, the
+               * state diff, the artifact and the limitations to get to it. The
+               * argument stays: it is the reason to press the button, and it
+               * belongs next to the verdict it qualifies.
                */}
               <div className="mt-8 rounded-card border border-line border-l-[3px] border-l-accent bg-surface p-5">
                 <h3 className="mb-2 text-[17px] leading-snug font-medium text-balance">
                   This verdict is a single sample.
                 </h3>
-                <p className="mb-4 max-w-[66ch] text-[14px] leading-relaxed text-text-muted text-pretty">
+                <p className="max-w-[66ch] text-[14px] leading-relaxed text-text-muted text-pretty">
                   The question worth asking is how often it comes out this way. This subject is
                   deterministic: it returns {evidence.result} every time, with the same tool
                   calls in the same order. A model-backed one is where repetition changes the
                   answer.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => go("repeat")}
-                  className="hit-target inline-flex items-center rounded-row bg-text px-4 py-2.5 text-[13px] font-medium text-bg"
-                >
-                  Run it twelve times
-                </button>
               </div>
 
               <div className="mt-8">
@@ -235,6 +319,8 @@ export function Playground({ scenarioId: requested = null }: Props) {
           </>
         )}
       </div>
+
+      {bar && <ActionBar status={bar.status}>{bar.action}</ActionBar>}
     </div>
   );
 }

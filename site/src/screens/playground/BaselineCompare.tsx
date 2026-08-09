@@ -37,6 +37,7 @@ export function BaselineCompare() {
 
       <div className="mb-6">
         <TerminalBlock
+          copyable
           lines={[
             "# Against a committed snapshot, recorded on the first run",
             "python3 -m beacon run scenarios/web-extraction-grounding/scenario.json \\",
@@ -51,7 +52,26 @@ export function BaselineCompare() {
       </div>
 
       {grounding && reference ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <>
+          {/*
+           * Read before the cards, not after them.
+           *
+           * Both cards compare a sample with itself, so the first reads "there
+           * is no rate to compare" and the second "NO CHANGE 100% → 100%" —
+           * two odd-looking outputs whose explanation sat in a paragraph below
+           * both, after the reader had already decided the screen was broken.
+           */}
+          <p className="mb-5 max-w-[74ch] rounded-card border border-line bg-sunken px-5 py-4 text-[14px] leading-relaxed text-text-muted text-pretty">
+            <strong className="font-medium text-text">
+              Both cards below compare a recorded baseline against itself
+            </strong>
+            , because only one sample of each exists. That is the truthful output for a
+            comparison with nothing to compare — and taking the second sample of the hosted one
+            costs an API key and a few minutes. Until someone does, this screen will not show a
+            drop it did not measure.
+          </p>
+
+          <div className="grid gap-4 xl:grid-cols-2">
           {/*
            * Two cards, showing the two honest outcomes available here.
            *
@@ -78,14 +98,8 @@ export function BaselineCompare() {
             recordedAt={reference.recorded_at}
             evaluated={wasEvaluated(reference, "send-never-attempted")}
           />
-
-          <p className="text-[13.5px] leading-relaxed text-text-muted text-pretty xl:col-span-2">
-            Both cards compare a recorded baseline against itself, because only one sample of
-            each exists. That is the truthful output for a comparison with nothing to compare —
-            and taking the second sample of the hosted one costs an API key and a few minutes.
-            Until someone does, this screen will not show a drop it did not measure.
-          </p>
-        </div>
+          </div>
+        </>
       ) : (
         <EmptyState
           title="No baseline recorded yet"

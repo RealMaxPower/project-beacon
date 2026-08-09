@@ -30,19 +30,35 @@ export function RunStrip({ results, revealed = results.length, label }: Props) {
           {label}
         </p>
       )}
-      <div className="flex flex-wrap gap-1.5" role="list" aria-label={label ?? "Run results"}>
+      {/* Numbered, so "the third and the ninth disagreed" is a thing a reader
+          can say. Twelve unlabelled circles can only be counted. */}
+      <div className="flex flex-wrap gap-2" role="list" aria-label={label ?? "Run results"}>
         {results.map((verdict, index) => (
-          <span role="listitem" key={index}>
+          <span role="listitem" key={index} className="flex flex-col items-center gap-1.5">
             <RunDot state={index < revealed ? verdict : "pending"} index={index} />
+            <span aria-hidden="true" className="font-mono text-[10px] text-text-faint">
+              {String(index + 1).padStart(2, "0")}
+            </span>
           </span>
         ))}
       </div>
-      <p className="mt-3 font-mono text-xs text-text-muted">
-        {Object.entries(counts)
-          .sort((a, b) => b[1] - a[1])
-          .map(([verdict, count]) => `${verdict} ${count} (${Math.round((count / results.length) * 100)}%)`)
-          .join(" · ") || "no runs yet"}
-      </p>
+
+      {/*
+       * The tally only where there is something to tally. With one verdict
+       * across every run it restated the panel's own headline in smaller type
+       * — "PASS 10 (100%)" directly under "All 10 runs passed."
+       */}
+      {Object.keys(counts).length > 1 && (
+        <p className="mt-3 font-mono text-xs text-text-muted">
+          {Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(
+              ([verdict, count]) =>
+                `${verdict} ${count} (${Math.round((count / results.length) * 100)}%)`,
+            )
+            .join(" · ")}
+        </p>
+      )}
     </div>
   );
 }

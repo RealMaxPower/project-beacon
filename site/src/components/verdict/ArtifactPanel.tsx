@@ -21,13 +21,19 @@ export function ArtifactPanel({ evidence }: Props) {
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface">
-      <header className="border-b border-line bg-sunken px-5 py-3">
-        <h3 className="font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-text-faint">
-          Artifact{wanted ? ` — ${wanted}` : ""}
-        </h3>
+      {/* A heading in the same voice as the two panels above it. A mono label
+          reading `ARTIFACT — SUMMARY` names the field; it does not say that
+          what follows is the thing the agent handed back. */}
+      <header className="border-b border-line bg-sunken px-5 py-3.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h3 className="text-[15px] font-medium">What the agent handed back</h3>
+          {wanted && (
+            <span className="font-mono text-[11px] text-text-muted">artifact · {wanted}</span>
+          )}
+        </div>
         {contract?.description && (
-          <p className="mt-1.5 text-xs leading-relaxed text-text-muted text-pretty">
-            {contract.description}
+          <p className="mt-1 max-w-[72ch] text-[13px] leading-relaxed text-text-muted text-pretty">
+            The scenario asked for this: {contract.description}
           </p>
         )}
       </header>

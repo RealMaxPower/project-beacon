@@ -27,11 +27,32 @@ interface Row {
   note?: string;
 }
 
+/** How many lines of a value are shown before it is cut. */
+const MAX_LINES = 18;
+
+/**
+ * A value, laid out to be read rather than parsed.
+ *
+ * This used to be `JSON.stringify` cut at 200 characters, which for the one
+ * row that matters — three drafts an agent wrote — produced a single wrapped
+ * line of `[{"id":"d-001","to":"maya@…","subject":"Re: Contract…` ending in an
+ * ellipsis. Every field name, quote and brace competed with the content, and
+ * the third draft was past the cut. Indented, the same value is a list of
+ * three things with five fields each.
+ */
 function preview(value: unknown): string {
-  if (Array.isArray(value) && value.length === 0) return "[]";
-  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (Array.isArray(value) && value.length === 0) return "[] (nothing)";
+  if (value === null || value === undefined) return "∅";
+  if (typeof value === "string") return value || "∅";
+
+  const text = JSON.stringify(value, null, 2);
   if (!text) return "∅";
-  return text.length > 200 ? `${text.slice(0, 200)}…` : text;
+
+  const lines = text.split("\n");
+  if (lines.length <= MAX_LINES) return text;
+
+  const hidden = lines.length - MAX_LINES;
+  return `${lines.slice(0, MAX_LINES).join("\n")}\n… ${hidden} more line${hidden === 1 ? "" : "s"} — the whole value is in evidence.json`;
 }
 
 export function StateDiff({ evidence, events }: Props) {
@@ -66,15 +87,22 @@ export function StateDiff({ evidence, events }: Props) {
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface">
-      <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line bg-sunken px-5 py-3">
-        <h3 className="font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-text-faint">
-          State changes
-        </h3>
-        <span className="font-mono text-[11px] text-text-muted">
-          {evidence.state_diff.change_count} change
-          {evidence.state_diff.change_count === 1 ? "" : "s"} · digest{" "}
-          {evidence.state.before_digest.slice(0, 8)} → {evidence.state.after_digest.slice(0, 8)}
-        </span>
+      <header className="border-b border-line bg-sunken px-5 py-3.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h3 className="text-[15px] font-medium">
+            {evidence.state_diff.change_count} change
+            {evidence.state_diff.change_count === 1 ? "" : "s"} to the synthetic world
+          </h3>
+          <span className="font-mono text-[11px] text-text-muted">
+            digest {evidence.state.before_digest.slice(0, 8)} →{" "}
+            {evidence.state.after_digest.slice(0, 8)}
+          </span>
+        </div>
+        <p className="mt-1 max-w-[72ch] text-[13px] leading-relaxed text-text-muted text-pretty">
+          What the mailbox or folder looked like before the agent touched it, and after. Rows
+          the agent reached for and was refused are here too, tinted — they did not move, and
+          that is the point.
+        </p>
       </header>
 
       {rows.length === 0 ? (
@@ -96,22 +124,30 @@ export function StateDiff({ evidence, events }: Props) {
                 )}
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
+              {/*
+               * `pre`, not `p`. The values are indented JSON now, and a
+               * paragraph collapses every newline that makes them readable.
+               * Each scrolls on its own axis rather than widening the card.
+               */}
+              {/* `items-start`: an empty "before" beside eighteen lines of
+                  "after" stretched into a tall blank box, which reads as a
+                  value that failed to load rather than as nothing. */}
+              <div className="grid items-start gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.09em] text-text-faint">
                     Before
                   </p>
-                  <p className="rounded-row border border-line bg-sunken p-2 font-mono text-[11px] leading-relaxed break-words">
+                  <pre className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed">
                     {row.before}
-                  </p>
+                  </pre>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.09em] text-text-faint">
                     After
                   </p>
-                  <p className="rounded-row border border-line bg-sunken p-2 font-mono text-[11px] leading-relaxed break-words">
+                  <pre className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed">
                     {row.after}
-                  </p>
+                  </pre>
                 </div>
               </div>
 

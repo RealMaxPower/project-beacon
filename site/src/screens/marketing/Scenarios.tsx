@@ -1,3 +1,5 @@
+import { NextSteps } from "@/components/shell/NextSteps";
+import { TerminalBlock } from "@/components/shell/TerminalBlock";
 import { ScenarioCard } from "@/components/select/ScenarioCard";
 import { facts, scenarios } from "@/data/fixtures";
 import type { Go } from "@/router";
@@ -36,6 +38,7 @@ const families = [
 
 export function Scenarios({ onGo }: Props) {
   return (
+    <>
     <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-11">
       <header className="mb-12">
         <h1 className="mb-4 max-w-[24ch] text-[clamp(1.8rem,5vw,2.5rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
@@ -84,10 +87,14 @@ export function Scenarios({ onGo }: Props) {
           worked one in the repository, with a test that runs it from outside the repository — so
           "no need to edit Beacon" is evidence rather than a claim.
         </p>
-        <p className="font-mono text-[12.5px] break-all text-text-muted">
-          python3 -m beacon init my-first-probe --service notes
-        </p>
+        <TerminalBlock copyable lines={["python3 -m beacon init my-first-probe --service notes"]} />
       </section>
     </div>
+
+    <NextSteps
+      onGo={onGo}
+      lead="Every card above opens a recorded run of that scenario — including the subjects written to break it. The same seven are in the repository, as JSON you can copy and edit."
+    />
+    </>
   );
 }

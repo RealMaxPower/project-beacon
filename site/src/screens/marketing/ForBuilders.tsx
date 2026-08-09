@@ -1,5 +1,8 @@
+import { Disclosure } from "@/components/shell/Disclosure";
+import { NextSteps } from "@/components/shell/NextSteps";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
 import { facts } from "@/data/fixtures";
+import type { Go } from "@/router";
 
 /**
  * The page for someone who has an agent and ships changes to it.
@@ -8,8 +11,13 @@ import { facts } from "@/data/fixtures";
  * find out before your users do. Everything here is a command they can run.
  */
 
-export function ForBuilders() {
+interface Props {
+  onGo: Go;
+}
+
+export function ForBuilders({ onGo }: Props) {
   return (
+    <>
     <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-11">
       <header className="mb-12">
         <h1 className="mb-4 max-w-[24ch] text-[clamp(1.8rem,5vw,2.5rem)] leading-[1.1] font-medium tracking-[-0.035em] text-balance">
@@ -27,11 +35,12 @@ export function ForBuilders() {
         <h2 className="mb-4 text-[clamp(1.3rem,3.2vw,1.6rem)] leading-tight font-medium tracking-[-0.025em]">
           Start from something that runs
         </h2>
-        <TerminalBlock lines={["python3 -m beacon init my-first-probe"]} />
+        <TerminalBlock copyable lines={["python3 -m beacon init my-first-probe"]} />
         <p className="mt-4 max-w-[66ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
           That writes a scenario and two subjects: one that satisfies every assertion, and one
-          that violates exactly one. Run both. The second is meant to fail, and watching it
-          fail is how you know the assertion measures something.
+          that violates exactly one. Run both.{" "}
+          <strong className="font-medium text-text">The second is meant to fail</strong> — and
+          watching it fail is how you know the assertion measures something.
         </p>
       </section>
 
@@ -45,6 +54,7 @@ export function ForBuilders() {
           per-assertion result vector.
         </p>
         <TerminalBlock
+          copyable
           lines={[
             "python3 -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5",
             "",
@@ -52,20 +62,28 @@ export function ForBuilders() {
             "assertion results identical).",
           ]}
         />
-        <p className="mt-4 max-w-[68ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
-          A model-backed subject rewrites its wording every run, so comparing state
-          byte-for-byte would report every one of them as non-deterministic however correctly
-          it behaved. String contents are dropped from the comparison and everything around
-          them is kept: a different number of drafts, a renamed or missing field, a changed
-          count or flag, or a body that is sometimes empty all still diverge.
-        </p>
+        <div className="mt-4 max-w-[72ch]">
+          <Disclosure question="Won't a model-backed agent look non-deterministic every time?">
+            <p>
+              It would, if the comparison were byte-for-byte: a subject that rewrites its
+              wording every run would be reported as non-deterministic however correctly it
+              behaved. String contents are dropped from the comparison and everything around
+              them is kept — a different number of drafts, a renamed or missing field, a
+              changed count or flag, or a body that is sometimes empty all still diverge.
+            </p>
+          </Disclosure>
+        </div>
       </section>
 
       <section className="mb-14">
         <h2 className="mb-4 text-[clamp(1.3rem,3.2vw,1.6rem)] leading-tight font-medium tracking-[-0.025em]">
           Fail the build when it regresses
         </h2>
+        <p className="mb-5 max-w-[66ch] text-[16px] leading-relaxed font-medium text-pretty">
+          Non-zero exit, so CI fails — and comparison is by pass rate, not by a single run.
+        </p>
         <TerminalBlock
+          copyable
           lines={[
             "# Against a committed snapshot, recorded on the first run",
             "python3 -m beacon run scenarios/inbox-briefing/scenario.json \\",
@@ -76,14 +94,16 @@ export function ForBuilders() {
             "  --repeat 10 --baseline-recent 20",
           ]}
         />
-        <p className="mt-4 max-w-[68ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
-          Non-zero exit, so CI fails. Comparison is by pass{" "}
-          <em className="text-text">rate</em>, because a subject failing a quarter of the time
-          still passes three single-run comparisons in four. A drop counts as a regression only
-          when the sample rules out chance, so a flaky agent does not fail your build at
-          random — and how many runs it takes to prove one scales with how flaky the baseline
-          said the subject was.
-        </p>
+        <div className="mt-4 max-w-[72ch]">
+          <Disclosure question="Why a rate, and not just whether this run passed?">
+            <p>
+              Because a subject failing a quarter of the time still passes three single-run
+              comparisons in four. A drop counts as a regression only when the sample rules out
+              chance, so a flaky agent does not fail your build at random — and how many runs
+              it takes to prove one scales with how flaky the baseline said the subject was.
+            </p>
+          </Disclosure>
+        </div>
       </section>
 
       <section className="mb-14">
@@ -149,11 +169,13 @@ export function ForBuilders() {
         <h2 className="mb-4 text-[clamp(1.3rem,3.2vw,1.6rem)] leading-tight font-medium tracking-[-0.025em]">
           Wrapping an agent that speaks neither MCP nor A2A
         </h2>
+        <p className="mb-3 max-w-[66ch] text-[16px] leading-relaxed font-medium text-pretty">
+          About thirty lines of JSONL over stdio.
+        </p>
         <p className="mb-5 max-w-[66ch] text-[15px] leading-relaxed text-text-muted text-pretty">
-          About thirty lines of JSONL over stdio. The child process receives one{" "}
-          <code className="font-mono text-text">start</code> message carrying the goal, the
-          tools this scenario exposes, and the artifact it must return. Assertions are never
-          sent.
+          The child process receives one <code className="font-mono text-text">start</code>{" "}
+          message carrying the goal, the tools this scenario exposes, and the artifact it must
+          return. Assertions are never sent.
         </p>
         <TerminalBlock
           lines={[
@@ -166,11 +188,15 @@ export function ForBuilders() {
           ]}
           label="what your bridge receives"
         />
-        <p className="mt-4 max-w-[68ch] text-[14.5px] leading-relaxed text-text-muted text-pretty">
-          The tool list is authoritative: anything else is refused and recorded as an attempt.
-          A requirement the subject was never told about is not one it can meet, which is why
-          the contract travels with the goal.
-        </p>
+        <div className="mt-4 max-w-[72ch]">
+          <Disclosure question="What happens if the bridge calls a tool that isn't in that list?">
+            <p>
+              The tool list is authoritative: anything else is refused and recorded as an
+              attempt. A requirement the subject was never told about is not one it can meet,
+              which is why the contract travels with the goal.
+            </p>
+          </Disclosure>
+        </div>
       </section>
 
       <section className="rounded-card border border-line bg-surface p-6">
@@ -206,19 +232,27 @@ export function ForBuilders() {
          * which is the opposite of what happened.
          */}
         <div className="mt-5 border-t border-line pt-4">
-          <p className="mb-2 text-[14px] leading-snug font-medium text-balance">
+          <p className="mb-3 text-[14.5px] leading-snug font-medium text-balance">
             Six of the first thirteen got the wrong verdict — from Beacon.
           </p>
-          <p className="max-w-[70ch] text-[13.5px] leading-relaxed text-text-muted text-pretty">
-            Not close calls. A subject that did the task correctly and took three seconds to
-            shut down was reported INCOMPLETE with every assertion passing. One that labelled
-            the mail it handled, using a tool Beacon had advertised to it, was reported FAIL.
-            All six are fixed, and this suite is what keeps them fixed — because until it
-            existed, every subject Beacon had ever graded was written by Beacon, against the
-            assertions doing the grading.
-          </p>
+          <Disclosure question="Which six, and what was wrong with them?">
+            <p>
+              Not close calls. A subject that did the task correctly and took three seconds to
+              shut down was reported INCOMPLETE with every assertion passing. One that labelled
+              the mail it handled, using a tool Beacon had advertised to it, was reported FAIL.
+              All six are fixed, and this suite is what keeps them fixed — because until it
+              existed, every subject Beacon had ever graded was written by Beacon, against the
+              assertions doing the grading.
+            </p>
+          </Disclosure>
         </div>
       </section>
     </div>
+
+    <NextSteps
+      onGo={onGo}
+      lead="Every command on this page runs against the seven scenarios that ship, so you can watch the shape of it before pointing anything at your own agent."
+    />
+    </>
   );
 }
