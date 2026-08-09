@@ -7,6 +7,7 @@ from unittest import mock
 
 from beacon.protocols.a2a import (
     ALLOW_ORIGIN_FLAG,
+    MAX_BODY_BYTES,
     ORIGIN_POLICY_ATTRIBUTE,
     A2AClient,
     A2AError,
@@ -24,6 +25,10 @@ TOKEN = "Bearer a2a-origin-fixture-token-DO-NOT-SHIP"
 class _FakeResponse:
     def __init__(self, value: dict) -> None:
         self._payload = json.dumps(value).encode("utf-8")
+        # Carried because the client reads a bounded body, and it consults the
+        # declared length before it reads. A fake without headers would let a
+        # regression in that path pass every test here.
+        self.headers = {"Content-Length": str(len(self._payload))}
 
     def __enter__(self) -> "_FakeResponse":
         return self
@@ -31,8 +36,8 @@ class _FakeResponse:
     def __exit__(self, *_: object) -> None:
         return None
 
-    def read(self) -> bytes:
-        return self._payload
+    def read(self, amount: int = -1) -> bytes:
+        return self._payload if amount < 0 else self._payload[:amount]
 
 
 def _card(service_url: str) -> dict:
@@ -349,6 +354,59 @@ class AllowOriginFlagTests(unittest.TestCase):
 
         args = build_parser().parse_args(["a2a-inspect", BASE])
         self.assertEqual(args.allow_agent_origin, [])
+
+
+class _HugeResponse:
+    """A peer that answers with more than the harness agreed to hold."""
+
+    def __init__(self, *, declared: str | None, size: int) -> None:
+        self._payload = b"{" + b"a" * size
+        self.headers = {} if declared is None else {"Content-Length": declared}
+
+    def __enter__(self) -> "_HugeResponse":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def read(self, amount: int = -1) -> bytes:
+        return self._payload if amount < 0 else self._payload[:amount]
+
+
+class BoundedBodyTests(unittest.TestCase):
+    """
+    The Agent Card is fetched from a host chosen by the party under evaluation,
+    and the body was read with a bare `response.read()`. The peer therefore
+    decided how much memory the harness allocated. `mcp_http` was given this
+    cap; the sibling client that reads a stranger's card was not.
+    """
+
+    def _fetch(self, response: _HugeResponse) -> A2AError:
+        with mock.patch("beacon.protocols.a2a._open", return_value=response):
+            client = A2AClient(BASE, timeout_seconds=3)
+            with self.assertRaises(A2AError) as caught:
+                client.discover()
+        return caught.exception
+
+    def test_an_oversized_declared_body_is_refused_before_it_is_read(self) -> None:
+        error = self._fetch(
+            _HugeResponse(declared=str(MAX_BODY_BYTES + 1), size=16)
+        )
+        self.assertIn("cap", str(error))
+
+    def test_an_undeclared_oversized_body_is_refused_on_the_read(self) -> None:
+        """
+        The declared length only saves the read; it is the peer's string. A
+        chunked body declares nothing, so the capped read is what has to hold.
+        """
+        error = self._fetch(_HugeResponse(declared=None, size=MAX_BODY_BYTES + 1))
+        self.assertIn("cap", str(error))
+
+    def test_a_lying_content_length_does_not_buy_an_unbounded_read(self) -> None:
+        error = self._fetch(
+            _HugeResponse(declared="12", size=MAX_BODY_BYTES + 1)
+        )
+        self.assertIn("cap", str(error))
 
 
 if __name__ == "__main__":

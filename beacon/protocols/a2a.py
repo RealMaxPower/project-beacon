@@ -15,6 +15,16 @@ class A2AError(RuntimeError):
 
 USER_AGENT = "project-beacon/0.1"
 
+MAX_BODY_BYTES = 4 * 1024 * 1024
+"""
+The most of a remote answer Beacon will hold.
+
+Mirrors the cap `mcp_http` applies, and for the same reason: without one the
+peer decides how much memory the harness allocates, and an Agent Card is
+fetched from a host named by the party under evaluation. A sweep runs several
+of these at once, so the ceiling is per-response and the peer never sets it.
+"""
+
 JSONRPC_METHODS = {
     # A2A 0.x, which is what deployed agents actually speak.
     "0": "message/send",
@@ -216,6 +226,27 @@ def _build_opener() -> urllib.request.OpenerDirector:
     return opener
 
 
+def _read_bounded(response: Any, url: str) -> bytes:
+    """
+    Read a capped amount of the response.
+
+    The declared length only saves the read; it is the peer's string, so it is
+    trusted no further than "plainly a small number", and the capped read below
+    is what actually holds for an undeclared or chunked body.
+    """
+    declared = str(response.headers.get("Content-Length", "")).strip()
+    if len(declared) <= 20 and declared.isascii() and declared.isdigit():
+        if int(declared) > MAX_BODY_BYTES:
+            raise A2AError(
+                f"response from {url} declares {declared} bytes, over the "
+                f"{MAX_BODY_BYTES} byte cap"
+            )
+    body = response.read(MAX_BODY_BYTES + 1)
+    if len(body) > MAX_BODY_BYTES:
+        raise A2AError(f"response from {url} is over the {MAX_BODY_BYTES} byte cap")
+    return body
+
+
 def _open(request: urllib.request.Request, *, timeout: float) -> Any:
     """
     The one place an A2A socket is opened, so the policy cannot be bypassed.
@@ -327,7 +358,7 @@ class A2AClient:
         setattr(request, ORIGIN_POLICY_ATTRIBUTE, self._policy)
         try:
             with _open(request, timeout=self.timeout_seconds) as response:
-                payload = response.read().decode("utf-8")
+                payload = _read_bounded(response, url).decode("utf-8")
         except (urllib.error.URLError, urllib.error.HTTPError) as exc:
             raise A2AError(f"A2A request failed for {url}: {exc}") from exc
         try:

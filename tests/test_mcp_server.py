@@ -380,7 +380,7 @@ class PinnedFacadeTests(unittest.TestCase):
             service = MCPHTTPService(
                 ScenarioMCPServer(scenario, router, recorder),
                 port=0 if index else 0,
-                token="pinned-token",
+                token="pinned-token-for-two-runs",
             )
             url = service.start()
             try:
@@ -389,7 +389,7 @@ class PinnedFacadeTests(unittest.TestCase):
                 service.stop()
 
         self.assertEqual(seen[0][1], seen[1][1], "the token changed between runs")
-        self.assertEqual(seen[0][1], "pinned-token")
+        self.assertEqual(seen[0][1], "pinned-token-for-two-runs")
 
     def test_an_unpinned_token_is_different_every_run(self) -> None:
         """The default must stay ephemeral; pinning is opt-in."""

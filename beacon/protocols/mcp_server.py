@@ -14,6 +14,18 @@ PROTOCOL_VERSION = "2025-06-18"
 SUBMIT_TOOL = "beacon_submit"
 MAX_BODY_BYTES = 4 * 1024 * 1024
 
+MINIMUM_TOKEN_LENGTH = 16
+"""
+The shortest bearer token the façade will serve behind.
+
+A generated token is `token_urlsafe(32)` and never comes near this. The floor
+is for the one an operator supplies instead, which is the only thing between
+another account on the machine and a tool surface that includes
+`beacon_submit` — the call that decides the recorded verdict. `SecretRegistry`
+sets a floor on the same reasoning; a credential guarding a live socket earns
+a higher one than a value being redacted from a file.
+"""
+
 
 class ScenarioMCPServer:
     """
@@ -247,6 +259,11 @@ class MCPHTTPService:
         self._host = host
         self._port = port
         self._path = path
+        if token is not None and len(token) < MINIMUM_TOKEN_LENGTH:
+            raise ValueError(
+                f"an MCP bearer token must be at least {MINIMUM_TOKEN_LENGTH} "
+                f"characters; this one is {len(token)}"
+            )
         self.token = token or secrets.token_urlsafe(32)
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
@@ -295,6 +312,12 @@ def _handler_class(
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
+        # `StreamRequestHandler.setup` puts this on the connection socket.
+        # Without it, a connection that opens and then says nothing holds its
+        # thread until the process exits, and `ThreadingHTTPServer` has no
+        # thread ceiling — so anything else on the loopback interface can tie
+        # the façade up without ever presenting the token.
+        timeout = 30
 
         def log_message(self, *_: Any) -> None:
             """Silence the default stderr access log; events are the record."""
@@ -328,11 +351,16 @@ def _handler_class(
             if not self._authorized():
                 self._send(401, {"error": "invalid or missing bearer token"}, {})
                 return
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-            except ValueError:
+            # Screened on the digits rather than parsed with a bare `int()`,
+            # which accepts "-1": that passes the cap below, and `read(-1)`
+            # then reads until the client closes — an unbounded body through
+            # the check written to bound it. `MCPHTTPClient._read_body`
+            # screens the same way against the same trick from a server.
+            declared = self.headers.get("Content-Length", "0").strip()
+            if not declared.isascii() or not declared.isdigit():
                 self._send(400, {"error": "invalid Content-Length"}, {})
                 return
+            length = int(declared)
             if length > MAX_BODY_BYTES:
                 self._send(413, {"error": "request too large"}, {})
                 return

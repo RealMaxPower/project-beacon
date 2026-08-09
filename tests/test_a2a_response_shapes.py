@@ -55,6 +55,10 @@ TASK_REPLY = {
 class _FakeResponse:
     def __init__(self, value: dict) -> None:
         self._payload = json.dumps(value).encode("utf-8")
+        # Carried because the client reads a bounded body, and it consults the
+        # declared length before it reads. A fake without headers would let a
+        # regression in that path pass every test here.
+        self.headers = {"Content-Length": str(len(self._payload))}
 
     def __enter__(self) -> "_FakeResponse":
         return self
@@ -62,8 +66,8 @@ class _FakeResponse:
     def __exit__(self, *_: object) -> None:
         return None
 
-    def read(self) -> bytes:
-        return self._payload
+    def read(self, amount: int = -1) -> bytes:
+        return self._payload if amount < 0 else self._payload[:amount]
 
 
 class MessageShapedReplyTests(unittest.TestCase):
