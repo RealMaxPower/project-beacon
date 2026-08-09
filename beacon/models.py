@@ -497,6 +497,18 @@ class SubjectResult:
         return asdict(self)
 
 
+REQUIRED_EVIDENCE_FIELDS = ("run_id", "result")
+"""
+The two fields a bundle cannot default its way out of.
+
+Everything else in `from_dict` defaults, deliberately: an old bundle staying
+readable is the point of writing one. These two cannot. `run_id` is what
+identifies a bundle to `--baseline-recent`'s exclusion list, so a defaulted one
+lets a run compare against itself. Defaulting `result` would invent a verdict,
+and history is exactly what a verdict gets compared against.
+"""
+
+
 @dataclass
 class Evidence:
     evidence_version: str
@@ -525,12 +537,35 @@ class Evidence:
         be re-read and re-graded without calling the subject again. Fields
         added since a bundle was written default rather than raising: an old
         bundle staying readable is the point of writing one.
+
+        What cannot default raises `ValueError`, and that is the whole failure
+        surface of this function. Callers that tolerate an unreadable bundle —
+        `load_recent_evidence` is the one that matters — catch that and nothing
+        else, so a second error type escaping here is a crash rather than a
+        skipped file.
         """
+        # A bundle that is not a JSON object at all arrives here as a list or a
+        # scalar, and the unknown-field check below then raises TypeError from
+        # inside a join: the wrong type, out of a function whose contract is
+        # ValueError, from a line that reads like a field check.
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"evidence must be a JSON object, not {type(value).__name__}"
+            )
         known = {item.name for item in fields(cls)}
         unknown = sorted(set(value) - known)
         if unknown:
             raise ValueError(
                 f"evidence has unknown fields: {', '.join(unknown)}"
+            )
+        # These used to raise KeyError from the subscripts below, which is not
+        # what this function promises and not what its one tolerant caller
+        # catches — so a single half-written bundle in the output directory
+        # took down a run that had already finished and been graded.
+        missing = [name for name in REQUIRED_EVIDENCE_FIELDS if name not in value]
+        if missing:
+            raise ValueError(
+                f"evidence is missing required field(s): {', '.join(missing)}"
             )
         return cls(
             evidence_version=str(value.get("evidence_version", "0.1")),

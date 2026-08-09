@@ -242,6 +242,13 @@ def load_recent_evidence(
         except (OSError, ValueError, json.JSONDecodeError):
             # A half-written or hand-edited bundle should not break a run that
             # is otherwise fine. It just does not count as history.
+            #
+            # `Evidence.from_dict` raises ValueError for everything it cannot
+            # read — unknown fields, missing required ones, a document that is
+            # not an object at all — so this tuple is that whole contract, not
+            # a list of the failures someone happened to hit. JSONDecodeError
+            # is a ValueError subclass and is named only as documentation of
+            # the common case.
             continue
         if evidence.run_id in excluded:
             continue

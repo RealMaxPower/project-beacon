@@ -17,7 +17,7 @@ from beacon.baseline import (
     wilson_interval,
 )
 from beacon.determinism import compare_runs
-from beacon.models import Evidence
+from beacon.models import REQUIRED_EVIDENCE_FIELDS, Evidence
 
 
 def _evidence(run_id: str, assertions: dict[str, bool], result: str) -> Evidence:
@@ -365,6 +365,42 @@ class RecentEvidenceTests(unittest.TestCase):
             [item.run_id for item in load_recent_evidence(self.root)], ["good"]
         )
 
+    def test_a_bundle_missing_its_verdict_does_not_break_the_run(self) -> None:
+        """
+        The bundle above is broken in a way `json` catches. This one is not:
+        it parses, and then `from_dict` walks off the end of it.
+
+        That used to raise KeyError, which this loader does not catch and the
+        CLI does not either, so a truncated bundle in a shared output directory
+        turned `--baseline-recent` into a traceback — for a run that had already
+        finished and been graded.
+        """
+        self._write(self.root, _evidence("good", {"a": True}, "PASS"))
+        for name, payload in (
+            ("no-verdict", {"run_id": "no-verdict"}),
+            ("no-id", {"result": "PASS"}),
+            ("empty", {}),
+        ):
+            directory = self.root / name
+            directory.mkdir()
+            (directory / "evidence.json").write_text(
+                json.dumps(payload), encoding="utf-8"
+            )
+        self.assertEqual(
+            [item.run_id for item in load_recent_evidence(self.root)], ["good"]
+        )
+
+    def test_a_bundle_that_is_not_an_object_does_not_break_the_run(self) -> None:
+        """Valid JSON, wrong shape. This one used to escape as TypeError."""
+        self._write(self.root, _evidence("good", {"a": True}, "PASS"))
+        for name, text in (("array", "[1, 2]"), ("scalar", "5"), ("null", "null")):
+            directory = self.root / name
+            directory.mkdir()
+            (directory / "evidence.json").write_text(text, encoding="utf-8")
+        self.assertEqual(
+            [item.run_id for item in load_recent_evidence(self.root)], ["good"]
+        )
+
     def test_an_empty_directory_yields_no_history(self) -> None:
         self.assertEqual(load_recent_evidence(self.root), [])
 
@@ -388,6 +424,41 @@ class EvidenceRoundTripTests(unittest.TestCase):
         payload["invented_field"] = 1
         with self.assertRaises(ValueError):
             Evidence.from_dict(payload)
+
+    def test_a_bundle_missing_a_required_field_is_refused(self) -> None:
+        """
+        ValueError, not KeyError, and the message has to name the field.
+
+        `beacon run` prints the exception and nothing else, so a bare
+        KeyError reached the operator as `error: 'run_id'` — which does not
+        say what was being read or what was wrong with it.
+        """
+        for name in REQUIRED_EVIDENCE_FIELDS:
+            with self.subTest(field=name):
+                payload = _evidence("run-1", {"a": True}, "PASS").to_dict()
+                del payload[name]
+                with self.assertRaises(ValueError) as caught:
+                    Evidence.from_dict(payload)
+                self.assertIn(name, str(caught.exception))
+
+    def test_a_bundle_that_is_not_an_object_is_refused(self) -> None:
+        for value in ([], None, 5, "text"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    Evidence.from_dict(value)  # type: ignore[arg-type]
+
+    def test_every_other_field_still_defaults(self) -> None:
+        """
+        The guard is two fields wide on purpose. Widening it would break the
+        thing `from_dict` exists to do — read a bundle written by an older
+        version — so this pins the boundary rather than the exception.
+        """
+        restored = Evidence.from_dict({"run_id": "run-1", "result": "PASS"})
+        self.assertEqual(restored.run_id, "run-1")
+        self.assertEqual(restored.result, "PASS")
+        self.assertEqual(restored.assertions, [])
+        self.assertEqual(restored.limitations, [])
+        self.assertFalse(restored.reset_verified)
 
 
 if __name__ == "__main__":

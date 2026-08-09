@@ -47,9 +47,85 @@ against a clean environment, so the first tag will publish.
   scenario against a real model — the first numbers in this repository that a
   reader can check against a committed artifact rather than take on trust.
   They replace a headline figure that lived only in prose.
+- `--adapter mcp-tool`, which grades one tool on a hosted MCP server as the
+  subject. The adapter existed and had probed 29 hosted agents, but it was
+  reachable only by writing Python.
 
 ### Fixed
 
+- **The façade's body-size cap was bypassed by a minus sign.** The MCP server
+  parsed `Content-Length` with a bare `int()`, so `-1` cleared the 4 MiB check
+  and `rfile.read(-1)` then read until the client chose to stop — an unbounded
+  body straight through the check written to bound it, on a handler thread
+  that blocked for as long as the caller cared to hold it. The client side had
+  screened the same header on its digits for exactly this reason; the constant
+  was mirrored between the two and the enforcement was not. The handler also
+  carries a socket timeout now: without one, a connection that opened and then
+  said nothing held its thread for the life of the process, and nothing caps
+  the thread count, so the façade could be tied up without presenting the
+  token at all.
+- **A remote agent decided how much memory the harness allocated.** The A2A
+  client read the response with a bare `read()`. An Agent Card is fetched from
+  a host named by the party under evaluation, and a sweep runs several at
+  once. The MCP client was given a cap for this reason; the sibling client
+  that reads a stranger's card was not. Capped now on both the declared length
+  and the read itself, since a chunked body declares nothing.
+- **A four-character bearer token was accepted for the tool façade.** A
+  generated token is 32 random bytes, but the one an operator supplies through
+  `--token-env` was checked only for being non-empty — and that token is the
+  whole of what stands between another account on the machine and
+  `beacon_submit`, the call that decides the recorded verdict. There is a
+  floor now, checked both at the CLI, which can name the variable and refuse
+  before a run directory exists, and in `MCPHTTPService`, which is the
+  chokepoint every caller passes. The test suite's own pinned fixture was
+  twelve characters and had to be replaced, which is the case for the floor
+  in miniature.
+- **A host that finished the work was reported as unmeasured.** `beacon_submit`
+  is the completion signal MCP does not otherwise have, and the JSONL adapter
+  already states the rule for its equivalent: nothing teardown reveals can
+  retract a completion that was validly sent. The MCP host adapter did not
+  follow it. A host that submitted a result and then hung closing a connection
+  pool hit the timeout, and the adapter returned `timeout` regardless — so the
+  run resolved INCOMPLETE and discarded an artifact Beacon had already recorded
+  and graded. A submission now stands on its own; the termination is recorded
+  in the subject metadata, in the `subject_completed` event, and as a
+  limitation in `report.md`, which is the one a reader sees. `MCPServeAdapter`
+  returned the right verdict for a Ctrl-C after a submission but recorded the
+  interruption nowhere except the event log, so that run was indistinguishable
+  from an untouched one. It now says so too.
+- **A protected document could be rewritten or deleted in silence.**
+  `FileService` checked the `protected` flag on read and on move, and recorded
+  a `policy_violation` for each. Write and delete checked only the scenario's
+  `allow_overwrite` and `allow_delete` policy, so a scenario that switched
+  either on let a subject change a protected record with no policy event at
+  all — the state diff would show the change and nothing would say it was not
+  permitted. No shipped scenario sets those flags, which is the only reason
+  nobody hit it: the trap was set for whoever wrote the next scenario pack.
+  Both paths now check the record as well as the policy, as
+  `files_write_protected` and `files_delete_protected`. The policy gate still
+  runs first, so a scenario with deletion switched off keeps reporting
+  `files_delete_blocked` and the evidence of runs that were already correct is
+  unchanged.
+- **A malformed evidence bundle crashed the run that found it.**
+  `--baseline-recent` reads history out of the output directory and skips
+  bundles it cannot read, but `Evidence.from_dict` raised `KeyError` for a
+  bundle missing `run_id` or `result`, and `TypeError` for JSON that was not an
+  object. Neither is what the function promises, neither is what the loader
+  catches, and neither is caught by the CLI — so one truncated file beside the
+  run directories ended a finished, graded run in a traceback. Both now raise
+  `ValueError`, naming what was missing, and are skipped like any other
+  unreadable bundle. `KeyError` is deliberately still not caught at the top
+  level: it is this codebase's most common internal-bug signature, and
+  swallowing it would turn a Beacon defect into `error: 'some_key'`.
+- **`beacon adapters` advertised routes that did not exist and hid one that
+  did.** The `--adapter` choices, the dispatch, and the printed table were
+  three hand-written lists, and they drifted apart in both directions: the
+  table listed `mcp-serve`, `mcp-stdio` and `a2a-http`, none of which are
+  `--adapter` values, while `mcp-tool` appeared in none of the three. One
+  declaration now feeds all three, each row carries a `reached_by` naming the
+  command that reaches it, and the integration level is read from the
+  adapter's own descriptor rather than retyped. A test walks
+  `beacon.adapters.__all__` and fails if an exported adapter is unreachable.
 - **A subject could write its own verdict into the report.** Artifact text is
   written by the subject and was inserted into `report.md` raw, so it could
   close the Artifacts heading and append a second Assertions section with a

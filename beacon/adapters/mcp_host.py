@@ -244,13 +244,13 @@ class MCPHostAdapter:
             },
         )
 
-        if timed_out:
-            return SubjectResult(
-                status="timeout",
-                error=f"host exceeded {timeout:g}s without submitting a result",
-                metadata={"exit_code": exit_code, "stderr_tail": stderr_tail},
-            )
         if submission is None:
+            if timed_out:
+                return SubjectResult(
+                    status="timeout",
+                    error=f"host exceeded {timeout:g}s without submitting a result",
+                    metadata={"exit_code": exit_code, "stderr_tail": stderr_tail},
+                )
             # The session ended and Beacon was never told the work finished.
             # That is not a statement about the subject's behavior, so it
             # resolves to INCOMPLETE rather than a failing verdict.
@@ -262,6 +262,27 @@ class MCPHostAdapter:
                 ),
                 metadata={"exit_code": exit_code, "stderr_tail": stderr_tail},
             )
+
+        if timed_out:
+            # `beacon_submit` is this protocol's `complete`, and the rule the
+            # JSONL adapter states applies here unchanged: nothing that happens
+            # after a completion was validly sent can retract it. The
+            # submission is taken once, under a lock, so a host that finished
+            # the work and then hung closing an HTTP pool had already told
+            # Beacon everything it needed — and used to be reported INCOMPLETE,
+            # "we did not measure this", for work Beacon had already graded and
+            # held the artifact for.
+            #
+            # The termination is still recorded, in all three places a reader
+            # might look: `subject_completed` above carries `timed_out`, the
+            # metadata below carries the key the JSONL adapter uses, and the
+            # limitation is the one that reaches report.md — which is where
+            # somebody reads a PASS without opening the event log.
+            context.limitations.append(
+                f"The host submitted a result and was still running at the "
+                f"{timeout:g}s limit, so Beacon terminated it. Anything it did "
+                f"after submitting is not in this evidence."
+            )
         return SubjectResult(
             status=submission["status"],
             summary=submission["summary"],
@@ -269,6 +290,7 @@ class MCPHostAdapter:
                 "exit_code": exit_code,
                 "client_info": server.client_info,
                 "stderr_tail": stderr_tail,
+                "terminated_after_complete": timed_out,
             },
         )
 
@@ -387,11 +409,25 @@ class MCPServeAdapter:
                 ),
                 metadata={"client_info": server.client_info},
             )
+        if interrupted:
+            # The same asymmetry the host adapter had, one level down. The
+            # verdict was already right here — the loop exits on submission —
+            # but the subject record carried only `client_info`, so a run
+            # stopped by hand after the result arrived was indistinguishable
+            # from a clean one everywhere except the event log.
+            context.limitations.append(
+                "A result was submitted and then this run was stopped by hand, "
+                "so anything the host did after submitting is not in this "
+                "evidence."
+            )
         artifact = context.scenario.required_artifact
         if artifact and submission.get("artifact") is not None:
             context.add_artifact(artifact, submission["artifact"])
         return SubjectResult(
             status=submission["status"],
             summary=submission["summary"],
-            metadata={"client_info": server.client_info},
+            metadata={
+                "client_info": server.client_info,
+                "terminated_after_complete": interrupted,
+            },
         )

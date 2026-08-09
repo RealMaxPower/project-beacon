@@ -112,4 +112,9 @@ jobs:
           name: distribution
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      # Pinned to a commit, not to `release/v1`, which is a branch: a moving
+      # ref on the only third-party action in this repository, running in the
+      # one job that holds an id-token PyPI will accept. Whoever can move that
+      # branch can publish as this project. Update deliberately — the comment
+      # is the version, because the SHA is not readable.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

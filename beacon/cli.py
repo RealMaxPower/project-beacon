@@ -5,8 +5,9 @@ import json
 import os
 import shlex
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Callable, Sequence
 
 from beacon import __version__
 from beacon.adapters import (
@@ -14,6 +15,7 @@ from beacon.adapters import (
     JSONLCommandAdapter,
     MCPHostAdapter,
     MCPServeAdapter,
+    MCPToolSubjectAdapter,
     ReferenceInboxAdapter,
 )
 from beacon.builtins import builtin_names, builtin_root, resolve_scenario
@@ -26,7 +28,13 @@ from beacon.baseline import (
 )
 from beacon.determinism import compare_runs, repeat_run_ids
 from beacon.models import Evidence, Scenario, ScenarioError
-from beacon.protocols import A2AClient, A2AError, MCPError, MCPStdioClient
+from beacon.protocols import (
+    MINIMUM_TOKEN_LENGTH,
+    A2AClient,
+    A2AError,
+    MCPError,
+    MCPStdioClient,
+)
 from beacon.scaffold import scaffold
 from beacon.secrets import SecretError, looks_like_a_secret
 from beacon.runner import run_scenario
@@ -64,6 +72,114 @@ def _json_object(value: str) -> dict:
     return parsed
 
 
+@dataclass(frozen=True)
+class AdapterSpec:
+    """
+    One row of `beacon adapters`, and the only source of `--adapter`.
+
+    This used to be written out by hand in three places — the `choices` tuple,
+    the dispatch in `_run`, and the listing — and they drifted in both
+    directions at once. The listing advertised `mcp-serve`, `mcp-stdio` and
+    `a2a-http`, none of which are `--adapter` values, while `mcp-tool`, a
+    finished adapter exported from `beacon.adapters`, appeared in none of the
+    three and could only be reached by writing Python.
+
+    `integration_level` and the subject id are read from the adapter's own
+    `descriptor` rather than retyped here, because those two are what the
+    evidence bundle will say and a copy of them can be wrong. The rest is
+    prose, and a descriptor has no business carrying prose: it would end up in
+    every bundle Beacon writes.
+
+    `probe` builds a throwaway instance purely to read that descriptor. Every
+    adapter's `__init__` is plain assignment — no I/O, no process, no socket —
+    and `tests/test_cli_adapters.py` fails if that stops being true.
+    """
+
+    flag: str
+    subject: str
+    interface: str
+    status: str
+    reached_by: str
+    probe: Callable[[], Any] | None = None
+    level: int | None = None
+
+
+ADAPTERS: tuple[AdapterSpec, ...] = (
+    AdapterSpec(
+        flag="reference",
+        subject="Beacon reference inbox agent",
+        interface="in-process",
+        status="MVP",
+        reached_by="beacon run --adapter reference",
+        probe=ReferenceInboxAdapter,
+    ),
+    AdapterSpec(
+        flag="command",
+        subject="Any wrapped CLI/API/SDK agent",
+        interface="bidirectional JSONL",
+        status="MVP",
+        reached_by="beacon run --adapter command",
+        probe=lambda: JSONLCommandAdapter(["true"]),
+    ),
+    AdapterSpec(
+        flag="mcp-host",
+        subject="Any MCP-speaking agent host",
+        interface="Beacon serves MCP over HTTP; adapter owns lifecycle",
+        status="MVP",
+        reached_by="beacon run --adapter mcp-host",
+        probe=lambda: MCPHostAdapter(["true"]),
+    ),
+    AdapterSpec(
+        flag="mcp-tool",
+        subject="One tool on a hosted MCP server",
+        interface="Beacon calls the server; the tool is the subject",
+        status="MVP",
+        reached_by="beacon run --adapter mcp-tool",
+        probe=lambda: MCPToolSubjectAdapter("https://example.invalid/mcp", "ask", {}),
+    ),
+    AdapterSpec(
+        flag="a2a",
+        subject="A2A agent",
+        interface="A2A v1.0 HTTP+JSON or JSON-RPC",
+        status="discover/send spike",
+        reached_by="beacon run --adapter a2a",
+        probe=lambda: A2ASubjectAdapter("https://example.invalid"),
+    ),
+    AdapterSpec(
+        flag="mcp-serve",
+        subject="An MCP host you connect yourself",
+        interface="Beacon serves MCP over HTTP and waits",
+        status="MVP",
+        reached_by="beacon serve-mcp",
+        probe=MCPServeAdapter,
+    ),
+    # The last two are protocol clients, not subject adapters. They have no
+    # descriptor because nothing about them reaches an evidence bundle — they
+    # inspect a server, they do not grade one — and `reached_by` is the column
+    # that stops them being read as `--adapter` values again.
+    AdapterSpec(
+        flag="mcp-stdio",
+        subject="MCP server",
+        interface="MCP stdio client",
+        status="inspect/call",
+        reached_by="beacon mcp-inspect",
+        level=1,
+    ),
+    AdapterSpec(
+        flag="a2a-http",
+        subject="A2A agent",
+        interface="A2A Agent Card discovery",
+        status="inspect",
+        reached_by="beacon a2a-inspect",
+        level=2,
+    ),
+)
+
+RUN_ADAPTERS: tuple[AdapterSpec, ...] = tuple(
+    spec for spec in ADAPTERS if spec.reached_by.startswith("beacon run ")
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="beacon",
@@ -91,7 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
     run.add_argument(
         "--adapter",
-        choices=("reference", "command", "mcp-host", "a2a"),
+        choices=tuple(spec.flag for spec in RUN_ADAPTERS),
         default="reference",
     )
     run.add_argument(
@@ -103,8 +219,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Base URL of a hosted A2A agent, for --adapter a2a.",
     )
     run.add_argument(
+        "--mcp-url",
+        help=(
+            "Streamable HTTP endpoint of the MCP server under test, for "
+            "--adapter mcp-tool. This is the complete endpoint, not a base "
+            "URL: unlike --agent-url there is nothing to discover."
+        ),
+    )
+    run.add_argument(
+        "--tool",
+        help="Tool to call as the subject, for --adapter mcp-tool.",
+    )
+    run.add_argument(
+        "--arguments",
+        type=_json_object,
+        default={},
+        metavar="JSON",
+        help="JSON object of arguments for --tool.",
+    )
+    run.add_argument(
+        "--artifact-name",
+        help=(
+            "Record the tool's answer under this name instead of the "
+            "adapter's default, for --adapter mcp-tool. It has to match the "
+            "artifact the scenario's output contract requires."
+        ),
+    )
+    run.add_argument(
         "--authorization",
-        help="Complete Authorization header value for --adapter a2a.",
+        # A credential on the command line lands in shell history, which is
+        # why every other secret here arrives by environment name. This flag
+        # predates that rule rather than being exempt from it.
+        help=(
+            "Complete Authorization header value for --adapter a2a and "
+            "--adapter mcp-tool."
+        ),
     )
     run.add_argument(
         "--allow-agent-origin",
@@ -465,6 +614,32 @@ def _run(args: argparse.Namespace) -> int:
             authorization=args.authorization,
             allowed_origins=args.allow_agent_origin,
         )
+    elif args.adapter == "mcp-tool":
+        if not args.mcp_url:
+            raise ScenarioError("--adapter mcp-tool requires --mcp-url")
+        if not args.tool:
+            raise ScenarioError("--adapter mcp-tool requires --tool")
+        if args.command:
+            raise ScenarioError(
+                "--command applies to adapters that launch a process; an MCP "
+                "tool subject is a service someone else is already running"
+            )
+        if args.env_passthrough or args.env_secret:
+            # Beacon starts nothing here, so an environment option would be a
+            # flag that silently does nothing to the subject — and the operator
+            # would believe a credential had been passed.
+            raise ScenarioError(
+                "environment options apply to adapters that launch a process; "
+                "use --authorization to authenticate to an MCP server"
+            )
+        adapter = MCPToolSubjectAdapter(
+            args.mcp_url,
+            args.tool,
+            args.arguments,
+            timeout_seconds=args.timeout,
+            authorization=args.authorization,
+            **({"artifact_name": args.artifact_name} if args.artifact_name else {}),
+        )
     elif args.adapter == "mcp-host":
         if not args.command:
             raise ScenarioError("--adapter mcp-host requires --command")
@@ -523,6 +698,16 @@ def _serve_mcp(args: argparse.Namespace) -> int:
                 f"{args.token_env} is not set. Export a token first, or drop "
                 f"--token-env to have one generated for this run."
             )
+        # Checked here as well as in `MCPHTTPService`, so a weak token is
+        # refused by name and before a run directory exists, rather than as an
+        # anonymous ValueError from inside a run that has already started.
+        if len(token) < MINIMUM_TOKEN_LENGTH:
+            raise ScenarioError(
+                f"{args.token_env} holds {len(token)} characters; a bearer "
+                f"token guarding the tool façade needs at least "
+                f"{MINIMUM_TOKEN_LENGTH}. `python3 -c 'import secrets; "
+                f"print(secrets.token_urlsafe(32))'` prints a usable one."
+            )
     outcome = run_scenario(
         scenario,
         MCPServeAdapter(
@@ -555,52 +740,29 @@ def _scenarios() -> int:
     return 0
 
 
+def adapter_rows() -> list[dict[str, Any]]:
+    """Build the listing, reading from each adapter what the adapter knows."""
+    rows: list[dict[str, Any]] = []
+    for spec in ADAPTERS:
+        row: dict[str, Any] = {
+            "id": spec.flag,
+            "subject": spec.subject,
+            "interface": spec.interface,
+            "reached_by": spec.reached_by,
+            "status": spec.status,
+        }
+        if spec.probe is not None:
+            descriptor = spec.probe().descriptor
+            row["level"] = descriptor["integration_level"]
+            row["subject_id"] = descriptor["id"]
+        else:
+            row["level"] = spec.level
+        rows.append(row)
+    return rows
+
+
 def _adapters() -> int:
-    rows = [
-        {
-            "id": "reference",
-            "subject": "Beacon reference inbox agent",
-            "interface": "in-process",
-            "level": 4,
-            "status": "MVP",
-        },
-        {
-            "id": "command",
-            "subject": "Any wrapped CLI/API/SDK agent",
-            "interface": "bidirectional JSONL",
-            "level": 3,
-            "status": "MVP",
-        },
-        {
-            "id": "mcp-host",
-            "subject": "Any MCP-speaking agent host",
-            "interface": "Beacon serves MCP over HTTP; adapter owns lifecycle",
-            "level": 1,
-            "status": "MVP",
-        },
-        {
-            "id": "mcp-serve",
-            "subject": "An MCP host you connect yourself",
-            "interface": "Beacon serves MCP over HTTP and waits",
-            "level": 1,
-            "status": "MVP",
-        },
-        {
-            "id": "mcp-stdio",
-            "subject": "MCP server",
-            "interface": "MCP stdio client",
-            "level": 1,
-            "status": "inspect/call",
-        },
-        {
-            "id": "a2a-http",
-            "subject": "A2A agent",
-            "interface": "A2A v1.0 HTTP+JSON or JSON-RPC",
-            "level": 2,
-            "status": "discover/send spike",
-        },
-    ]
-    print(json.dumps(rows, indent=2))
+    print(json.dumps(adapter_rows(), indent=2))
     return 0
 
 

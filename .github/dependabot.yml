@@ -1,0 +1,36 @@
+# Dependency updates.
+#
+# The Python package has no runtime dependencies and that is enforced in CI, so
+# there is no pip ecosystem to watch here. What can go stale is everything
+# around it: the actions that run the workflows, and the site's npm tree.
+#
+# Actions matter most. `release.yml` pins the publish action to a commit, which
+# is the right call for the job that holds a PyPI id-token — and a pinned
+# commit is exactly the kind of thing nobody remembers to update by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: site
+    groups:
+      # One pull request per month rather than one per package. The site is a
+      # static build with a committed lockfile; the review that matters is
+      # "does it still build and do the snapshots still match", which is the
+      # same review whether one package moved or twenty.
+      site:
+        patterns:
+          - "*"

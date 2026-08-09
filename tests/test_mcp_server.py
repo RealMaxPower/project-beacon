@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import stat
 import sys
 import tempfile
@@ -13,14 +14,25 @@ from typing import Any
 
 from beacon.adapters import MCPHostAdapter
 from beacon.models import EventRecorder, Scenario
-from beacon.protocols import SUBMIT_TOOL, MCPHTTPService, ScenarioMCPServer
+from beacon.protocols import (
+    MINIMUM_TOKEN_LENGTH,
+    SUBMIT_TOOL,
+    MCPHTTPService,
+    ScenarioMCPServer,
+)
+from beacon.protocols.mcp_server import MAX_BODY_BYTES
 from beacon.runner import run_scenario
 from beacon.services import MailService, ToolRouter
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "inbox-briefing" / "scenario.json"
+# Long enough to clear `MINIMUM_TOKEN_LENGTH`. The fixture used to read
+# "pinned-token", which the floor now refuses — a twelve-character credential
+# in front of a live tool façade is precisely what it exists to stop.
+PINNED_TOKEN = "pinned-token-for-two-runs"
 HOST = ROOT / "examples" / "mcp_host_agent.py"
+SLOW_TEARDOWN_HOST = ROOT / "examples" / "mcp_host_slow_teardown.py"
 
 
 def _server(scenario: Scenario | None = None) -> tuple[ScenarioMCPServer, EventRecorder]:
@@ -235,6 +247,72 @@ class TransportTests(unittest.TestCase):
         self.service.stop()
         self.service.stop()
 
+    def _raw(self, headers: str, body: bytes = b"") -> bytes:
+        """
+        Speak HTTP by hand.
+
+        `urllib` computes Content-Length itself and will not send a malformed
+        one, so the header this class is about cannot be tested through it.
+        """
+        host, port = self.service._httpd.server_address[:2]
+        connection = socket.create_connection((host, port), timeout=5)
+        self.addCleanup(connection.close)
+        # latin-1, not ascii: header bytes are latin-1 on the wire, and one of
+        # the cases below is a non-ascii character that `str.isdigit` calls a
+        # digit. Encoding as ascii would fail in the test rather than at the
+        # server, and prove nothing about the server.
+        connection.sendall(headers.encode("latin-1") + b"\r\n" + body)
+        connection.settimeout(5)
+        try:
+            return connection.recv(200)
+        except socket.timeout:
+            return b""
+
+    def _headers(self, length: str) -> str:
+        return (
+            f"POST /mcp HTTP/1.1\r\n"
+            f"Host: localhost\r\n"
+            f"Authorization: Bearer {self.service.token}\r\n"
+            f"Content-Type: application/json\r\n"
+            f"Content-Length: {length}\r\n"
+        )
+
+    def test_a_negative_content_length_is_refused(self) -> None:
+        """
+        `int()` accepts "-1". It then passes the size cap, and `read(-1)` reads
+        until the client closes — so the one check that bounds how much memory
+        a request may claim was bypassed by writing a minus sign, and the
+        handler thread blocked for as long as the caller cared to hold it.
+        """
+        self.assertIn(b"400", self._raw(self._headers("-1")))
+
+    def test_a_content_length_that_is_not_ascii_digits_is_refused(self) -> None:
+        # `"²".isdigit()` is True, which is why the ascii test comes first.
+        for length in ("-1", "+5", "1_0", "", " ", "1.5", "²"):
+            with self.subTest(length=length):
+                self.assertIn(b"400", self._raw(self._headers(length)))
+
+    def test_an_oversized_declared_body_is_refused(self) -> None:
+        answer = self._raw(self._headers(str(MAX_BODY_BYTES + 1)))
+        self.assertIn(b"413", answer)
+
+    def test_a_body_at_the_cap_is_still_read(self) -> None:
+        """The cap must refuse the oversized, not the merely large."""
+        message = {"jsonrpc": "2.0", "id": 1, "method": "ping"}
+        body = json.dumps(message).encode()
+        answer = self._raw(self._headers(str(len(body))), body)
+        self.assertIn(b"200", answer)
+
+    def test_the_handler_carries_a_socket_timeout(self) -> None:
+        """
+        Without one, a connection that opens and says nothing holds its thread
+        for the life of the process, and nothing caps the thread count — so
+        the façade can be tied up without presenting the token at all.
+        """
+        handler = self.service._httpd.RequestHandlerClass
+        self.assertIsNotNone(handler.timeout)
+        self.assertGreater(handler.timeout, 0)
+
 
 class HostAdapterTests(unittest.TestCase):
     """
@@ -299,6 +377,61 @@ class HostAdapterTests(unittest.TestCase):
         )
         self.assertEqual(outcome.evidence.result, "INCOMPLETE")
         self.assertEqual(outcome.evidence.subject["execution"]["status"], "timeout")
+        # A host that never submitted was not terminated after completing
+        # anything. The two timeout paths have to stay tellable apart, or the
+        # key below stops meaning what it says.
+        self.assertNotIn(
+            "terminated_after_complete",
+            outcome.evidence.subject["execution"]["metadata"],
+        )
+
+    def test_a_host_that_submits_and_then_hangs_still_gets_a_verdict(self) -> None:
+        """
+        The rule the JSONL adapter already states, applied to this protocol:
+        nothing that happens after a completion was validly sent can retract
+        it. This used to resolve INCOMPLETE, discarding an artifact Beacon had
+        already recorded and graded.
+        """
+        outcome = self._run(
+            [sys.executable, str(SLOW_TEARDOWN_HOST)],
+            "mcp-submit-then-hang",
+            timeout_seconds=25,
+        )
+        failed = [a["id"] for a in outcome.evidence.assertions if not a["passed"]]
+        self.assertEqual(outcome.evidence.result, "PASS", failed)
+        self.assertEqual(outcome.evidence.subject["execution"]["status"], "completed")
+        self.assertIn("summary", outcome.evidence.artifacts)
+
+    def test_the_termination_is_recorded_even_though_the_verdict_stands(self) -> None:
+        """
+        The other half, and the one that stops the fix above from becoming
+        "quietly forgive timeouts". A PASS on a run Beacon had to kill has to
+        say so — in the metadata, in the event stream, and in report.md, which
+        is the only one of the three most people read.
+        """
+        outcome = self._run(
+            [sys.executable, str(SLOW_TEARDOWN_HOST)],
+            "mcp-submit-then-hang-recorded",
+            timeout_seconds=25,
+        )
+        self.assertTrue(
+            outcome.evidence.subject["execution"]["metadata"][
+                "terminated_after_complete"
+            ]
+        )
+        completed = [
+            event
+            for event in outcome.evidence.events
+            if event["kind"] == "subject_completed"
+        ]
+        self.assertEqual(len(completed), 1)
+        self.assertTrue(completed[0]["payload"]["timed_out"])
+        self.assertTrue(completed[0]["payload"]["submitted"])
+        self.assertTrue(
+            any("terminated it" in item for item in outcome.evidence.limitations),
+            outcome.evidence.limitations,
+        )
+        self.assertIn("terminated it", outcome.markdown_path.read_text(encoding="utf-8"))
 
     def test_every_outcome_still_writes_an_evidence_bundle(self) -> None:
         for label, command in (
@@ -362,6 +495,129 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class ServeAdapterInterruptionTests(unittest.TestCase):
+    """
+    `MCPServeAdapter` waits for a host somebody else connects, so the run ends
+    when a person decides it does. It already returned the right verdict for a
+    Ctrl-C that arrived after the submission — the wait loop exits on the
+    submission, not the key — but the subject record carried only
+    `client_info`, so that run was indistinguishable from an untouched one
+    everywhere except the event payload.
+
+    The interruption is driven here by standing in for the wait itself, which
+    is the only part of this adapter a test can reach without a human at a
+    keyboard. The submission is made over the real transport.
+    """
+
+    def _submit(self, config_path: Path) -> None:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        server = config["mcpServers"]["beacon"]
+        request = urllib.request.Request(
+            server["url"],
+            data=json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": SUBMIT_TOOL,
+                        "arguments": {
+                            "status": "completed",
+                            "summary": "Prepared 2 draft responses.",
+                            "artifact": "Action-required inbox briefing",
+                        },
+                    },
+                }
+            ).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": server["headers"]["Authorization"],
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 200)
+
+    def _run_interrupted_after_submitting(self, run_id: str):
+        from unittest import mock
+
+        from beacon.adapters import MCPServeAdapter
+
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        config_path = (
+            Path(directory.name) / run_id / "workspace" / "mcp-config.json"
+        )
+        def fake_wait(_seconds: float) -> None:
+            # Both in the one wait, which is the only ordering that reaches
+            # this branch: the loop re-checks `submission` as soon as it wakes,
+            # so a Ctrl-C after that check ends a run that has already left the
+            # loop. The race the adapter has to survive is a person stopping a
+            # run in the moment the result lands.
+            self._submit(config_path)
+            raise KeyboardInterrupt
+
+        with mock.patch("beacon.adapters.mcp_host.time.sleep", fake_wait):
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                MCPServeAdapter(timeout_seconds=30, announce=lambda *_: None),
+                output_dir=directory.name,
+                run_id=run_id,
+            )
+        return outcome
+
+    def test_a_result_submitted_before_a_ctrl_c_is_not_discarded(self) -> None:
+        outcome = self._run_interrupted_after_submitting("serve-interrupted")
+        self.assertEqual(outcome.evidence.subject["execution"]["status"], "completed")
+        self.assertNotEqual(outcome.evidence.result, "INCOMPLETE")
+
+    def test_the_interruption_is_recorded_even_though_the_verdict_stands(self) -> None:
+        outcome = self._run_interrupted_after_submitting("serve-interrupted-recorded")
+        self.assertTrue(
+            outcome.evidence.subject["execution"]["metadata"][
+                "terminated_after_complete"
+            ]
+        )
+        self.assertTrue(
+            any("stopped by hand" in item for item in outcome.evidence.limitations),
+            outcome.evidence.limitations,
+        )
+
+    def test_an_untouched_run_says_so(self) -> None:
+        """
+        The mirror. Without it, a flag that was always True would pass both
+        tests above and record nothing.
+        """
+        from unittest import mock
+
+        from beacon.adapters import MCPServeAdapter
+
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        config_path = (
+            Path(directory.name) / "serve-clean" / "workspace" / "mcp-config.json"
+        )
+
+        with mock.patch(
+            "beacon.adapters.mcp_host.time.sleep",
+            lambda _s: self._submit(config_path),
+        ):
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                MCPServeAdapter(timeout_seconds=30, announce=lambda *_: None),
+                output_dir=directory.name,
+                run_id="serve-clean",
+            )
+        self.assertFalse(
+            outcome.evidence.subject["execution"]["metadata"][
+                "terminated_after_complete"
+            ]
+        )
+        self.assertFalse(
+            [item for item in outcome.evidence.limitations if "stopped by hand" in item]
+        )
+
+
 class PinnedFacadeTests(unittest.TestCase):
     """
     A GUI host is configured by hand. With an ephemeral port and a fresh token
@@ -380,7 +636,7 @@ class PinnedFacadeTests(unittest.TestCase):
             service = MCPHTTPService(
                 ScenarioMCPServer(scenario, router, recorder),
                 port=0 if index else 0,
-                token="pinned-token-for-two-runs",
+                token=PINNED_TOKEN,
             )
             url = service.start()
             try:
@@ -389,7 +645,7 @@ class PinnedFacadeTests(unittest.TestCase):
                 service.stop()
 
         self.assertEqual(seen[0][1], seen[1][1], "the token changed between runs")
-        self.assertEqual(seen[0][1], "pinned-token-for-two-runs")
+        self.assertEqual(seen[0][1], PINNED_TOKEN)
 
     def test_an_unpinned_token_is_different_every_run(self) -> None:
         """The default must stay ephemeral; pinning is opt-in."""
@@ -404,6 +660,39 @@ class PinnedFacadeTests(unittest.TestCase):
             tokens.add(service.token)
             service.stop()
         self.assertEqual(len(tokens), 2)
+
+    def test_a_pinned_token_below_the_floor_is_refused(self) -> None:
+        """
+        The generated token is 32 random bytes; the supplied one was checked
+        only for being non-empty, so `BEACON_MCP_TOKEN=test` was accepted — and
+        that token is the whole of what stands between another account on the
+        machine and `beacon_submit`, which decides the recorded verdict.
+        """
+        scenario = Scenario.load(SCENARIO)
+        recorder = EventRecorder()
+        router = ToolRouter(recorder, allowed=scenario.tools)
+        router.register(MailService(scenario.fixtures["mail"], recorder))
+        server = ScenarioMCPServer(scenario, router, recorder)
+        with self.assertRaises(ValueError) as caught:
+            MCPHTTPService(server, token="a" * (MINIMUM_TOKEN_LENGTH - 1))
+        self.assertIn(str(MINIMUM_TOKEN_LENGTH), str(caught.exception))
+
+    def test_the_cli_refuses_a_token_variable_below_the_floor(self) -> None:
+        """
+        Refused by name and before a run directory exists, rather than as an
+        anonymous ValueError from inside a run that has already started.
+        """
+        from beacon.cli import main
+
+        variable = "BEACON_TEST_SHORT_TOKEN_VAR"
+        os.environ[variable] = "short"
+        self.addCleanup(os.environ.pop, variable, None)
+        with tempfile.TemporaryDirectory() as directory:
+            code = main(
+                ["serve-mcp", str(SCENARIO), "--output", directory,
+                 "--token-env", variable]
+            )
+        self.assertEqual(code, 2)
 
     def test_the_cli_refuses_an_unset_token_variable(self) -> None:
         """

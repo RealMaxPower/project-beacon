@@ -90,6 +90,13 @@ ephemeral token, or the server answers 401.
 This is the completion signal MCP does not otherwise have. A session that ends
 without it resolves to `INCOMPLETE`.
 
+A submission already received is not retracted by what happens afterwards. A
+host that submits and then hangs past the timeout, or is stopped by hand, keeps
+the verdict its submission earned — the same rule the JSONL bridge applies to
+`complete`. Beacon terminating the host is recorded three ways: `timed_out` in
+the `subject_completed` event, `terminated_after_complete` in the subject
+metadata, and a limitation in `report.md`.
+
 A failing tool call returns a normal `tools/call` result with `isError: true`,
 never a JSON-RPC error — a refusal is information the subject can act on, and a
 transport error is not. The attempt is recorded either way.
