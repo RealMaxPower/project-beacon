@@ -29,11 +29,11 @@ jobs:
     name: Beacon's MCP client vs third-party servers
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Install uv (for the Python MCP servers)
@@ -44,7 +44,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           python conformance/run_mcp_sweep.py --timeout 180 --json-out sweep.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mcp-conformance
@@ -54,8 +54,8 @@ jobs:
     name: Official MCP SDK vs Beacon's facade
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
