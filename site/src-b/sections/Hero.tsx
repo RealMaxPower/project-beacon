@@ -1,12 +1,16 @@
 import { evidenceFor, facts, fixtures } from "@/data/fixtures";
+import { Pipeline } from "../components/Pipeline";
 
 /**
  * The opening claim, and the run that carries it.
  *
  * The source design's hero is an animated six-stage pipeline for a product
- * with claims, review tasks and bound approvals. Beacon has none of those, so
- * porting the stages would have meant inventing the machinery underneath them.
- * What Beacon does have is stronger and already recorded: five agents that end
+ * with claims, review tasks and bound approvals. Beacon has none of those — but
+ * it has six stages of its own that are just as real, so the card is re-staged
+ * rather than dropped. It sits in `components/Pipeline.tsx`.
+ *
+ * The claim beside it is the one this repository can make best: five agents
+ * that end
  * a scenario in byte-identical state and earn three different verdicts.
  *
  * Every figure is computed. The block removes itself if the runs ever stop
@@ -46,7 +50,8 @@ export function Hero() {
 
   return (
     <section id="top" className="pt-16 pb-[clamp(48px,6vw,88px)]">
-      <div className="b-measure">
+      <div className="b-measure grid items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+        <div>
         <p className="b-eyebrow inline-flex items-center rounded-full border border-b-src/30 px-3 py-1.5 text-b-src">
           Protocol-neutral trial lab
         </p>
@@ -83,10 +88,13 @@ export function Hero() {
           </a>
         </div>
 
-        <p className="mt-8 font-b-mono text-[11.5px] text-b-faint">
-          {facts.scenarios} scenarios · {facts.subjects} adversarial subjects · every fixture
-          synthetic
-        </p>
+          <p className="mt-8 font-b-mono text-[11.5px] text-b-faint">
+            {facts.scenarios} scenarios · {facts.subjects} adversarial subjects · every fixture
+            synthetic
+          </p>
+        </div>
+
+        <Pipeline />
       </div>
     </section>
   );

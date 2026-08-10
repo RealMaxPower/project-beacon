@@ -228,6 +228,29 @@
 }
 
 /*
+ * One reveal, and it changes nothing but opacity.
+ *
+ * A transform would move the element's rect while it played, and the layout
+ * audit screenshots at an arbitrary moment — an animation that changes
+ * geometry turns that audit into a coin toss. Fading leaves every box where it
+ * will end up, so the still render, the reduced-motion render and the finished
+ * animation are the same picture. `both` holds the end state; there is no loop
+ * and no timer anywhere.
+ */
+@keyframes b-stage-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.b-stage {
+  animation: b-stage-in 420ms ease-out both;
+}
+
+/*
  * This design does not inherit the first one's reduced-motion block, so it
  * declares its own. The rule is narrower than it reads: it stops CSS
  * animation, transition and smooth scrolling, and cannot reach a JS timer, an
