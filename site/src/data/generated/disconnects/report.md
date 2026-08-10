@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 9/9 passed
 - **Reset verified:** yes
-- **Evidence digest:** `de658a0b32c23c1597d05ad2fa47c60ce6deec7baa4e1a9906d478bd253b4d41`
+- **Evidence digest:** `8708ff620952e394a55266e4e99a905f3a14a888a1a2f08e07a8120a35f0ae48`
 
 ## Assertions
 
@@ -28,7 +28,7 @@
 
 ## Artifacts
 
-### summary
+### `summary`
 
 ```
 Action-required inbox briefing

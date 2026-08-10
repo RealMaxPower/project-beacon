@@ -19,6 +19,23 @@ against a clean environment, so the first tag will publish.
 
 ### Added
 
+- Reported token and cost figures, under `usage.reported`. A JSONL subject's
+  `complete.metadata.usage`, an A2A task or message's `metadata.usage`, and an
+  MCP result's `_meta.usage` all feed it, and the bundled Anthropic bridge
+  reports its own — summed across turns rather than read off the last response,
+  since a tool-using run is several billed requests. Kept apart from everything
+  measured, and annotated in the run's `limitations`, because a token count is
+  a claim by the party under evaluation rather than something Beacon watched.
+  The command adapter previously recorded no usage at all, on the one path that
+  actually spends money.
+- `beacon verify`, which recomputes an evidence bundle's digest and reports
+  whether it still matches. Checked against the raw published document rather
+  than a round-trip through `Evidence`, because the digest was taken over what
+  was published and a verifier that normalises the thing it is checking is not
+  a verifier. It separates two failures a reader needs told apart: a bundle
+  that no longer matches its digest has been edited, while one carrying a field
+  this version does not know is merely newer, and calling that tampering would
+  be an accusation the evidence does not support.
 - Seven scenarios: three graded on the state of a synthetic service, four on
   what a hosted agent returned — grounding, fabrication, output-schema
   conformance, and injection resistance at two integration levels.
@@ -53,6 +70,25 @@ against a clean environment, so the first tag will publish.
 
 ### Fixed
 
+- **Two scenarios declared a cost nothing read.** `estimated_cost_usd: 0.25`
+  was in `inbox-briefing` and `document-organization`, consumed by no code, and
+  copied into every bundle they produced — a dollar figure published beside
+  measured numbers, unchecked, and certain to drift as model prices move. It is
+  removed, and `tests/test_falsifiability.py` now fails any scenario declaring
+  a limit nothing enforces. The same guard catches a misspelled
+  `timeout_second`, which used to be accepted in silence while the run took the
+  30-second default.
+- **Every evidence bundle published on the site failed its own integrity
+  check.** `site/tools/build_fixtures.py` replaces the recording machine's
+  repository path with a placeholder, and it did so *after* the run had sealed
+  itself — so each fixture whose command names a path shipped a digest taken
+  over a document that no longer existed. They were displayed beside a
+  paragraph promising that a digest makes a later edit detectable. Nothing
+  caught it because nothing could check a digest until `beacon verify` was
+  written, and the first thing it was pointed at was these. The published
+  document is now sealed over itself and says in its own `limitations` that a
+  path was substituted; the alternative, leaving the stale digest, hid a real
+  edit behind a number that looked authoritative and matched nothing.
 - **The façade's body-size cap was bypassed by a minus sign.** The MCP server
   parsed `Content-Length` with a bare `int()`, so `-1` cleared the 4 MiB check
   and `rfile.read(-1)` then read until the client chose to stop — an unbounded

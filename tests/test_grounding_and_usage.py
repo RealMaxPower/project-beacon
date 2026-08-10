@@ -174,6 +174,87 @@ class UsageTests(unittest.TestCase):
         self.assertFalse(usage.calls[0].ok)
 
 
+class ReportedUsageTests(unittest.TestCase):
+    """
+    A subject may say what it spent. Beacon cannot check it, so the whole
+    design question is where that number is allowed to sit.
+
+    It sits under `reported`, apart from everything measured, because the
+    party supplying it is the party being evaluated. Anything that blurs that
+    line makes the bundle claim more than it knows.
+    """
+
+    def test_a_reported_figure_never_lands_among_the_measured_ones(self) -> None:
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": 900})
+        summary = usage.summary()
+        self.assertEqual(summary["calls"], 0)
+        self.assertEqual(summary["reported"]["totals"]["input_tokens"], 900)
+
+    def test_the_summary_carries_the_caveat_with_the_number(self) -> None:
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": 5})
+        self.assertIn("cannot check them", usage.summary()["reported"]["note"])
+
+    def test_nothing_reported_means_no_key_rather_than_zero(self) -> None:
+        """
+        A run that spent nothing and a run that never said must not read the
+        same. Zero is a measurement; absence is the honest answer here.
+        """
+        self.assertNotIn("reported", UsageRecorder().summary())
+
+    def test_figures_from_several_sources_are_summed(self) -> None:
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": 10, "output_tokens": 1})
+        usage.report("a2a", {"input_tokens": 5, "output_tokens": 2})
+        totals = usage.summary()["reported"]["totals"]
+        self.assertEqual(totals["input_tokens"], 15)
+        self.assertEqual(totals["output_tokens"], 3)
+
+    def test_every_claim_keeps_its_source(self) -> None:
+        """Summing hides who said what; the entries keep it."""
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": 10})
+        usage.report("mcp", {"input_tokens": 5})
+        self.assertEqual(
+            [entry["source"] for entry in usage.summary()["reported"]["entries"]],
+            ["subject", "mcp"],
+        )
+
+    def test_a_boolean_is_not_counted_as_a_token(self) -> None:
+        """
+        `True` is an `int` in Python, so a flag named like a count would add 1
+        to a total and nothing would look wrong.
+        """
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": True})
+        self.assertEqual(usage.summary()["reported"]["totals"], {})
+
+    def test_an_unrecognised_field_is_kept_but_not_totalled(self) -> None:
+        usage = UsageRecorder()
+        usage.report("subject", {"input_tokens": 7, "model": "some-model"})
+        reported = usage.summary()["reported"]
+        self.assertEqual(reported["totals"], {"input_tokens": 7})
+        self.assertEqual(reported["entries"][0]["model"], "some-model")
+
+    def test_nothing_usable_is_not_recorded_as_a_claim(self) -> None:
+        usage = UsageRecorder()
+        for value in (None, {}, "tokens", [1, 2], {"nested": {"deep": 1}}):
+            with self.subTest(value=value):
+                self.assertFalse(usage.report("subject", value))
+        self.assertEqual(usage.reported, ())
+
+    def test_a_reported_figure_does_not_consume_the_call_budget(self) -> None:
+        """
+        The budget bounds what Beacon causes. A subject that reports more spend
+        must not be able to end its own run by saying so.
+        """
+        usage = UsageRecorder(max_calls=1)
+        for _ in range(5):
+            usage.report("subject", {"input_tokens": 100})
+        usage.check()
+
+
 class GroundingScenarioTests(unittest.TestCase):
     def test_the_scenario_is_valid_and_declares_a_budget(self) -> None:
         scenario = Scenario.load(SCENARIO)

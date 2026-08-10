@@ -39,7 +39,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from beacon.adapters import JSONLCommandAdapter, ReferenceInboxAdapter  # noqa: E402
-from beacon.models import Scenario  # noqa: E402
+from beacon.models import Scenario, canonical_digest  # noqa: E402
 from beacon.runner import run_scenario  # noqa: E402
 from beacon.services import registered_services  # noqa: E402
 
@@ -209,6 +209,36 @@ def _scrub(value: Any) -> Any:
     return value
 
 
+def _reseal(evidence: dict[str, Any]) -> dict[str, Any]:
+    """
+    Re-digest a bundle after the recording machine's path has been scrubbed.
+
+    `_scrub` runs after the run has already sealed itself, so every fixture
+    whose command names a path used to ship a digest taken over a document that
+    no longer existed. `beacon verify` reported them MODIFIED — correctly, and
+    embarrassingly, since the page displaying them says a digest makes an edit
+    detectable. Publishing a hash that does not match the thing beside it
+    teaches a reader that the check is decorative.
+
+    So the published document is sealed over itself, and says in its own
+    `limitations` that it was edited and why. The alternative — leaving the
+    stale digest — hides the edit behind a number nobody could check until
+    there was a command to check it with.
+    """
+    sealed = dict(evidence)
+    limitations = list(sealed.get("limitations", []))
+    limitations.append(
+        f"The recording machine's repository path was replaced with "
+        f"{PLACEHOLDER!r} before publication, so this bundle is not "
+        f"byte-identical to the one the run wrote. Its digest was recomputed "
+        f"over the published document."
+    )
+    sealed["limitations"] = limitations
+    sealed["digest"] = ""
+    sealed["digest"] = canonical_digest(sealed)
+    return sealed
+
+
 def _strip_volatile(value: Any) -> Any:
     """Drop the fields that cannot repeat, so --check compares the rest."""
     if isinstance(value, list):
@@ -269,11 +299,10 @@ def _record(spec: dict[str, str], into: Path) -> dict[str, Any]:
     run_dir = into / spec["key"]
     for name in ("evidence.json", "events.json"):
         path = run_dir / name
-        path.write_text(
-            json.dumps(_scrub(json.loads(path.read_text(encoding="utf-8"))), indent=2)
-            + "\n",
-            encoding="utf-8",
-        )
+        document = _scrub(json.loads(path.read_text(encoding="utf-8")))
+        if name == "evidence.json":
+            document = _reseal(document)
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     report = run_dir / "report.md"
     report.write_text(_scrub(report.read_text(encoding="utf-8")), encoding="utf-8")
 

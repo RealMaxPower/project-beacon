@@ -34,10 +34,30 @@ class _Block:
         self.__dict__.update(fields)
 
 
+class _Usage:
+    """
+    What the real SDK returns on every response.
+
+    The counts differ per turn on purpose. A bridge that reported the last
+    response's usage instead of the sum would still look right against a
+    transcript where every turn cost the same, so they do not.
+    """
+
+    def __init__(self, input_tokens: int, output_tokens: int) -> None:
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+
+
 class _Response:
-    def __init__(self, content: list[_Block], stop_reason: str) -> None:
+    def __init__(
+        self,
+        content: list[_Block],
+        stop_reason: str,
+        usage: _Usage | None = None,
+    ) -> None:
         self.content = content
         self.stop_reason = stop_reason
+        self.usage = usage or _Usage(0, 0)
 
 
 def _tool_use(call_id: str, name: str, arguments: dict[str, Any]) -> _Block:
@@ -48,7 +68,12 @@ class _Messages:
     def __init__(self) -> None:
         self._turn = 0
 
-    def create(self, **_: Any) -> _Response:
+    def create(self, **kwargs: Any) -> _Response:
+        response = self._respond(**kwargs)
+        response.usage = _Usage(self._turn * 100, self._turn * 10)
+        return response
+
+    def _respond(self, **_: Any) -> _Response:
         self._turn += 1
 
         if self._turn == 1:

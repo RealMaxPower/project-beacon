@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.2",
   "run_id": "extracts_only_what_is_there",
-  "started_at": "2026-08-03T18:39:42.197944+00:00",
-  "completed_at": "2026-08-03T18:39:42.231647+00:00",
+  "started_at": "2026-08-10T01:18:41.694749+00:00",
+  "completed_at": "2026-08-10T01:18:41.731403+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-grounding",
@@ -172,7 +172,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-03T18:39:42.197960+00:00",
+      "timestamp": "2026-08-10T01:18:41.694760+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -184,7 +184,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-03T18:39:42.197964+00:00",
+      "timestamp": "2026-08-10T01:18:41.694765+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -200,7 +200,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-03T18:39:42.227649+00:00",
+      "timestamp": "2026-08-10T01:18:41.727291+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -230,7 +230,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-03T18:39:42.231519+00:00",
+      "timestamp": "2026-08-10T01:18:41.731198+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -278,7 +278,8 @@
   "limitations": [
     "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
     "The MVP command adapter uses process and working-directory isolation, not a hardened container or VM boundary.",
-    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations."
+    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
+    "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "8916a81c66b3aa54181c18e6db9c6ab6ecee635f3b793757fe63b1d3f8586f01"
+  "digest": "5912a63f19744b0a77774b320b71901422c39f95d8b63922129624c98a337c9c"
 }

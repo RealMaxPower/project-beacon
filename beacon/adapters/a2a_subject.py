@@ -216,6 +216,17 @@ class A2ASubjectAdapter:
         result = response.get("result") or response.get("task") or {}
         stored = self._store_artifacts(context, result)
 
+        # A2A's `metadata` is the specification's extension point, and a usage
+        # key inside it is where an agent that wants to declare its spend puts
+        # it. Beacon read neither the task's nor the message's, so an agent
+        # that volunteered the one number a caller most wants was answered with
+        # silence. Both are checked because a Message-shaped reply has no task.
+        for carrier in (result, result.get("message")):
+            if isinstance(carrier, dict):
+                metadata = carrier.get("metadata")
+                if isinstance(metadata, dict):
+                    context.usage.report("a2a", metadata.get("usage"))
+
         # `message/send` may answer with a Task or with a Message. A Message
         # has no status and needs none: it is the whole reply, already final.
         # Reading a missing status as an unrecognised state reported a

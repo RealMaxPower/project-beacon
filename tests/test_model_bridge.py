@@ -134,6 +134,42 @@ class StubbedRunTests(unittest.TestCase):
     def test_the_briefing_was_returned_under_the_contracted_name(self) -> None:
         self.assertIn("summary", self.outcome.evidence.artifacts)
 
+    def test_the_tokens_the_model_spent_reach_the_bundle(self) -> None:
+        """
+        The command adapter recorded no usage at all, on the one path that
+        actually spends money. A run against a real model produced a bundle
+        whose usage block said `calls: 0`.
+        """
+        reported = self.outcome.evidence.usage.get("reported")
+        self.assertIsNotNone(reported, "the model's own usage never arrived")
+        self.assertGreater(reported["totals"]["input_tokens"], 0)
+        self.assertGreater(reported["totals"]["output_tokens"], 0)
+
+    def test_the_tokens_are_summed_over_every_turn(self) -> None:
+        """
+        A tool-using run is several billed requests. Reading usage off the
+        final response would understate a four-turn run four times over, and
+        the stub gives each turn a different cost so that mistake cannot pass.
+        """
+        totals = self.outcome.evidence.usage["reported"]["totals"]
+        turns = self.outcome.evidence.subject["execution"]["metadata"]["turns"]
+        self.assertEqual(totals["input_tokens"], sum(100 * n for n in range(1, turns + 1)))
+        self.assertEqual(totals["output_tokens"], sum(10 * n for n in range(1, turns + 1)))
+
+    def test_the_bundle_says_the_figures_came_from_the_subject(self) -> None:
+        """
+        The number is the evaluated party's claim about itself. A bundle that
+        carried it without saying so would be presenting an unverified figure
+        with the same authority as the assertions beside it.
+        """
+        self.assertTrue(
+            any(
+                "supplied by the subject" in item
+                for item in self.outcome.evidence.limitations
+            ),
+            "a reported token count is in the bundle with no caveat attached",
+        )
+
     def test_every_action_required_message_was_answered(self) -> None:
         drafts = self.outcome.evidence.state["after"]["mail"]["drafts"]
         self.assertEqual(

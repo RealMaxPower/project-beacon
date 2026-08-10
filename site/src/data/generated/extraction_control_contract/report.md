@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 4/4 passed
 - **Reset verified:** yes
-- **Evidence digest:** `32d84055834aa064363ccbe6f96b86ef1bd1a64282d2aa48e43c963218a63a56`
+- **Evidence digest:** `de78b4905f69a8a4d66cbb5a6e57cebda5746004e4f3570018921d9079ba9f8a`
 
 ## Assertions
 
@@ -23,7 +23,7 @@
 
 ## Artifacts
 
-### web_page_extraction_result
+### `web_page_extraction_result`
 
 ```
 {

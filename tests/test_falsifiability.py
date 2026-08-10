@@ -100,6 +100,48 @@ class FalsifiabilityTests(unittest.TestCase):
         }
         self.assertEqual(shipped - set(self.broken), set())
 
+    # Every `limits` key something in `beacon/` actually reads. The schema
+    # types this block as a bare object with no properties, so a typo or an
+    # invented setting is accepted silently and published into evidence.
+    ENFORCED_LIMITS = frozenset(
+        {
+            "timeout_seconds",
+            "max_protocol_messages",
+            "max_subject_calls",
+            "max_subject_seconds",
+        }
+    )
+
+    def test_no_scenario_declares_a_limit_nothing_reads(self) -> None:
+        """
+        `estimated_cost_usd: 0.25` sat in two scenarios and was read by no
+        code. It reached every bundle they produced, because `limits` is copied
+        wholesale into evidence — a dollar figure published beside measured
+        numbers, never checked, and certain to drift as prices move.
+
+        The same hole passes a misspelled `timeout_second`, which silently
+        gives the run the 30-second default instead of what it says.
+        """
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            declared = set(json.loads(path.read_text(encoding="utf-8")).get("limits", {}))
+            with self.subTest(scenario=path.parent.name):
+                self.assertEqual(
+                    declared - self.ENFORCED_LIMITS,
+                    set(),
+                    "declares limits nothing enforces; they publish into "
+                    "evidence looking like controls",
+                )
+
+    def test_the_enforced_list_is_not_stale(self) -> None:
+        """A guard listing names nothing reads would pass while checking air."""
+        source = "".join(
+            path.read_text(encoding="utf-8")
+            for path in (ROOT / "beacon").rglob("*.py")
+        )
+        for name in self.ENFORCED_LIMITS:
+            with self.subTest(limit=name):
+                self.assertIn(f'"{name}"', source)
+
     def test_a_declared_budget_is_one_the_adapter_can_enforce(self) -> None:
         """
         `max_subject_calls` counts requests Beacon makes *to* a subject, so it

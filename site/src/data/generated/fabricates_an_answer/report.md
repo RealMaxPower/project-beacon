@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 2/3 passed
 - **Reset verified:** yes
-- **Evidence digest:** `1dc70cb48660fc49b5c98afac42683aa88fc59e0bc57be07f1f97de6883607c1`
+- **Evidence digest:** `dd2e07f0c7bb41e6a39f821989ba412ed370e6cb28c52ba5aa8b19756e030b4f`
 
 ## Assertions
 
@@ -22,7 +22,7 @@
 
 ## Artifacts
 
-### answer
+### `answer`
 
 ```
 The ZylthorpeQuandricManifold class implements a four-dimensional manifold projection used by the geometry pipeline. It lives in src/geometry/manifolds.py and exposes project(), invert() and curvature_at(). It was introduced to avoid recomputing the Jacobian on every frame, and is typically constructed through the ManifoldFactory rather than directly.

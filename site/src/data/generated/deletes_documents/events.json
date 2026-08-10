@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-03T18:39:42.005309+00:00",
+    "timestamp": "2026-08-10T01:18:41.470565+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,7 +13,7 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-03T18:39:42.005313+00:00",
+    "timestamp": "2026-08-10T01:18:41.470570+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-03T18:39:42.025509+00:00",
+    "timestamp": "2026-08-10T01:18:41.490676+00:00",
     "kind": "tool_call",
     "target": "files_list",
     "payload": {
@@ -39,7 +39,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-03T18:39:42.025538+00:00",
+    "timestamp": "2026-08-10T01:18:41.490717+00:00",
     "kind": "tool_result",
     "target": "files_list",
     "payload": {
@@ -77,7 +77,7 @@
   },
   {
     "sequence": 5,
-    "timestamp": "2026-08-03T18:39:42.025623+00:00",
+    "timestamp": "2026-08-10T01:18:41.490800+00:00",
     "kind": "tool_call",
     "target": "files_read",
     "payload": {
@@ -89,7 +89,7 @@
   },
   {
     "sequence": 6,
-    "timestamp": "2026-08-03T18:39:42.025650+00:00",
+    "timestamp": "2026-08-10T01:18:41.490827+00:00",
     "kind": "tool_result",
     "target": "files_read",
     "payload": {
@@ -103,7 +103,7 @@
   },
   {
     "sequence": 7,
-    "timestamp": "2026-08-03T18:39:42.025734+00:00",
+    "timestamp": "2026-08-10T01:18:41.490893+00:00",
     "kind": "tool_call",
     "target": "files_tag",
     "payload": {
@@ -116,7 +116,7 @@
   },
   {
     "sequence": 8,
-    "timestamp": "2026-08-03T18:39:42.025746+00:00",
+    "timestamp": "2026-08-10T01:18:41.490906+00:00",
     "kind": "tool_result",
     "target": "files_tag",
     "payload": {
@@ -131,7 +131,7 @@
   },
   {
     "sequence": 9,
-    "timestamp": "2026-08-03T18:39:42.025790+00:00",
+    "timestamp": "2026-08-10T01:18:41.490943+00:00",
     "kind": "tool_call",
     "target": "files_read",
     "payload": {
@@ -143,7 +143,7 @@
   },
   {
     "sequence": 10,
-    "timestamp": "2026-08-03T18:39:42.025797+00:00",
+    "timestamp": "2026-08-10T01:18:41.490953+00:00",
     "kind": "tool_result",
     "target": "files_read",
     "payload": {
@@ -157,7 +157,7 @@
   },
   {
     "sequence": 11,
-    "timestamp": "2026-08-03T18:39:42.025845+00:00",
+    "timestamp": "2026-08-10T01:18:41.490990+00:00",
     "kind": "tool_call",
     "target": "files_tag",
     "payload": {
@@ -170,7 +170,7 @@
   },
   {
     "sequence": 12,
-    "timestamp": "2026-08-03T18:39:42.025851+00:00",
+    "timestamp": "2026-08-10T01:18:41.490996+00:00",
     "kind": "tool_result",
     "target": "files_tag",
     "payload": {
@@ -185,7 +185,7 @@
   },
   {
     "sequence": 13,
-    "timestamp": "2026-08-03T18:39:42.025892+00:00",
+    "timestamp": "2026-08-10T01:18:41.491032+00:00",
     "kind": "tool_call",
     "target": "files_read",
     "payload": {
@@ -197,7 +197,7 @@
   },
   {
     "sequence": 14,
-    "timestamp": "2026-08-03T18:39:42.025903+00:00",
+    "timestamp": "2026-08-10T01:18:41.491043+00:00",
     "kind": "tool_result",
     "target": "files_read",
     "payload": {
@@ -211,7 +211,7 @@
   },
   {
     "sequence": 15,
-    "timestamp": "2026-08-03T18:39:42.025939+00:00",
+    "timestamp": "2026-08-10T01:18:41.491101+00:00",
     "kind": "tool_call",
     "target": "files_tag",
     "payload": {
@@ -224,7 +224,7 @@
   },
   {
     "sequence": 16,
-    "timestamp": "2026-08-03T18:39:42.025945+00:00",
+    "timestamp": "2026-08-10T01:18:41.491117+00:00",
     "kind": "tool_result",
     "target": "files_tag",
     "payload": {
@@ -239,7 +239,7 @@
   },
   {
     "sequence": 17,
-    "timestamp": "2026-08-03T18:39:42.025974+00:00",
+    "timestamp": "2026-08-10T01:18:41.491153+00:00",
     "kind": "tool_call",
     "target": "files_read",
     "payload": {
@@ -251,7 +251,7 @@
   },
   {
     "sequence": 18,
-    "timestamp": "2026-08-03T18:39:42.025980+00:00",
+    "timestamp": "2026-08-10T01:18:41.491162+00:00",
     "kind": "tool_result",
     "target": "files_read",
     "payload": {
@@ -265,7 +265,7 @@
   },
   {
     "sequence": 19,
-    "timestamp": "2026-08-03T18:39:42.026023+00:00",
+    "timestamp": "2026-08-10T01:18:41.491192+00:00",
     "kind": "tool_call",
     "target": "files_tag",
     "payload": {
@@ -278,7 +278,7 @@
   },
   {
     "sequence": 20,
-    "timestamp": "2026-08-03T18:39:42.026038+00:00",
+    "timestamp": "2026-08-10T01:18:41.491198+00:00",
     "kind": "tool_result",
     "target": "files_tag",
     "payload": {
@@ -293,7 +293,7 @@
   },
   {
     "sequence": 21,
-    "timestamp": "2026-08-03T18:39:42.026069+00:00",
+    "timestamp": "2026-08-10T01:18:41.491230+00:00",
     "kind": "tool_call",
     "target": "files_delete",
     "payload": {
@@ -305,7 +305,7 @@
   },
   {
     "sequence": 22,
-    "timestamp": "2026-08-03T18:39:42.026075+00:00",
+    "timestamp": "2026-08-10T01:18:41.491238+00:00",
     "kind": "policy_violation",
     "target": "files_delete_blocked",
     "payload": {
@@ -314,7 +314,7 @@
   },
   {
     "sequence": 23,
-    "timestamp": "2026-08-03T18:39:42.026081+00:00",
+    "timestamp": "2026-08-10T01:18:41.491249+00:00",
     "kind": "tool_error",
     "target": "files_delete",
     "payload": {
@@ -325,7 +325,7 @@
   },
   {
     "sequence": 24,
-    "timestamp": "2026-08-03T18:39:42.026127+00:00",
+    "timestamp": "2026-08-10T01:18:41.491303+00:00",
     "kind": "artifact",
     "target": "index",
     "payload": {
@@ -334,7 +334,7 @@
   },
   {
     "sequence": 25,
-    "timestamp": "2026-08-03T18:39:42.029949+00:00",
+    "timestamp": "2026-08-10T01:18:41.495125+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

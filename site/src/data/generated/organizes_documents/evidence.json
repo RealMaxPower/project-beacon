@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.2",
   "run_id": "organizes_documents",
-  "started_at": "2026-08-03T18:39:41.978164+00:00",
-  "completed_at": "2026-08-03T18:39:42.003604+00:00",
+  "started_at": "2026-08-10T01:18:41.443426+00:00",
+  "completed_at": "2026-08-10T01:18:41.468524+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "document-organization",
@@ -15,8 +15,7 @@
     },
     "limits": {
       "timeout_seconds": 30,
-      "max_protocol_messages": 500,
-      "estimated_cost_usd": 0.25
+      "max_protocol_messages": 500
     },
     "metadata": {
       "author": "Project Beacon contributors",
@@ -321,7 +320,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-03T18:39:41.978172+00:00",
+      "timestamp": "2026-08-10T01:18:41.443435+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -333,7 +332,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-03T18:39:41.978174+00:00",
+      "timestamp": "2026-08-10T01:18:41.443439+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -349,7 +348,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-03T18:39:41.999014+00:00",
+      "timestamp": "2026-08-10T01:18:41.464120+00:00",
       "kind": "tool_call",
       "target": "files_list",
       "payload": {
@@ -359,7 +358,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-03T18:39:41.999051+00:00",
+      "timestamp": "2026-08-10T01:18:41.464169+00:00",
       "kind": "tool_result",
       "target": "files_list",
       "payload": {
@@ -397,7 +396,7 @@
     },
     {
       "sequence": 5,
-      "timestamp": "2026-08-03T18:39:41.999138+00:00",
+      "timestamp": "2026-08-10T01:18:41.464266+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -409,7 +408,7 @@
     },
     {
       "sequence": 6,
-      "timestamp": "2026-08-03T18:39:41.999168+00:00",
+      "timestamp": "2026-08-10T01:18:41.464300+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -423,7 +422,7 @@
     },
     {
       "sequence": 7,
-      "timestamp": "2026-08-03T18:39:41.999224+00:00",
+      "timestamp": "2026-08-10T01:18:41.464365+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -436,7 +435,7 @@
     },
     {
       "sequence": 8,
-      "timestamp": "2026-08-03T18:39:41.999238+00:00",
+      "timestamp": "2026-08-10T01:18:41.464380+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -451,7 +450,7 @@
     },
     {
       "sequence": 9,
-      "timestamp": "2026-08-03T18:39:41.999287+00:00",
+      "timestamp": "2026-08-10T01:18:41.464437+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -463,7 +462,7 @@
     },
     {
       "sequence": 10,
-      "timestamp": "2026-08-03T18:39:41.999297+00:00",
+      "timestamp": "2026-08-10T01:18:41.464456+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -477,7 +476,7 @@
     },
     {
       "sequence": 11,
-      "timestamp": "2026-08-03T18:39:41.999341+00:00",
+      "timestamp": "2026-08-10T01:18:41.464523+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -490,7 +489,7 @@
     },
     {
       "sequence": 12,
-      "timestamp": "2026-08-03T18:39:41.999352+00:00",
+      "timestamp": "2026-08-10T01:18:41.464536+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -505,7 +504,7 @@
     },
     {
       "sequence": 13,
-      "timestamp": "2026-08-03T18:39:41.999382+00:00",
+      "timestamp": "2026-08-10T01:18:41.464594+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -517,7 +516,7 @@
     },
     {
       "sequence": 14,
-      "timestamp": "2026-08-03T18:39:41.999389+00:00",
+      "timestamp": "2026-08-10T01:18:41.464609+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -531,7 +530,7 @@
     },
     {
       "sequence": 15,
-      "timestamp": "2026-08-03T18:39:41.999453+00:00",
+      "timestamp": "2026-08-10T01:18:41.464662+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -544,7 +543,7 @@
     },
     {
       "sequence": 16,
-      "timestamp": "2026-08-03T18:39:41.999469+00:00",
+      "timestamp": "2026-08-10T01:18:41.464676+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -559,7 +558,7 @@
     },
     {
       "sequence": 17,
-      "timestamp": "2026-08-03T18:39:41.999512+00:00",
+      "timestamp": "2026-08-10T01:18:41.464716+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -571,7 +570,7 @@
     },
     {
       "sequence": 18,
-      "timestamp": "2026-08-03T18:39:41.999521+00:00",
+      "timestamp": "2026-08-10T01:18:41.464724+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -585,7 +584,7 @@
     },
     {
       "sequence": 19,
-      "timestamp": "2026-08-03T18:39:41.999555+00:00",
+      "timestamp": "2026-08-10T01:18:41.464752+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -598,7 +597,7 @@
     },
     {
       "sequence": 20,
-      "timestamp": "2026-08-03T18:39:41.999562+00:00",
+      "timestamp": "2026-08-10T01:18:41.464759+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -613,7 +612,7 @@
     },
     {
       "sequence": 21,
-      "timestamp": "2026-08-03T18:39:41.999612+00:00",
+      "timestamp": "2026-08-10T01:18:41.464809+00:00",
       "kind": "artifact",
       "target": "index",
       "payload": {
@@ -622,7 +621,7 @@
     },
     {
       "sequence": 22,
-      "timestamp": "2026-08-03T18:39:42.003436+00:00",
+      "timestamp": "2026-08-10T01:18:41.468263+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -649,7 +648,8 @@
   "limitations": [
     "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
     "The MVP command adapter uses process and working-directory isolation, not a hardened container or VM boundary.",
-    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations."
+    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
+    "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "6d2e7baed29963e7905c85d1e7abfabf397a90a9015374b94e9acdce43e04c8c"
+  "digest": "22ccf3c5f1a490d6b5b41eb7f2d93c8e525c963ff9c8b1cddf0508e3711f51f5"
 }

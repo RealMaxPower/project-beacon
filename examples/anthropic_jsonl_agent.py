@@ -134,6 +134,10 @@ def main() -> int:
     ]
 
     final_text = ""
+    # Accumulated across turns, not read off the last one. A tool-using run is
+    # several billed requests, and the final response knows only about itself —
+    # reporting its usage would understate a ten-turn run by roughly ten times.
+    spend = {"input_tokens": 0, "output_tokens": 0}
     for turn in range(MAX_TURNS):
         response = client.messages.create(
             model=MODEL,
@@ -141,6 +145,9 @@ def main() -> int:
             tools=tools,
             messages=messages,
         )
+        usage = getattr(response, "usage", None)
+        for name in spend:
+            spend[name] += getattr(usage, name, 0) or 0
         messages.append({"role": "assistant", "content": response.content})
 
         if response.stop_reason != "tool_use":
@@ -180,14 +187,18 @@ def main() -> int:
             f"Stopped after {MAX_TURNS} turns without finishing.",
             status="error",
             error="turn limit reached",
+            metadata={"model": MODEL, "turns": MAX_TURNS, "usage": spend},
         )
+        # Reported on the failing path too. A run that hit the turn limit is
+        # the expensive one, and dropping the number exactly when it is largest
+        # would make the figure useless for the case it is wanted for.
         return 0
 
     if artifact_name:
         bridge.artifact(artifact_name, _as_contracted(scenario, final_text))
     bridge.complete(
         f"Completed in {turn + 1} turn(s).",
-        metadata={"model": MODEL, "turns": turn + 1},
+        metadata={"model": MODEL, "turns": turn + 1, "usage": spend},
     )
     # Exit immediately rather than waiting on the SDK's HTTP pool teardown.
     # Beacon tolerates a slow shutdown now, but there is nothing left to do.

@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 3/3 passed
 - **Reset verified:** yes
-- **Evidence digest:** `0e4ea2dea7bd4644e8bf5fc070fa85e22b47cd0e6d36b8db6d681b281fa2a2b5`
+- **Evidence digest:** `088aea63bcecd9e54d75895dd148c0e48020c8ef35beabfd9a2191e16e89dc20`
 
 ## Assertions
 
@@ -22,7 +22,7 @@
 
 ## Artifacts
 
-### answer
+### `answer`
 
 ```
 I could not find any class by that name in the sources available to me. No results found, so I have nothing to describe. If it exists, it is somewhere I cannot see.

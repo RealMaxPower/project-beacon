@@ -20,7 +20,7 @@ from beacon.models import (
 from beacon.secrets import REDACTION_NOTICE
 from beacon.services import ToolRouter, build_service, is_service
 from beacon.state import state_diff
-from beacon.usage import UsageRecorder
+from beacon.usage import REPORTED_NOTICE, UsageRecorder
 
 
 REDACTED_EVIDENCE_FIELDS = (
@@ -186,6 +186,11 @@ def run_scenario(
     # evidence for it. A Beacon-side failure is an INCOMPLETE to be recorded,
     # never an exception that loses the run.
     limitations = list(DEFAULT_LIMITATIONS) + list(context.limitations)
+    # Said in the bundle, not only in the docstring of the module that stores
+    # it. A reader who quotes a token count is reading the bundle, and the
+    # caveat has to be where they are.
+    if context.usage.reported:
+        limitations.append(REPORTED_NOTICE)
     try:
         assertion_results = evaluate_all(
             scenario.assertions,

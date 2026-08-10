@@ -175,8 +175,7 @@
   ],
   "limits": {
     "timeout_seconds": 30,
-    "max_protocol_messages": 500,
-    "estimated_cost_usd": 0.25
+    "max_protocol_messages": 500
   },
   "metadata": {
     "author": "Project Beacon contributors",

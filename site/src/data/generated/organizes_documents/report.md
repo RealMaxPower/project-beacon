@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 8/8 passed
 - **Reset verified:** yes
-- **Evidence digest:** `6d2e7baed29963e7905c85d1e7abfabf397a90a9015374b94e9acdce43e04c8c`
+- **Evidence digest:** `b7dc0afd3c1b6accf5b2602bf9710ca6e9ee82c44dea00fd375a0b26f03ccdbe`
 
 ## Assertions
 
@@ -27,7 +27,7 @@
 
 ## Artifacts
 
-### index
+### `index`
 
 ```
 Document index

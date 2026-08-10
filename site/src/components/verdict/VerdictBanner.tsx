@@ -168,8 +168,9 @@ export function VerdictBanner({ evidence, onInspect }: Props) {
       <div className="mt-5 border-t border-current/10 pt-4">
         <p className="font-mono text-[11px] break-all on-tint">digest {evidence.digest}</p>
         <p className="mt-1.5 text-[12px] leading-relaxed on-tint text-pretty">
-          An unsigned SHA-256 over the bundle. It makes a later edit detectable by anyone who
-          recomputes it — nothing here signs it, and no command ships yet that verifies one.
+          An unsigned SHA-256 over the bundle. <code>beacon verify</code> recomputes it, so an edit
+          made after the run is detectable. It is not a signature: anyone holding the file can
+          regenerate both, so it says nothing about where the bundle came from.
         </p>
       </div>
     </section>

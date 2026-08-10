@@ -113,6 +113,13 @@ class MCPToolSubjectAdapter:
             )
             return SubjectResult(status="error", error=str(exc))
 
+        # MCP carries server-supplied extras under `_meta`, which `_flatten`
+        # drops along with everything that is not the answer. A usage key there
+        # is the server declaring what the call cost it.
+        meta = result.get("_meta")
+        if isinstance(meta, dict):
+            context.usage.report("mcp", meta.get("usage"))
+
         text = self._flatten(result)
         context.add_artifact(self._artifact_name, text)
         context.recorder.record(

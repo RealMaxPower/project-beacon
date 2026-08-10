@@ -468,7 +468,11 @@ class QualifyingCaveatTests(unittest.TestCase):
         ("screens/marketing/HowItWorks.tsx", "level 4", "which rungs of the table are real"),
         ("screens/marketing/HowItWorks.tsx", "does not currently collect", "what levels 3-4 do not gather"),
         ("components/verdict/VerdictBanner.tsx", "unsigned", "that the digest is not a signature"),
-        ("components/verdict/VerdictBanner.tsx", "verifies", "that no command checks a digest yet"),
+        # `beacon verify` now exists, so "no command checks one yet" stopped
+        # being true and was replaced. What did not change is the limitation
+        # underneath it: recomputing a hash shows the file is intact, and
+        # nothing about who produced it.
+        ("components/verdict/VerdictBanner.tsx", "regenerate both", "that the digest proves no provenance"),
         ("screens/playground/ExportBundle.tsx", "exact-value", "that redaction is matching, not a guarantee"),
         ("components/shell/EmptyState.tsx", "mistaken for a finding", "why an empty screen stays empty"),
     )

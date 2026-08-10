@@ -108,7 +108,8 @@ verdict:
 | `report.md` | Human-readable report with the assertion table and state diff |
 
 Verdicts are `PASS`, `FAIL`, or `INCOMPLETE`. Each bundle carries its own
-`limitations` block and a SHA-256 digest, so a later edit is detectable.
+`limitations` block and a SHA-256 digest, so a later edit is detectable —
+`beacon verify <evidence.json>` recomputes it.
 
 **A passing report is evidence for one synthetic scenario and one
 configuration. It is not a safety certification.** Every bundle says so in its

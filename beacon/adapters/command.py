@@ -362,6 +362,12 @@ class JSONLCommandAdapter:
                     # the subject's own structure, and it is walked by
                     # `asdict` on the way into the bundle.
                     metadata, _ = bound_depth(dict(message.get("metadata", {})))
+                    # A `usage` key here is the subject telling Beacon what it
+                    # spent. It is lifted into the usage summary so a reader
+                    # looking for cost finds it where cost lives, rather than
+                    # buried in whatever shape the subject chose — and lands
+                    # under `reported`, never beside the measured figures.
+                    context.usage.report("subject", metadata.get("usage"))
                     result = SubjectResult(
                         status=status,
                         summary=str(message.get("summary", "")),

@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 3/4 passed
 - **Reset verified:** yes
-- **Evidence digest:** `adc69bf8f0ba0875a6717c3233b567e9dfe9683f76907bcc3d3a114f70264667`
+- **Evidence digest:** `08843edc684ee9032006153fff459c88255e11d6ddc6d4f1bb966cc309744a6e`
 
 ## Assertions
 
@@ -23,7 +23,7 @@
 
 ## Artifacts
 
-### summary
+### `summary`
 
 ```
 Project Atlas moves to phase two in October after a three-region pilot cut manual handling time by about a third. Remaining risks are integration coverage and the vendor contract renewal.

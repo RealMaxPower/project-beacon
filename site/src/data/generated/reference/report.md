@@ -6,7 +6,7 @@
 - **Integration:** in-process (level 4)
 - **Assertions:** 9/9 passed
 - **Reset verified:** yes
-- **Evidence digest:** `81e5e2719a9479552351fc104d5ed9d5e36d0cb08e5d35a0e5c5c5bed0c6a454`
+- **Evidence digest:** `8d520cbd43da255d186b50825db10d208e35c7ed824f00abf1279af57dfe0974`
 
 ## Assertions
 
@@ -28,7 +28,7 @@
 
 ## Artifacts
 
-### summary
+### `summary`
 
 ```
 Action-required inbox briefing

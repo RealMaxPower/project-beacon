@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.2",
   "run_id": "breaks_the_output_contract",
-  "started_at": "2026-08-03T18:39:42.169003+00:00",
-  "completed_at": "2026-08-03T18:39:42.194808+00:00",
+  "started_at": "2026-08-10T01:18:41.647232+00:00",
+  "completed_at": "2026-08-10T01:18:41.693426+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-contract",
@@ -181,7 +181,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-03T18:39:42.169014+00:00",
+      "timestamp": "2026-08-10T01:18:41.647251+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -193,7 +193,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-03T18:39:42.169018+00:00",
+      "timestamp": "2026-08-10T01:18:41.647258+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -209,7 +209,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-03T18:39:42.190761+00:00",
+      "timestamp": "2026-08-10T01:18:41.689634+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -235,7 +235,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-03T18:39:42.194371+00:00",
+      "timestamp": "2026-08-10T01:18:41.693219+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -279,7 +279,8 @@
   "limitations": [
     "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
     "The MVP command adapter uses process and working-directory isolation, not a hardened container or VM boundary.",
-    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations."
+    "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
+    "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "11413a5b064f396a4c8c7b555b03d173dec0d397a35056d8b5c4fdac00dca6ee"
+  "digest": "47ab1b97a1b3c9d0bf85c619d8094e303f8b55def8bec2e9dbb26effdb890745"
 }
