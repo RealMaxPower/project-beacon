@@ -191,6 +191,39 @@ if (!paint) {
 }
 
 /*
+ * And that it wears this design's type and accent, not the first design's.
+ *
+ * These two are scoped rules rather than aliases, hung off an attribute set in
+ * `SiteB.tsx`. Delete the attribute and nothing breaks, nothing throws, and the
+ * screen quietly reverts to the other site's voice — headings back to Inter and
+ * every primary button back to an inverted white chip. That is precisely the
+ * failure a screenshot review stops catching once the page is familiar.
+ */
+const brand = await page.evaluate(() => {
+  const h = document.querySelector("[data-shared-screen] h1");
+  const btn = document.querySelector("[data-shared-screen] .bg-text");
+  const probe = document.createElement("span");
+  probe.style.color = getComputedStyle(document.documentElement).getPropertyValue("--b-src");
+  document.body.appendChild(probe);
+  const src = getComputedStyle(probe).color;
+  probe.remove();
+  return {
+    face: h ? getComputedStyle(h).fontFamily : null,
+    fill: btn ? getComputedStyle(btn).backgroundColor : null,
+    src,
+  };
+});
+if (!brand.face || !brand.face.includes("Archivo")) {
+  console.log(`  FAIL the shared playground's heading is not in Archivo: ${brand.face}`);
+  failures += 1;
+} else if (brand.fill !== brand.src) {
+  console.log(`  FAIL its primary action is not --b-src: ${brand.fill} vs ${brand.src}`);
+  failures += 1;
+} else {
+  console.log(`  ok   it wears this design's type and accent: Archivo, ${brand.fill}`);
+}
+
+/*
  * A download uses a blob: URL. Nothing in the policy should stop it.
  *
  * Wrapped, because every step here is a click on something the previous step

@@ -49,7 +49,7 @@ export function SiteB() {
     <>
       <Header route={location.route} />
       {location.route === "playground" ? (
-        <main>
+        <main data-shared-screen>
           <Playground scenarioId={location.param} />
         </main>
       ) : location.route === B_NOT_FOUND ? (

@@ -163,6 +163,17 @@
   --color-fail-tint: color-mix(in oklab, var(--b-bad) 12%, var(--b-bg));
   --color-inc-tint: color-mix(in oklab, var(--b-review) 12%, var(--b-bg));
 
+  /*
+   * The first design's radii, at this design's scale. Its card is 8px and its
+   * row 5px; this design's panels are 12 and its rows and tiles 8, and the
+   * shared playground reaches for `rounded-card` twenty-one times — so leaving
+   * these alone would have left one screen rounded to a different system than
+   * every other on the site.
+   */
+  --radius-chip: 4px;
+  --radius-row: 8px;
+  --radius-card: 12px;
+
   --font-b-display: Archivo, system-ui, sans-serif;
   --font-b-ui: Inter, system-ui, sans-serif;
   --font-b-mono: "Azeret Mono", ui-monospace, monospace;
@@ -253,6 +264,64 @@
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+  }
+
+  /*
+   * The shared playground, in this design's voice.
+   *
+   * Everything above is a token — a name the shared files already reach for,
+   * pointed somewhere new. Type is the one thing that could not be done that
+   * way: those headings are `text-2xl font-medium`, generic utilities with no
+   * token behind them, so they inherit the body face and arrive in Inter while
+   * every heading elsewhere on this site is Archivo. That is the difference a
+   * reader actually notices between the two designs.
+   *
+   * So this is a scoped rule rather than an alias, and the scope is an
+   * attribute set in `SiteB.tsx` — this design marking a screen it borrowed.
+   * Nothing is edited in the shared files, which is the whole point of them.
+   *
+   * Weight 600 rather than the 500 the markup asks for, because this design
+   * ships Archivo at 400, 600 and 700. A 500 would be resolved by the browser
+   * to the nearest it has, and the version of that bug worth avoiding is the
+   * one where it synthesises instead.
+   *
+   * `:is()` keeps this at one class of specificity, so a heading that needs to
+   * opt out can still do it with a utility.
+   */
+  [data-shared-screen] :is(h1, h2, h3) {
+    font-family: Archivo, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+
+  /*
+   * The primary action, in this design's accent.
+   *
+   * The first design fills its primary buttons, its active step and its
+   * progress bar with `bg-text` on `text-bg` — an inverted chip, because its
+   * accent is a blue it reserves for links. This design fills primary actions
+   * with cyan, and the hero's "Open the case" is exactly that; leaving the
+   * playground inverted would have put two different primary buttons on one
+   * site, and the whiter one on the screen with the most buttons.
+   *
+   * Both utilities are set from one rule because they are never apart: every
+   * `bg-text` in those files carries `text-bg` on the same element, checked
+   * rather than assumed. The pair measures 10.65, which is the ratio already
+   * published for `--b-on-accent` on `--b-src`.
+   *
+   * The header's Source button stays inverted, and that is not an
+   * inconsistency — it is chrome rather than an action in the page, and this
+   * design already draws that distinction on the marketing side.
+   */
+  [data-shared-screen] .bg-text {
+    background-color: var(--b-src);
+    color: var(--b-on-accent);
+  }
+
+  /* The step heading is the page's title here, so it takes a title's size. */
+  [data-shared-screen] h1 {
+    font-size: clamp(28px, 3.2vw, 42px);
+    line-height: 1.05;
   }
 
   /*
