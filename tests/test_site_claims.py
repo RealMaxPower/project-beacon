@@ -839,8 +839,10 @@ class ContrastTests(unittest.TestCase):
     TOLERANCE = 0.05
 
     #: The surfaces a ratio may name. A bare number means `bg`, which is the
-    #: convention the file's own header states.
-    SURFACES = ("bg", "surface", "sunken")
+    #: convention the file's own header states. `accent` is here for the one
+    #: ink-on-fill pairing in the file, which is measured against a fill rather
+    #: than a page surface.
+    SURFACES = ("bg", "surface", "sunken", "accent")
 
     def _blocks(self) -> dict[str, str]:
         source = self.TOKENS.read_text(encoding="utf-8")
@@ -902,6 +904,39 @@ class ContrastTests(unittest.TestCase):
                             f"and the comment says {claimed:.2f}"
                         ),
                     )
+
+    def test_the_inverted_plate_is_the_other_mode_exactly(self) -> None:
+        """
+        `[data-invert]` re-declares the whole palette, which means it is a
+        second copy of it.
+
+        A copy is only safe while something compares it. If a token were added
+        to `:root` and not to the dark plate, the plate would silently inherit
+        the outer page's value for that one token — a single light colour
+        inside a dark band, and none of the published ratios would have moved,
+        so the contrast test above would still pass.
+
+        Each plate must therefore declare the same token names as the other
+        mode, with the same values.
+        """
+        source = self.TOKENS.read_text(encoding="utf-8")
+        blocks = self._blocks()
+        plates = {}
+        for selector, name in (
+            (r"\[data-invert\]", "plate-on-light"),
+            (r'\[data-theme="dark"\] \[data-invert\]', "plate-on-dark"),
+        ):
+            match = re.search(rf"^{selector} \{{(.*?)^\}}", source, re.S | re.M)
+            self.assertIsNotNone(match, f"the {name} block moved; repoint this guard")
+            plates[name] = self._declarations(match.group(1))
+
+        for plate, mirrors in (("plate-on-light", "dark"), ("plate-on-dark", "light")):
+            with self.subTest(plate=plate):
+                self.assertEqual(
+                    plates[plate],
+                    self._declarations(blocks[mirrors]),
+                    f"{plate} is not exactly the {mirrors} palette",
+                )
 
     def test_body_text_clears_the_readable_threshold(self) -> None:
         """

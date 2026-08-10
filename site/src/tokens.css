@@ -27,6 +27,14 @@
   --text-disabled: #878d98; /* 3.23 bg · 3.34 surface · 3.06 sunken — non-text use only */
 
   --accent: #1e5fd0; /* 5.64 */
+  /*
+   * Ink on a filled accent, and the only ink-on-fill pairing in the file.
+   *
+   * Every other ratio here is text against a surface. This one is measured
+   * against --accent itself, so it is legal on a fill of exactly that colour
+   * and nowhere else — on --bg it would be invisible.
+   */
+  --on-accent: #ffffff; /* 5.83 accent */
 
   --pass: #17795e; /* 5.16 */
   --fail: #b3261e; /* 6.32 */
@@ -39,6 +47,40 @@
 
   --font-ui: "Space Grotesk", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /*
+   * Three type tiers, and the ceiling is the font files rather than taste.
+   *
+   * `fonts.css` ships both families at `font-weight: 400 500`. Anything
+   * heavier is synthesised by the browser, which at five rem is a visible
+   * smear — so emphasis here is size, tracking and colour, never weight, and
+   * a test forbids the rest.
+   *
+   * --type-numeral deliberately outranks --type-display: in this product a
+   * measured number is a stronger statement than a sentence. A band gets one
+   * or the other, never both.
+   */
+  --type-display: clamp(2.75rem, 7vw, 5.5rem);
+  --type-numeral: clamp(2.5rem, 7vw, 5rem);
+  --type-h2: clamp(1.75rem, 4vw, 2.75rem);
+  --type-lede: clamp(1.0625rem, 1.7vw, 1.3125rem);
+
+  --track-display: -0.055em;
+  --track-h2: -0.035em;
+  --leading-display: 0.94;
+
+  /*
+   * Three densities, alternating. A section rule appears only between bands
+   * of the same density — where the density changes, the change is the
+   * separator, which is what stops the page being five identical hairlines.
+   */
+  --band-air: clamp(5rem, 11vh, 8.5rem);
+  --band-base: 3.5rem;
+  --band-tight: 1.75rem;
+
+  --measure: 1180px;
+  /* One graduation length. There is one rule weight, and it is 1px. */
+  --tick: 8px;
 }
 
 [data-theme="dark"] {
@@ -54,6 +96,7 @@
   --text-disabled: #61697a; /* 3.46 bg · 3.20 surface · 3.38 sunken — non-text use only */
 
   --accent: #6ba6ff; /* 7.73 */
+  --on-accent: #0e1013; /* 7.73 accent */
 
   --pass: #4fbf97; /* 8.38 */
   --fail: #f2665a; /* 6.19 */
@@ -63,6 +106,77 @@
   --inc-tint: #2e2210;
 
   --shadow-overlay: 0 8px 24px -8px rgb(0 0 0 / 0.5);
+}
+
+/*
+ * An inverted band: the other mode, whole.
+ *
+ * The tempting version of this is `bg-text text-bg` on a div, and it is wrong
+ * in a way that is invisible until someone measures it. This file publishes
+ * twenty-four contrast ratios, every one of them a token against a surface in
+ * its own mode; a partial invert keeps the ratios' names and breaks their
+ * values, so the page would be making twenty-four claims that are no longer
+ * true and no test could tell, because the numbers in the comments would not
+ * have moved.
+ *
+ * So a plate re-declares the entire palette or it does not exist. Every
+ * pairing inside one is then a pairing already measured above, and the band
+ * costs no new ratios at all.
+ *
+ * Both selectors are needed and their order does not matter: a plate inside a
+ * dark page matches `[data-theme="dark"] [data-invert]` at specificity (0,2,0),
+ * which beats the bare `[data-invert]` at (0,1,0) whichever is written first.
+ * `color-scheme` comes along so scrollbars and form controls inside the band
+ * match the band rather than the page.
+ */
+[data-invert] {
+  --bg: #0e1013;
+  --surface: #16191e;
+  --sunken: #101317;
+  --line: #262a31;
+  --line-strong: #383d46;
+  --text: #e9ebef;
+  --text-muted: #9ba2af;
+  --text-faint: #828a99;
+  --text-disabled: #61697a;
+  --accent: #6ba6ff;
+  --on-accent: #0e1013;
+  --pass: #4fbf97;
+  --fail: #f2665a;
+  --inc: #e0a63c;
+  --pass-tint: #0e2a22;
+  --fail-tint: #33110e;
+  --inc-tint: #2e2210;
+  --shadow-overlay: 0 8px 24px -8px rgb(0 0 0 / 0.5);
+
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+[data-theme="dark"] [data-invert] {
+  --bg: #fbfbfc;
+  --surface: #ffffff;
+  --sunken: #f4f5f7;
+  --line: #e3e5ea;
+  --line-strong: #c9ccd4;
+  --text: #14161a;
+  --text-muted: #5c626e;
+  --text-faint: #666d79;
+  --text-disabled: #878d98;
+  --accent: #1e5fd0;
+  --on-accent: #ffffff;
+  --pass: #17795e;
+  --fail: #b3261e;
+  --inc: #8a5a00;
+  --pass-tint: #e4f4ee;
+  --fail-tint: #fbe9e7;
+  --inc-tint: #fbf0da;
+  --shadow-overlay: 0 8px 24px -8px rgb(20 22 26 / 0.18);
+
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -78,6 +192,7 @@
   --color-text-disabled: var(--text-disabled);
 
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
 
   --color-pass: var(--pass);
   --color-fail: var(--fail);
@@ -170,6 +285,47 @@
      with font metrics. */
   .hit-target {
     min-height: 44px;
+  }
+
+  /*
+   * The measured column, for content inside a full-bleed band.
+   *
+   * Bleeding is done by *removing* the max-width from the section and putting
+   * it back on a child — never with `100vw`, which counts the classic
+   * scrollbar and leaves the document wider than the viewport. A test forbids
+   * the viewport units; this is the thing to use instead.
+   */
+  .measure {
+    margin-inline: auto;
+    max-width: var(--measure);
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 640px) {
+    .measure {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /*
+   * A display line. Size and tracking carry it, because the shipped faces stop
+   * at 500 and anything heavier is a synthesised smear at this scale.
+   */
+  .type-display {
+    font-size: var(--type-display);
+    line-height: var(--leading-display);
+    letter-spacing: var(--track-display);
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  .type-numeral {
+    font-family: var(--font-mono);
+    font-size: var(--type-numeral);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
   }
 }
 

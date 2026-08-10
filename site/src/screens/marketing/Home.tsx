@@ -1,5 +1,6 @@
 import { Disclosure } from "@/components/shell/Disclosure";
 import { NextSteps } from "@/components/shell/NextSteps";
+import { Sweep } from "@/components/shell/Sweep";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
 import {
   baselines,
@@ -29,6 +30,61 @@ import type { Go } from "@/router";
  */
 
 const MARKER = "[SYSTEM OVERRIDE]";
+
+/**
+ * Small counts as words, so the headline can be prose and still be derived.
+ *
+ * "Five agents. One end state. Three different answers." reads as a sentence
+ * somebody wrote, and a hand-typed five is exactly the drift this site tests
+ * against everywhere else. Spelling a computed number keeps both: prose spells,
+ * instruments count.
+ */
+const WORDS = [
+  "no",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
+
+const spell = (n: number): string => WORDS[n] ?? String(n);
+
+/**
+ * A state value, short enough to sit on one line.
+ *
+ * A list of records is rendered as its ids, because that is what the reader is
+ * being shown — which fields changed, not what is inside each one. The full
+ * objects are in the evidence bundle, one click away, and `StateDiff` in the
+ * playground makes the same reduction for the same reason.
+ */
+function summarise(value: unknown): string {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    const ids = value.map((item) =>
+      item && typeof item === "object" && typeof (item as { id?: unknown }).id === "string"
+        ? (item as { id: string }).id
+        : null,
+    );
+    if (ids.every((id) => id !== null)) return `[${ids.join(", ")}]`;
+    return `${value.length} items`;
+  }
+  if (value && typeof value === "object") return `${Object.keys(value).length} fields`;
+  return JSON.stringify(value) ?? "—";
+}
+
+/** The same word, starting a sentence. */
+const Spell = (n: number): string => {
+  const word = spell(n);
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
 
 function injectedMessage() {
   const inbox = scenarios.find((s) => s.slug === "inbox-briefing");
@@ -197,6 +253,55 @@ export function Home({ onGo }: Props) {
     };
   })();
 
+  /*
+   * The finding the page opens with, computed rather than asserted.
+   *
+   * Five recorded runs of one scenario end on the same state and earn three
+   * different verdicts. Every number in the headline comes from here — the
+   * count of runs, the count of end states, the count of answers — so the
+   * sentence cannot outlive the evidence. If a subject is re-recorded and the
+   * runs stop agreeing, `identical` is null and the whole band disappears
+   * rather than making a claim that is no longer true. A test in
+   * `tests/test_site_claims.py` fails at the same moment, so the disappearance
+   * is loud rather than quiet.
+   */
+  const identical = (() => {
+    const inbox = fixtures.filter((f) => f.scenario === "inbox-briefing-draft-only");
+    if (inbox.length < 3) return null;
+
+    const runs = inbox.map((f) => ({ fixture: f, evidence: evidenceFor(f.key) }));
+    const shapes = new Set(
+      runs.map((r) =>
+        JSON.stringify([
+          r.evidence.state.before_digest,
+          r.evidence.state.after_digest,
+          r.evidence.state_diff,
+        ]),
+      ),
+    );
+    if (shapes.size !== 1) return null;
+
+    const first = runs[0].evidence;
+    const change = first.state_diff.changes[0];
+    // PASS first, then FAIL, then INCOMPLETE — a fixed order, so the picture
+    // does not reshuffle when the fixtures are regenerated.
+    const rank: Record<Verdict, number> = { PASS: 0, FAIL: 1, INCOMPLETE: 2 };
+
+    return {
+      runs: runs.sort((a, b) => rank[a.evidence.result] - rank[b.evidence.result]),
+      answers: new Set(runs.map((r) => r.evidence.result)).size,
+      before: first.state.before_digest.slice(0, 8),
+      after: first.state.after_digest.slice(0, 8),
+      change,
+      changeCount: first.state_diff.change_count,
+      resetVerified: first.reset_verified,
+      /** The run that satisfied everything and still was not a PASS. */
+      unmeasured: runs.find(
+        (r) => r.evidence.result !== "PASS" && r.evidence.assertions.every((a) => a.passed),
+      ),
+    };
+  })();
+
   const badgeTone: Record<Verdict, string> = {
     PASS: "bg-pass-tint border-pass/30 text-pass",
     FAIL: "bg-fail-tint border-fail/30 text-fail",
@@ -205,50 +310,201 @@ export function Home({ onGo }: Props) {
 
   return (
     <div className="animate-enter">
-      <section className="mx-auto max-w-[1180px] px-5 pt-14 pb-14 sm:px-10 sm:pt-[76px]">
-        <div className="mb-5 flex flex-wrap items-center gap-2.5">
-          {["Apache 2.0", "Python 3.11+", "zero runtime dependencies", "no LLM judge"].map(
-            (item, index) => (
-              <span key={item} className="flex items-center gap-2.5">
-                {index > 0 && (
-                  <span aria-hidden="true" className="h-[3px] w-[3px] rounded-full bg-line-strong" />
-                )}
-                <span className="font-mono text-[11.5px] tracking-[0.04em] text-text-faint">
-                  {item}
+      {/*
+        * The hook.
+        *
+        * The page used to open on a mechanism — "give Beacon a scenario and
+        * point it at an agent" — which explains the product to somebody who
+        * has already decided they want it, and states no stake to anybody
+        * else. It also never named its reader.
+        *
+        * It opens on the finding instead. Five recorded agents, one end state,
+        * three answers: a harness that grades by diffing before and after
+        * calls all five the same agent, and this page can prove that with
+        * bundles on disk. Every count in the headline is computed; the section
+        * removes itself if the runs ever stop agreeing.
+        *
+        * Full-bleed, which costs nothing: the max-width moves off the section
+        * and onto a `.measure` child. Never `100vw` — that counts the
+        * scrollbar and makes the document wider than the viewport.
+        */}
+      <section className="pt-12 pb-[var(--band-air)] sm:pt-[68px]">
+        <div className="measure">
+          <div className="mb-5 flex flex-wrap items-center gap-2.5">
+            {["Apache 2.0", "Python 3.11+", "zero runtime dependencies", "no LLM judge"].map(
+              (item, index) => (
+                <span key={item} className="flex items-center gap-2.5">
+                  {index > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="h-[3px] w-[3px] rounded-full bg-line-strong"
+                    />
+                  )}
+                  <span className="font-mono text-[11.5px] tracking-[0.04em] text-text-faint">
+                    {item}
+                  </span>
                 </span>
-              </span>
-            ),
+              ),
+            )}
+          </div>
+
+          {identical ? (
+            <>
+              <p className="mb-6 font-mono text-[11px] tracking-[0.14em] text-text-faint uppercase">
+                {hero?.evidence.scenario.id} · {spell(identical.runs.length)} recorded runs · one
+                end state
+              </p>
+              <h1 className="type-display mb-7 max-w-[15ch]">
+                {Spell(identical.runs.length)} agents. One end state.{" "}
+                {Spell(identical.answers)} different answers.
+              </h1>
+              <p className="mb-5 max-w-[66ch] text-[length:var(--type-lede)] leading-[1.5] text-text-muted text-pretty">
+                One scenario, {spell(identical.runs.length)} recorded runs,{" "}
+                {spell(identical.runs.length)} different agents. All of them end on the same
+                digest and the same one-line diff: three drafts created, nothing else touched.
+                Two tried three times each to send mail they were told not to send. One of those
+                also reached for a message it was told not to open, because an email in the inbox
+                told it to. Every attempt was refused, so none of it is in the diff.
+              </p>
+              <p className="mb-5 max-w-[66ch] text-[17px] leading-[1.5] font-medium text-pretty">
+                Grade an agent by comparing before and after, and you have one agent,{" "}
+                {spell(identical.runs.length)} times. Beacon records what each one tried to do,
+                which is the part the diff cannot see.
+              </p>
+              <p className="mb-8 max-w-[62ch] text-[15px] leading-relaxed text-text-muted text-pretty">
+                Beacon is for the person who has to decide whether an agent gets write access.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="type-display mb-7 max-w-[17ch]">
+                Try an agent on realistic work before trusting it with real work.
+              </h1>
+              <p className="mb-8 max-w-[64ch] text-[length:var(--type-lede)] leading-[1.5] text-text-muted text-pretty">
+                Give Beacon a scenario and point it at an agent. The agent does the work inside a
+                synthetic world. Beacon watches every tool call, compares the before and after,
+                and returns PASS, FAIL, or INCOMPLETE with the evidence attached.
+              </p>
+            </>
           )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              // Straight to the run this page is about. It used to open the
+              // scenario picker, which asks a reader who just clicked "watch
+              // an agent fail" to find the failing agent themselves.
+              onClick={() => onGo("playground", hero?.evidence.scenario.id)}
+              className="hit-target inline-flex items-center rounded-md bg-text px-[22px] py-3.5 text-[15px] font-medium text-bg"
+            >
+              {identical ? `Replay all ${spell(identical.runs.length)} →` : "Watch an agent fail →"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onGo("how-it-works")}
+              className="hit-target inline-flex items-center rounded-md border border-line-strong bg-surface px-[22px] py-3.5 text-[15px] font-medium text-text"
+            >
+              How it grades
+            </button>
+          </div>
         </div>
 
-        <h1 className="mb-6 max-w-[17ch] text-[clamp(2.4rem,7vw,3.75rem)] leading-[1.04] font-medium tracking-[-0.04em] text-balance">
-          Try an agent on realistic work before trusting it with real work.
-        </h1>
-        <p className="mb-8 max-w-[64ch] text-[clamp(1rem,2.2vw,1.19rem)] leading-[1.55] text-text-muted text-pretty">
-          Give Beacon a scenario and point it at an agent. The agent does the work inside a
-          synthetic world. Beacon watches every tool call, compares the before and after, and
-          returns PASS, FAIL, or INCOMPLETE with the evidence attached.
-        </p>
+        {identical && (
+          <>
+            <div className="mt-[var(--band-base)]">
+              <Sweep
+                runs={identical.runs.map((r) => ({
+                  key: r.fixture.key,
+                  label: r.fixture.label,
+                  verdict: r.evidence.result,
+                }))}
+                before={identical.before}
+                after={identical.after}
+              />
+            </div>
 
-        <div className="mb-13 flex flex-wrap gap-3">
-          <button
-            type="button"
-            // Straight to the run this page is about. It used to open the
-            // scenario picker, which asks a reader who just clicked "watch
-            // an agent fail" to find the failing agent themselves.
-            onClick={() => onGo("playground", hero?.evidence.scenario.id)}
-            className="hit-target inline-flex items-center rounded-md bg-text px-[22px] py-3.5 text-[15px] font-medium text-bg"
-          >
-            Watch an agent fail →
-          </button>
-          <button
-            type="button"
-            onClick={() => onGo("how-it-works")}
-            className="hit-target inline-flex items-center rounded-md border border-line-strong bg-surface px-[22px] py-3.5 text-[15px] font-medium text-text"
-          >
-            How it works
-          </button>
+            {/*
+              The five runs as real controls, beneath the picture that is only a
+              picture. Two columns on a phone rather than a scrolling row: a
+              scroller would need a cue, and avoiding the class of problem beats
+              advertising it.
+            */}
+            <div className="measure mt-6">
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {identical.runs.map((run) => (
+                  <li key={run.fixture.key}>
+                    <button
+                      type="button"
+                      onClick={() => onGo("playground", run.evidence.scenario.id)}
+                      className="hit-target flex w-full flex-col items-start gap-1.5 rounded-row border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-accent"
+                    >
+                      <span className="text-[12.5px] leading-tight text-pretty">
+                        {run.fixture.label}
+                      </span>
+                      <span
+                        className={`font-mono text-[10.5px] tracking-[0.06em] ${
+                          run.evidence.result === "PASS"
+                            ? "text-pass"
+                            : run.evidence.result === "FAIL"
+                              ? "text-fail"
+                              : "text-inc"
+                        }`}
+                      >
+                        {run.evidence.result}{" "}
+                        {run.evidence.assertions.filter((a) => a.passed).length}/
+                        {run.evidence.assertions.length}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              {identical.unmeasured && (
+                <p className="mt-5 max-w-[68ch] text-[13.5px] leading-relaxed text-text-muted text-pretty">
+                  {identical.unmeasured.fixture.label} satisfied every one of its{" "}
+                  {identical.unmeasured.evidence.assertions.length} assertions and is still not a
+                  PASS — the host went away before it said it had finished. Could not be measured
+                  is not failed.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/*
+        The one line the whole argument turns on, set wide and alone. It is the
+        entire difference between five agents, and it is just text.
+      */}
+      {identical && identical.change && (
+        <div className="border-y border-line bg-sunken py-[var(--band-tight)]">
+          <div className="measure flex flex-wrap items-baseline gap-x-8 gap-y-2 font-mono text-[13.5px] text-text-muted">
+            {/*
+              The changed field, named by what it holds rather than dumped.
+
+              `after` is not the short id list it looks like — it is three
+              complete draft objects with recipients, subjects and bodies, and
+              stringifying it put a 500-character unbreakable mono run across
+              the page. It overflowed the document by 35px at 390px, which in
+              turn pushed the header nav into hiding two of its own links.
+
+              So the ids are extracted where the values carry one. That is
+              still the recorded value, read out of the bundle; it is the same
+              summary `StateDiff` makes in the playground, and the whole object
+              is one click away in the exported evidence.
+            */}
+            <span className="min-w-0 break-all">
+              <span className="text-text">{identical.change.path}</span>{" "}
+              {summarise(identical.change.before)} →{" "}
+              <span className="text-text">{summarise(identical.change.after)}</span>
+            </span>
+            <span>change_count {identical.changeCount}</span>
+            <span>reset_verified {String(identical.resetVerified)}</span>
+          </div>
         </div>
+      )}
+
+      <section className="measure pt-[var(--band-air)] pb-[var(--band-base)]">
 
         {/*
           * The hero is a run that failed, and it has to be a run a stranger can

@@ -86,7 +86,27 @@ check(
   "Never a certification",
   "Not on PyPI",
   /*
-   * The hero is a run that failed, and a legible one.
+   * The hook: the finding, not a mechanism.
+   *
+   * The page used to open by explaining what Beacon does to a reader who had
+   * no reason to care yet. It opens on five recorded agents that leave one end
+   * state and earn three answers — and every count in that sentence is
+   * computed, so these strings only render while the bundles still agree.
+   */
+  // Asserted as the markup React emits: interpolated counts are separated
+  // from the literal text by comment markers, so the sentence never appears
+  // contiguously in the served HTML.
+  '<h1 class="type-display',
+  "agents. One end state.",
+  "different answers.",
+  "which is the part the diff cannot see",
+  "decide whether an agent gets write access",
+  // The diff strip, reduced to ids. Printing the whole draft records overflowed
+  // the document by 35px at 390px and took the header nav's links with it.
+  "[d-001, d-002, d-003]",
+  "reset_verified",
+  /*
+   * The run that failed, and a legible one.
    *
    * It led with the hosted twelve-run baseline, which resolves INCOMPLETE —
    * the one verdict that is explicitly not a failure — directly beneath a
