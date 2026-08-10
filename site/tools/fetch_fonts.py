@@ -21,21 +21,53 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 FONTS = ROOT / "site" / "public" / "fonts"
-CSS = ROOT / "site" / "src" / "fonts.css"
+
+#: The font sets, one per design that ships.
+#:
+#: Both write into the same `public/fonts/` directory, because both are served
+#: from the same origin and the licence file that covers them is shared. Only
+#: the stylesheet differs, so a design can be rebuilt without disturbing the
+#: other's faces — this script used to rewrite one hardcoded path wholesale,
+#: which meant fetching for one design silently deleted the other's.
+SETS: dict[str, dict[str, Any]] = {
+    "a": {
+        "css": ROOT / "site" / "src" / "fonts.css",
+        "families": ("Space+Grotesk:wght@400;500", "JetBrains+Mono:wght@400;500"),
+        "names": "Space Grotesk and JetBrains Mono",
+    },
+    "b": {
+        "css": ROOT / "site" / "src-b" / "fonts-b.css",
+        # Inter stands in for the IBM Plex Sans the design specifies.
+        #
+        # Not a preference. IBM Plex declares the Reserved Font Name "Plex",
+        # and the licence file beside these woff2s states that subsetting them
+        # makes Modified Versions — which OFL clause 3 forbids from using a
+        # reserved name. Inter declares no reserved name, fills the same
+        # interface-grotesque role, and removes the conflict rather than
+        # arguing about it.
+        "families": (
+            "Archivo:wght@400;600;700",
+            "Inter:wght@400;500",
+            "Azeret+Mono:wght@400;500;600",
+        ),
+        "names": "Archivo, Inter and Azeret Mono",
+    },
+}
 
 # The API returns woff2 only when it believes the caller is a browser that
 # supports it; with the default urllib agent it serves truetype, which is
 # roughly twice the size.
 CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-API = (
-    "https://fonts.googleapis.com/css2"
-    "?family=Space+Grotesk:wght@400;500"
-    "&family=JetBrains+Mono:wght@400;500"
-    "&display=swap"
-)
+def _api(families: tuple[str, ...]) -> str:
+    return (
+        "https://fonts.googleapis.com/css2?"
+        + "&".join(f"family={name}" for name in families)
+        + "&display=swap"
+    )
 
 # Subsets worth carrying for an English site: latin, plus latin-ext so an
 # accented name in a scenario fixture or a contributor's byline still renders.
@@ -55,11 +87,17 @@ def _subset_name(ranges: str) -> str:
     return "other"
 
 
+#: The preamble every generated stylesheet starts with.
+#:
+#: Deliberately names no family: it is shared by every set, and a list of
+#: families here would be a second place to keep them in step. The families a
+#: given file carries are written beneath it, from the set's own `names`.
 HEADER = """/*
  * Written by `site/tools/fetch_fonts.py`. Do not edit by hand.
  *
- * Space Grotesk and JetBrains Mono, both SIL Open Font Licence 1.1, served
- * from this origin rather than a font CDN. See the script for why.
+ * Served from this origin rather than a font CDN, so a visitor's address is
+ * never handed to a third party for the sake of a typeface. See the script
+ * for the rest of the reasoning.
  *
  * Licence: public/fonts/OFL.txt, which ships beside the files. The OFL
  * allows redistribution only with the licence attached, so it is a file in
@@ -89,9 +127,11 @@ def _get(url: str) -> bytes:
     return result.stdout
 
 
-def main() -> int:
+def fetch(name: str, spec: dict[str, Any]) -> int:
     FONTS.mkdir(parents=True, exist_ok=True)
-    css = _get(API).decode("utf-8")
+    spec["css"].parent.mkdir(parents=True, exist_ok=True)
+    print(f"{name}: {spec['names']}")
+    css = _get(_api(spec["families"])).decode("utf-8")
 
     blocks = re.findall(r"@font-face \{(.*?)\}", css, re.S)
     if not blocks:
@@ -131,7 +171,7 @@ def main() -> int:
         )
         face["weights"].add(int(weight.group(1)))
 
-    out: list[str] = [HEADER]
+    out: list[str] = [HEADER + f"\n/* {spec['names']}. */\n"]
     for url_value, face in faces.items():
         stem = face["family"].replace(" ", "-").lower()
         name = f"{stem}-{face['subset']}.woff2"
@@ -155,9 +195,26 @@ def main() -> int:
         )
         print(f"  {name:<38} weight {declared}")
 
-    CSS.write_text("\n".join(out), encoding="utf-8")
-    print(f"\n{len(out) - 1} faces written to {CSS.relative_to(ROOT)}")
+    spec["css"].write_text("\n".join(out), encoding="utf-8")
+    print(f"  {len(out) - 1} faces written to {spec['css'].relative_to(ROOT)}\n")
     return 0
+
+
+def main() -> int:
+    """
+    Fetch one set, or every set.
+
+    Named rather than positional so that rebuilding one design's faces cannot
+    be confused with rebuilding the other's — the previous version had exactly
+    one target and rewrote it unconditionally.
+    """
+    wanted = sys.argv[1:] or list(SETS)
+    unknown = [name for name in wanted if name not in SETS]
+    if unknown:
+        print(f"unknown font set(s): {', '.join(unknown)}", file=sys.stderr)
+        print(f"known: {', '.join(SETS)}", file=sys.stderr)
+        return 2
+    return max(fetch(name, SETS[name]) for name in wanted)
 
 
 if __name__ == "__main__":

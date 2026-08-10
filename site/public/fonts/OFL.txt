@@ -1,12 +1,24 @@
-The four .woff2 files in this directory are a redistribution of two typefaces,
-both licensed under the SIL Open Font Licence 1.1. The OFL permits that only
+The ten .woff2 files in this directory are a redistribution of five typefaces,
+all licensed under the SIL Open Font Licence 1.1. The OFL permits that only
 if the copyright notice and the licence travel with the files, so this is that
 file. It is served from /fonts/OFL.txt alongside them.
 
 They were fetched by `site/tools/fetch_fonts.py`, which subsets them to latin
 and latin-ext. Subsetting makes these Modified Versions under the licence's
-definition; neither upstream declares a Reserved Font Name, so no renaming is
-required, and both notices below are reproduced verbatim from upstream.
+definition; none of the five upstreams declares a Reserved Font Name, so no
+renaming is required, and every notice below is reproduced verbatim from
+upstream.
+
+That last point is load-bearing rather than decorative. The design this site's
+second face is built from specifies IBM Plex Sans, whose notice reads
+`Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"`. Clause 3 of this
+licence forbids a Modified Version from using a Reserved Font Name, and the
+paragraph above states that these files are Modified Versions — so Plex could
+not ship here under that reading. Inter fills the same role and reserves
+nothing. The substitution is a licensing decision, not a typographic one.
+
+The first two families dress the original site; the last three dress the
+second.
 
 Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
     space-grotesk-latin.woff2
@@ -15,6 +27,18 @@ Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankars
 Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
     jetbrains-mono-latin.woff2
     jetbrains-mono-latin-ext.woff2
+
+Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)
+    archivo-latin.woff2
+    archivo-latin-ext.woff2
+
+Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+    inter-latin.woff2
+    inter-latin-ext.woff2
+
+Copyright 2021 The Azeret Project Authors (https://github.com/displaay/azeret)
+    azeret-mono-latin.woff2
+    azeret-mono-latin-ext.woff2
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

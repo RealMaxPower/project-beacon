@@ -19,12 +19,16 @@ SOURCE_SUFFIXES = {".ts", ".tsx", ".css", ".html", ".json"}
 
 def _without_comments(source: str) -> str:
     """
-    Drop `/* … */` and `//` comments.
+    Drop `/* … */`, `//` and `<!-- … -->` comments.
 
     Several guards below forbid a word appearing in the code. The same word
     usually has to appear in the comment that explains why it is forbidden, and
     a check that cannot tell those apart would punish writing the reason down.
+
+    HTML comments were the gap: an entry document explaining *why* it carries
+    no `og:image` was failing the guard that forbids one.
     """
+    source = re.sub(r"<!--.*?-->", "", source, flags=re.S)
     source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
     return re.sub(r"^\s*//.*$", "", source, flags=re.M)
 
@@ -567,8 +571,8 @@ class SocialCardTests(unittest.TestCase):
 
     INDEX = SITE / "index.html"
 
-    def _meta(self, attribute: str, name: str) -> str:
-        source = self.INDEX.read_text(encoding="utf-8")
+    def _meta(self, attribute: str, name: str, page: Path | None = None) -> str:
+        source = _without_comments((page or self.INDEX).read_text(encoding="utf-8"))
         match = re.search(
             rf'<meta\s+{attribute}="{re.escape(name)}"\s+content="([^"]*)"',
             source,
@@ -593,6 +597,30 @@ class SocialCardTests(unittest.TestCase):
             self._meta("name", "description"),
         )
 
+    def test_every_entry_point_carries_a_matching_card(self) -> None:
+        """
+        Each design is a separate document, so each needs its own tags — and
+        each is a second copy of a sentence, which is the shape that drifts.
+        """
+        for name in ENTRY_POINTS:
+            page = SITE / name
+            if not page.is_file():
+                continue
+            with self.subTest(page=name):
+                source = _without_comments(page.read_text(encoding="utf-8"))
+                title = re.search(r"<title>(.*?)</title>", source, re.S)
+                self.assertIsNotNone(title, "no <title>")
+                self.assertEqual(
+                    self._meta("property", "og:title", page),
+                    " ".join(title.group(1).split()),
+                )
+                self.assertEqual(
+                    self._meta("property", "og:description", page),
+                    self._meta("name", "description", page),
+                )
+                self.assertNotIn("og:image", source)
+                self.assertEqual(self._meta("name", "twitter:card", page), "summary")
+
     def test_the_card_declares_no_image(self) -> None:
         """
         `summary`, not `summary_large_image`, and no `og:image`.
@@ -600,7 +628,7 @@ class SocialCardTests(unittest.TestCase):
         There is no picture on this site, and a card that promises one renders
         as a broken card rather than a small one.
         """
-        source = self.INDEX.read_text(encoding="utf-8")
+        source = _without_comments(self.INDEX.read_text(encoding="utf-8"))
         self.assertNotIn("og:image", source)
         self.assertEqual(self._meta("name", "twitter:card"), "summary")
 
@@ -653,34 +681,49 @@ class VisualVocabularyTests(unittest.TestCase):
         "font-black": 900,
     }
 
-    def _heaviest_shipped_weight(self) -> int:
+    def _ceiling_for(self, tree: Path) -> int:
         """
-        The heaviest weight any `@font-face` in the site actually provides.
+        The heaviest weight the `@font-face` rules in one tree provide.
 
-        Derived rather than written down. This guard used to hardcode 500,
-        which was right for the two families the site shipped and would have
-        been wrong the moment it shipped a third — the rule is not "500 is the
-        limit", it is "do not ask for a weight the font files do not contain",
-        because the browser answers by synthesising one and at display sizes
-        that is a visible smear.
+        Derived rather than written down, and derived **per tree**. The first
+        version of this took the maximum across the whole site, which quietly
+        made it weaker than the constant it replaced: the moment a second
+        design fetched Archivo at 700, the first design could ask for a
+        synthesised bold from a face that stops at 500 and this guard would
+        have said nothing. A ceiling is a fact about the faces a given page
+        loads, so it is computed from the stylesheet that page uses.
 
         `font-weight: 400 500` is a variable range, so the second number is the
         ceiling; a single value is its own ceiling.
         """
         heaviest = 0
-        for path in sorted(SRC.parent.rglob("fonts*.css")):
-            for declaration in re.findall(r"font-weight:\s*([0-9\s]+);", path.read_text(encoding="utf-8")):
+        for path in sorted(tree.rglob("fonts*.css")):
+            for declaration in re.findall(
+                r"font-weight:\s*([0-9\s]+);", path.read_text(encoding="utf-8")
+            ):
                 heaviest = max(heaviest, *(int(n) for n in declaration.split()))
         return heaviest
 
+    @staticmethod
+    def _tree_of(path: Path) -> Path:
+        """Which source tree a file belongs to; entry points map to their own."""
+        for tree in SOURCE_TREES:
+            if tree in path.parents:
+                return tree
+        return SITE / "src-b" if path.name == "b.html" else SRC
+
     def test_the_shipped_fonts_are_discoverable(self) -> None:
         """A ceiling of zero would make the guard below pass on anything."""
-        self.assertGreaterEqual(
-            self._heaviest_shipped_weight(), 400, "no @font-face weights found; repoint this guard"
-        )
+        for tree in SOURCE_TREES:
+            if not tree.is_dir():
+                continue
+            with self.subTest(tree=tree.name):
+                self.assertGreaterEqual(
+                    self._ceiling_for(tree), 400, "no @font-face weights found in this tree"
+                )
 
     def test_no_weight_the_fonts_cannot_render(self) -> None:
-        ceiling = self._heaviest_shipped_weight()
+        ceilings = {tree: self._ceiling_for(tree) for tree in SOURCE_TREES if tree.is_dir()}
         numeric = re.compile(r"font-weight:\s*(\d{3})\b")
         named = re.compile(r"\b(font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black))\b")
 
@@ -690,6 +733,7 @@ class VisualVocabularyTests(unittest.TestCase):
             # use of it.
             if path.name.startswith("fonts") and path.suffix == ".css":
                 continue
+            ceiling = ceilings.get(self._tree_of(path), 0)
 
             for weight in numeric.findall(source):
                 with self.subTest(file=path.relative_to(ROOT), weight=weight):

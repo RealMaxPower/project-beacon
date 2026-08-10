@@ -40,6 +40,10 @@ const ROUTES = [
   ["docs", "#/docs"],
   ["hosted", "#/hosted"],
   ["playground", "#/playground"],
+  // The second design, by filename rather than by route: `vite preview` serves
+  // dist/ without the host's rewrites, so /b resolves only in production and
+  // /b.html resolves in both.
+  ["b", "b.html"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];

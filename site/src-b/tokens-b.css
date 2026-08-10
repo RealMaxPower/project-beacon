@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "./fonts-b.css";
+
+/*
+ * The second design's tokens. Placeholder values until the palette is
+ * validated; the real set lands with measured ratios in its comments, in the
+ * same format `tests/test_site_claims.py` parses for the first design.
+ */
+
+:root {
+  --b-ink: #0e1116;
+  --b-paper: #f4f1ea;
+  --b-ink-text: #f5f7fa; /* 16.61 b-ink */
+  --b-paper-text: #14171c; /* 15.94 b-paper */
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--b-ink);
+    color: var(--b-ink-text);
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .b-shell {
+    margin-inline: auto;
+    max-width: 1260px;
+    padding: clamp(64px, 7vw, 116px) clamp(20px, 5vw, 60px);
+  }
+
+  .b-eyebrow {
+    font-family: "Azeret Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--b-ink-text);
+  }
+
+  .b-display {
+    font-family: Archivo, system-ui, sans-serif;
+    font-size: clamp(38px, 5.4vw, 72px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  .b-lede {
+    max-width: 56ch;
+    font-size: clamp(15.5px, 1.2vw, 18px);
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+}
+
+/*
+ * B does not inherit the first design's reduced-motion block, so it declares
+ * its own. The rule is narrower than it reads: it stops CSS animation,
+ * transition and smooth scrolling, and cannot reach a JS timer, SVG SMIL or an
+ * animated image format — which is why a test forbids all three rather than
+ * trusting this.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

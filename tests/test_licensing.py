@@ -97,11 +97,49 @@ class FontLicenceTests(unittest.TestCase):
             with self.subTest(font=path.name):
                 self.assertIn(path.name, licence)
 
-    def test_both_upstream_copyright_notices_are_reproduced(self) -> None:
+    #: Every upstream, with the year its own notice carries.
+    #:
+    #: Written out rather than globbed because the point is that each notice is
+    #: reproduced *verbatim*: a year that drifts is a notice that is no longer
+    #: the upstream's. Inter's is `(c) 2016`, not `2016`, and that difference is
+    #: exactly the kind this check exists to hold.
+    NOTICES = (
+        ("Copyright 2020", "The Space Grotesk Project Authors"),
+        ("Copyright 2020", "The JetBrains Mono Project Authors"),
+        ("Copyright 2020", "The Archivo Project Authors"),
+        ("Copyright (c) 2016", "The Inter Project Authors"),
+        ("Copyright 2021", "The Azeret Project Authors"),
+    )
+
+    def test_every_upstream_copyright_notice_is_reproduced(self) -> None:
         licence = self.LICENCE.read_text(encoding="utf-8")
-        for holder in ("The Space Grotesk Project Authors", "The JetBrains Mono Project Authors"):
+        for prefix, holder in self.NOTICES:
             with self.subTest(holder=holder):
-                self.assertIn(f"Copyright 2020 {holder}", licence)
+                self.assertIn(f"{prefix} {holder}", licence)
+
+    def test_no_redistributed_family_reserves_its_name(self) -> None:
+        """
+        A Reserved Font Name and a Modified Version cannot coexist.
+
+        This file states that subsetting makes these Modified Versions, and
+        clause 3 forbids one from using a reserved name. IBM Plex — which the
+        second design originally specified — declares `Reserved Font Name
+        "Plex"`, so it cannot ship here; Inter replaced it for that reason and
+        no other. The check is on the stylesheets rather than the licence,
+        because the family name in an `@font-face` is where the reserved name
+        would actually be used.
+        """
+        reserved = ("Plex", "Source Sans", "Source Serif", "Source Code", "PT Sans", "PT Serif")
+        for path in sorted(SITE.rglob("fonts*.css")):
+            declared = re.findall(r"font-family:\s*'([^']+)'", path.read_text(encoding="utf-8"))
+            for family in declared:
+                for name in reserved:
+                    with self.subTest(file=path.name, family=family):
+                        self.assertNotIn(
+                            name,
+                            family,
+                            f"{family} carries the reserved name {name!r}",
+                        )
 
     def test_the_generator_and_the_stylesheet_agree(self) -> None:
         """
@@ -114,8 +152,15 @@ class FontLicenceTests(unittest.TestCase):
         header = re.search(r'HEADER = """(.*?)"""', source, re.S)
         self.assertIsNotNone(header, "the header constant moved; repoint this guard")
         self.assertIn("OFL.txt", header.group(1))
-        css = (SITE / "src" / "fonts.css").read_text(encoding="utf-8")
-        self.assertTrue(css.startswith(header.group(1).rstrip("\n")))
+        # Every generated stylesheet, not just the first design's — the
+        # preamble is shared, so a second one that drifted would be invisible
+        # to a check that only ever read one file.
+        written = sorted(SITE.rglob("fonts*.css"))
+        self.assertGreaterEqual(len(written), 1, "no generated stylesheets found")
+        for path in written:
+            with self.subTest(file=path.relative_to(ROOT)):
+                css = path.read_text(encoding="utf-8")
+                self.assertTrue(css.startswith(header.group(1).rstrip("\n")))
 
 
 if __name__ == "__main__":

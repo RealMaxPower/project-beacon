@@ -105,6 +105,10 @@ const ROUTES = [
   "/#/hosted",
   "/#/playground",
   "/#/playground/inbox-briefing-draft-only",
+  // The second design. It is a separate document, so it inherits the policy
+  // but proves nothing about it until it is actually loaded — which is what
+  // the rewrite-aware resolver above exists to make true.
+  "/b",
 ];
 
 let failures = 0;
@@ -118,6 +122,25 @@ for (const route of ROUTES) {
   console.log(`  ${ok ? "ok  " : "FAIL"} ${route.padEnd(42)} ${painted.trim().length} chars rendered`);
   for (const v of violations.slice(0, 3)) console.log(`         ${v.slice(0, 160)}`);
 }
+
+/*
+ * The second design is the second design.
+ *
+ * "More than 200 characters painted" is satisfied just as well by the first
+ * site, which is precisely what this harness used to serve for /b — so the
+ * route check above would have gone green on the very bug that made it
+ * meaningless. Assert the document by something only it renders.
+ */
+await page.goto(`${base}/b`, { waitUntil: "networkidle" });
+const bMarkers = await page.evaluate(() => ({
+  heading: document.querySelector("h1")?.textContent ?? "",
+  font: getComputedStyle(document.querySelector("h1") ?? document.body).fontFamily,
+}));
+const isB = bMarkers.heading.includes("defend") && /Archivo/i.test(bMarkers.font);
+if (!isB) failures += 1;
+console.log(
+  `  ${isB ? "ok  " : "FAIL"} /b served the second design: ${JSON.stringify(bMarkers.heading)} in ${bMarkers.font.split(",")[0]}`,
+);
 
 // The one place an inline style is load-bearing: the pass-rate bars are sized
 // by `style={{ width }}`. A CSP that blocked them would leave a bar at zero
