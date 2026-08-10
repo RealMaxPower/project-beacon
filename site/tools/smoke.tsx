@@ -23,6 +23,7 @@ import { TimelineEvent } from "@/components/execution/TimelineEvent";
 import { InjectionCallout } from "@/components/execution/InjectionCallout";
 import { AssertionRow } from "@/components/verdict/AssertionRow";
 import { App } from "@/App";
+import { SiteB } from "@b/SiteB";
 import { Home } from "@/screens/marketing/Home";
 import { HowItWorks } from "@/screens/marketing/HowItWorks";
 import { Scenarios } from "@/screens/marketing/Scenarios";
@@ -408,6 +409,31 @@ check(
   " · <!-- -->not evaluated",
   "Every entity it reported appears in the page it was given",
   "path cannot be traversed",
+);
+
+/*
+ * The second design, against the facts it is supposed to be reading.
+ *
+ * The point of these needles is that this page describes *this* repository.
+ * The design it was built from marketed a product that does not exist here —
+ * a CLI called outcome_assurance, seventeen shipped capabilities, fourteen
+ * automated tests — and the whole job of the port was replacing every one of
+ * those with something the code actually does.
+ */
+check(
+  "Site B",
+  () => renderToString(<SiteB />),
+  // Counts derived, never typed.
+  String(facts.scenarios),
+  String(facts.subjects),
+  // The real CLI, not the design's invented one.
+  "python3 -m beacon run",
+  "python3 -m beacon verify",
+  // The strip that occupies the slot a logo wall would take, and the sentence
+  // that stops it reading as one.
+  "Not adoption metrics",
+  // Limitations are read out of a recorded bundle rather than written here.
+  "not a safety certification",
 );
 
 console.log();

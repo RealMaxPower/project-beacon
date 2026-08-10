@@ -957,21 +957,34 @@ class ContrastTests(unittest.TestCase):
     """
 
     TOKENS = SRC / "tokens.css"
+    #: Every token file that publishes ratios, with the blocks to read from it.
+    #:
+    #: The second design carries its own palette on its own grounds. A guard
+    #: that reads only the first file would let an entire second set of colours
+    #: ship with unverified numbers beside them — which is worse than no
+    #: numbers, because a measurement that is written down reads as checked.
+    TOKEN_BLOCKS = (
+        (SRC / "tokens.css", r":root", "light"),
+        (SRC / "tokens.css", r'\[data-theme="dark"\]', "dark"),
+        (SITE / "src-b" / "tokens-b.css", r":root", "b-ink"),
+        (SITE / "src-b" / "tokens-b.css", r'\[data-ground="paper"\]', "b-paper"),
+    )
     #: Ratios are quoted to two decimals, so anything inside half a unit of the
     #: last place is the same measurement rounded, not a different one.
     TOLERANCE = 0.05
 
-    #: The surfaces a ratio may name. A bare number means `bg`, which is the
-    #: convention the file's own header states. `accent` is here for the one
-    #: ink-on-fill pairing in the file, which is measured against a fill rather
-    #: than a page surface.
-    SURFACES = ("bg", "surface", "sunken", "accent")
+    #: A bare number means this token, which is the convention the first
+    #: file's header states. The second design names its ground explicitly.
+    DEFAULT_SURFACE = "bg"
 
     def _blocks(self) -> dict[str, str]:
-        source = self.TOKENS.read_text(encoding="utf-8")
         blocks = {}
-        for selector, name in ((r":root", "light"), (r'\[data-theme="dark"\]', "dark")):
-            match = re.search(rf"^{selector} \{{(.*?)^\}}", source, re.S | re.M)
+        for path, selector, name in self.TOKEN_BLOCKS:
+            if not path.is_file():
+                continue
+            match = re.search(
+                rf"^{selector} \{{(.*?)^\}}", path.read_text(encoding="utf-8"), re.S | re.M
+            )
             self.assertIsNotNone(match, f"the {name} token block moved; repoint this guard")
             blocks[name] = match.group(1)
         return blocks
@@ -998,7 +1011,7 @@ class ContrastTests(unittest.TestCase):
                     ratio = float(parts[0])
                 except ValueError:
                     continue
-                surface = parts[1] if len(parts) > 1 else "bg"
+                surface = parts[1] if len(parts) > 1 else self.DEFAULT_SURFACE
                 found.append((token, surface, ratio))
         return found
 
@@ -1014,9 +1027,15 @@ class ContrastTests(unittest.TestCase):
             colours = self._declarations(block)
             for token, surface, claimed in self._claims(block):
                 with self.subTest(mode=mode, token=token, against=surface):
-                    self.assertIn(surface, self.SURFACES, "unknown surface named in a comment")
+                    # The surface has to be a token declared in the same block.
+                    # A fixed list of legal names could not describe a second
+                    # design's grounds without being edited, and a name that is
+                    # merely spelled correctly proves nothing — this way a
+                    # ratio can only be measured against a colour that exists.
                     self.assertIn(token, colours)
-                    self.assertIn(surface, colours)
+                    self.assertIn(
+                        surface, colours, f"{surface} is not a colour declared in this block"
+                    )
                     actual = _contrast(colours[token], colours[surface])
                     self.assertAlmostEqual(
                         actual,
@@ -1070,9 +1089,11 @@ class ContrastTests(unittest.TestCase):
         """
         for mode, block in self._blocks().items():
             colours = self._declarations(block)
-            for token in ("text", "text-muted"):
+            prose = ("text", "text-muted") if "text" in colours else ("b-text", "b-muted")
+            ground = "bg" if "bg" in colours else "b-bg"
+            for token in prose:
                 with self.subTest(mode=mode, token=token):
-                    self.assertGreaterEqual(_contrast(colours[token], colours["bg"]), 4.5)
+                    self.assertGreaterEqual(_contrast(colours[token], colours[ground]), 4.5)
 
 
 if __name__ == "__main__":

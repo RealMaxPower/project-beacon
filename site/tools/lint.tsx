@@ -12,6 +12,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { App } from "@/App";
+import { SiteB } from "@b/SiteB";
 import { Home } from "@/screens/marketing/Home";
 import { HowItWorks } from "@/screens/marketing/HowItWorks";
 import { Scenarios } from "@/screens/marketing/Scenarios";
@@ -192,6 +193,15 @@ const SHELL_ROUTES = [
 ];
 
 const screens: [string, () => string][] = [
+  /*
+   * The second design, as one page.
+   *
+   * It has no router — it is a single document — so it is audited as a screen
+   * rather than as a shell route. The landmark rule below matters more here
+   * than anywhere: this design brings its own header, main and footer, and
+   * rendering it inside the first design's shell would be two of each.
+   */
+  ["Site B", () => renderToStaticMarkup(<SiteB />)],
   ...SHELL_ROUTES.map(
     (route) =>
       [`App shell · #/${route}`, () => shellAt(`#/${route}`)] as [string, () => string],

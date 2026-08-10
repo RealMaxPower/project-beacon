@@ -2,66 +2,237 @@
 @import "./fonts-b.css";
 
 /*
- * The second design's tokens. Placeholder values until the palette is
- * validated; the real set lands with measured ratios in its comments, in the
- * same format `tests/test_site_claims.py` parses for the first design.
+ * The second design's tokens.
+ *
+ * Two grounds, alternating by section: ink for the dark bands, paper for the
+ * warm light ones. Rather than two sets of token names, there is one set and a
+ * `[data-ground="paper"]` scope that re-declares every one of them — the same
+ * construction the first design uses for its inverted plate, for the same
+ * reason. A partial override keeps the names and breaks the values, so the
+ * ratios published below would silently stop being true while still reading as
+ * measurements.
+ *
+ * Four accents, each carrying exactly one meaning:
+ *
+ *   src     where a thing came from — evidence, sources, locators
+ *   review  something a person has to look at
+ *   ok      checked and satisfied
+ *   bad     a contradiction, a refusal, an integrity failure
+ *
+ * They were chosen by running the palette validator on both grounds, not by
+ * eye, and the results are worth writing down because two of them constrain
+ * how the accents may be used.
+ *
+ * On ink the set passes every check: worst adjacent pair `ok` against `review`
+ * at ΔE 9.0 under deuteranopia, against a target of 8.
+ *
+ * On paper it does not, and cannot. Four hues at AA contrast on a warm light
+ * ground leave `src` at chroma 0.087 against a 0.1 floor, and `ok` against
+ * `review` at ΔE 6.1 under protanopia — inside the 6–8 band the validator
+ * permits only with a second encoding. So the rule for this design is that a
+ * semantic colour never travels alone: every use carries a word or a mark.
+ * That is the same conclusion the first design reached from the opposite
+ * direction, where verdict colours separate by ΔE 0.7 and survive only because
+ * the badges carry shapes.
+ *
+ * The rule is not yet enforced by a check, and saying so is the point: it will
+ * be a render-audit rule in `tools/lint.tsx`, where the computed colour of an
+ * element and the text beside it are both visible, and it lands with the first
+ * section that has anything for it to examine. A check written now would pass
+ * on an empty page and read afterwards as coverage.
+ *
+ * The validator also fails the lightness band on ink, and that one is set
+ * aside deliberately: the check wants marks in a mid band so they read on
+ * either surface, and an accent used as text on a near-black ground has to be
+ * light or it fails contrast instead. Contrast is the constraint that matters
+ * for text, and every value below clears AA.
+ *
+ * Ratios in the comments are measured against the ground of their own block.
  */
 
 :root {
-  --b-ink: #0e1116;
-  --b-paper: #f4f1ea;
-  --b-ink-text: #f5f7fa; /* 16.61 b-ink */
-  --b-paper-text: #14171c; /* 15.94 b-paper */
+  --b-bg: #0e1116;
+  --b-raised: #12161d;
+  --b-deep: #0b0d12;
+  --b-line: #232830;
+  --b-line-strong: #333a45;
+
+  --b-text: #f5f7fa; /* 17.62 b-bg */
+  --b-muted: #98a1ae; /* 7.24 b-bg */
+  --b-faint: #79828f; /* 4.87 b-bg */
+
+  --b-src: #4ed8ea; /* 11.11 b-bg */
+  --b-review: #f0ac3a; /* 9.61 b-bg */
+  --b-ok: #5bdd93; /* 10.99 b-bg */
+  --b-bad: #ff6e55; /* 6.86 b-bg */
+
+  --b-on-accent: #08181c; /* 10.65 b-src */
+
+  --b-display: clamp(38px, 5.4vw, 72px);
+  --b-h2: clamp(30px, 3.9vw, 54px);
+  --b-lede: clamp(15.5px, 1.2vw, 18px);
+
+  --b-band: clamp(64px, 7vw, 116px);
+  --b-gutter: clamp(20px, 5vw, 60px);
+  --b-measure: 1260px;
+}
+
+/*
+ * The paper ground: the whole palette, re-declared.
+ *
+ * Every accent here is a different hex from its ink counterpart rather than the
+ * same colour on a lighter field — a hue that clears AA on #0e1116 does not on
+ * #f4f1ea, and reusing it would publish four ratios that no longer hold.
+ */
+[data-ground="paper"] {
+  --b-bg: #f4f1ea;
+  --b-raised: #fffdf9;
+  --b-deep: #ffffff;
+  --b-line: #d8d3c8;
+  --b-line-strong: #bdb7a9;
+
+  --b-text: #14171c; /* 15.92 b-bg */
+  --b-muted: #4e5661; /* 6.58 b-bg */
+  --b-faint: #616873; /* 4.98 b-bg */
+
+  --b-src: #00737f; /* 4.95 b-bg */
+  --b-review: #9a5300; /* 5.16 b-bg */
+  --b-ok: #00753f; /* 5.15 b-bg */
+  --b-bad: #b5341d; /* 5.36 b-bg */
+
+  --b-on-accent: #ffffff; /* 5.59 b-src */
+
+  background: var(--b-bg);
+  color: var(--b-text);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-b-bg: var(--b-bg);
+  --color-b-raised: var(--b-raised);
+  --color-b-deep: var(--b-deep);
+  --color-b-line: var(--b-line);
+  --color-b-line-strong: var(--b-line-strong);
+  --color-b-text: var(--b-text);
+  --color-b-muted: var(--b-muted);
+  --color-b-faint: var(--b-faint);
+  --color-b-src: var(--b-src);
+  --color-b-review: var(--b-review);
+  --color-b-ok: var(--b-ok);
+  --color-b-bad: var(--b-bad);
+  --color-b-on-accent: var(--b-on-accent);
+
+  --font-b-display: Archivo, system-ui, sans-serif;
+  --font-b-ui: Inter, system-ui, sans-serif;
+  --font-b-mono: "Azeret Mono", ui-monospace, monospace;
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
   body {
     margin: 0;
-    background: var(--b-ink);
-    color: var(--b-ink-text);
+    background: var(--b-bg);
+    color: var(--b-text);
     font-family: Inter, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* One ring, everywhere, on both grounds. */
+  :focus-visible {
+    outline: 2px solid var(--b-src);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  [id] {
+    scroll-margin-top: 88px;
   }
 }
 
 @layer utilities {
-  .b-shell {
+  .b-measure {
     margin-inline: auto;
-    max-width: 1260px;
-    padding: clamp(64px, 7vw, 116px) clamp(20px, 5vw, 60px);
+    max-width: var(--b-measure);
+    padding-inline: var(--b-gutter);
   }
 
-  .b-eyebrow {
-    font-family: "Azeret Mono", monospace;
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--b-ink-text);
+  .b-band {
+    padding-block: var(--b-band);
   }
 
   .b-display {
     font-family: Archivo, system-ui, sans-serif;
-    font-size: clamp(38px, 5.4vw, 72px);
+    font-size: var(--b-display);
     line-height: 1.02;
     letter-spacing: -0.035em;
     font-weight: 700;
     text-wrap: balance;
   }
 
+  .b-h2 {
+    font-family: Archivo, system-ui, sans-serif;
+    font-size: var(--b-h2);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
   .b-lede {
-    max-width: 56ch;
-    font-size: clamp(15.5px, 1.2vw, 18px);
+    font-size: var(--b-lede);
     line-height: 1.6;
+    color: var(--b-muted);
     text-wrap: pretty;
+  }
+
+  /*
+   * Set by min-height rather than padding arithmetic, so it cannot drift with
+   * font metrics. Declared here because this design does not import the first
+   * one's stylesheet — every `hit-target` in these components was doing
+   * nothing at all until this existed, and `npm run visual` reported nine
+   * controls under 44px to prove it.
+   */
+  .hit-target {
+    min-height: 44px;
+  }
+
+  .b-eyebrow {
+    font-family: "Azeret Mono", ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /*
+   * Hairline cell separators without doubling.
+   *
+   * Lifted from the source design, where it is used nineteen times and never
+   * explained. In an `auto-fit` grid the cells do not know how many neighbours
+   * they have, so a border on each produces two lines between every pair and
+   * one stray at the edges. An inset shadow draws only on the sides that face
+   * inward and costs no layout.
+   */
+  .b-cells > * {
+    box-shadow:
+      inset -1px 0 0 var(--b-line),
+      inset 0 -1px 0 var(--b-line);
   }
 }
 
 /*
- * B does not inherit the first design's reduced-motion block, so it declares
- * its own. The rule is narrower than it reads: it stops CSS animation,
- * transition and smooth scrolling, and cannot reach a JS timer, SVG SMIL or an
- * animated image format — which is why a test forbids all three rather than
- * trusting this.
+ * This design does not inherit the first one's reduced-motion block, so it
+ * declares its own. The rule is narrower than it reads: it stops CSS
+ * animation, transition and smooth scrolling, and cannot reach a JS timer, an
+ * SVG SMIL element or an animated image format — which is why a test forbids
+ * all three rather than trusting this to catch them.
  */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,25 +1,37 @@
-import { facts } from "@/data/fixtures";
+import { Footer, Header } from "./components/Chrome";
+import { Facts } from "./sections/Facts";
+import { Hero } from "./sections/Hero";
+import { MissingLayer } from "./sections/MissingLayer";
+import { Quickstart } from "./sections/Quickstart";
+import { Status } from "./sections/Status";
 
 /**
- * Version B, under construction.
+ * The second design.
  *
- * A deliberate stub: it exists so the second entry point can be proved to
- * build, serve under the real Content-Security-Policy, and pass the audits
- * before a single section of the design is ported. Standing the pipeline up
- * first is what makes every later failure attributable to the thing that
- * caused it.
+ * Built from `design/Outcome Assurance.dc.html`, with its visual system kept
+ * and its content replaced. The design markets a product with claims, review
+ * tasks, bound approvals and reconciled external outcomes; this repository has
+ * scenarios, recorded tool calls, deterministic assertions and a verdict. The
+ * sections that described the former are gone rather than filled with
+ * plausible substitutes, and the ones that remain read their numbers from the
+ * same recorded runs the first design uses.
+ *
+ * Two sections are still to come — the case explorer on Beacon's own tabs, and
+ * the integrity panel that recomputes a bundle digest with real SHA-256.
  */
 
 export function SiteB() {
   return (
-    <main className="b-shell">
-      <p className="b-eyebrow">Outcome Assurance</p>
-      <h1 className="b-display">Agent work you can defend.</h1>
-      <p className="b-lede">
-        The second design is being built. It reads the same recorded runs as the first —{" "}
-        {facts.scenarios} scenarios and {facts.subjects} adversarial subjects — so neither site
-        can describe a run the other does not have.
-      </p>
-    </main>
+    <>
+      <Header />
+      <main>
+        <Hero />
+        <Facts />
+        <MissingLayer />
+        <Status />
+        <Quickstart />
+      </main>
+      <Footer />
+    </>
   );
 }
