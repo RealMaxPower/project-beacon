@@ -1,6 +1,6 @@
 import { Disclosure } from "@/components/shell/Disclosure";
 import { NextSteps } from "@/components/shell/NextSteps";
-import { Sweep } from "@/components/shell/Sweep";
+import { OutcomeMatrix } from "@/components/runs/OutcomeMatrix";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
 import {
   baselines,
@@ -269,7 +269,20 @@ export function Home({ onGo }: Props) {
     const inbox = fixtures.filter((f) => f.scenario === "inbox-briefing-draft-only");
     if (inbox.length < 3) return null;
 
-    const runs = inbox.map((f) => ({ fixture: f, evidence: evidenceFor(f.key) }));
+    const runs = inbox.map((f) => {
+      const evidence = evidenceFor(f.key);
+      const events = eventsFor(f.key);
+      return {
+        fixture: f,
+        evidence,
+        // What it reached for and was refused, and whether it ever said it had
+        // finished — the three things that differ across these five runs, and
+        // none of which is a state change.
+        refused: blockedAttempts(events),
+        completed: events.some((e) => e.kind === "subject_completed"),
+        diff: summarise(evidence.state_diff.changes[0]?.after),
+      };
+    });
     const shapes = new Set(
       runs.map((r) =>
         JSON.stringify([
@@ -410,65 +423,21 @@ export function Home({ onGo }: Props) {
         </div>
 
         {identical && (
-          <>
-            <div className="mt-[var(--band-base)]">
-              <Sweep
-                runs={identical.runs.map((r) => ({
-                  key: r.fixture.key,
-                  label: r.fixture.label,
-                  verdict: r.evidence.result,
-                }))}
-                before={identical.before}
-                after={identical.after}
-              />
-            </div>
+          <div className="measure mt-[var(--band-base)]">
+            <OutcomeMatrix
+              runs={identical.runs}
+              changed={identical.change?.path ?? "state"}
+              onOpen={(scenarioId) => onGo("playground", scenarioId)}
+            />
 
-            {/*
-              The five runs as real controls, beneath the picture that is only a
-              picture. Two columns on a phone rather than a scrolling row: a
-              scroller would need a cue, and avoiding the class of problem beats
-              advertising it.
-            */}
-            <div className="measure mt-6">
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {identical.runs.map((run) => (
-                  <li key={run.fixture.key}>
-                    <button
-                      type="button"
-                      onClick={() => onGo("playground", run.evidence.scenario.id)}
-                      className="hit-target flex w-full flex-col items-start gap-1.5 rounded-row border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-accent"
-                    >
-                      <span className="text-[12.5px] leading-tight text-pretty">
-                        {run.fixture.label}
-                      </span>
-                      <span
-                        className={`font-mono text-[10.5px] tracking-[0.06em] ${
-                          run.evidence.result === "PASS"
-                            ? "text-pass"
-                            : run.evidence.result === "FAIL"
-                              ? "text-fail"
-                              : "text-inc"
-                        }`}
-                      >
-                        {run.evidence.result}{" "}
-                        {run.evidence.assertions.filter((a) => a.passed).length}/
-                        {run.evidence.assertions.length}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              {identical.unmeasured && (
-                <p className="mt-5 max-w-[68ch] text-[13.5px] leading-relaxed text-text-muted text-pretty">
-                  {identical.unmeasured.fixture.label} satisfied every one of its{" "}
-                  {identical.unmeasured.evidence.assertions.length} assertions and is still not a
-                  PASS — the host went away before it said it had finished. Could not be measured
-                  is not failed.
-                </p>
-              )}
-            </div>
-          </>
+            {identical.unmeasured && (
+              <p className="mt-6 max-w-[70ch] text-[14.5px] leading-relaxed text-pretty">
+                {identical.unmeasured.fixture.label} satisfied every one of its{" "}
+                {identical.unmeasured.evidence.assertions.length} assertions and is still not a
+                PASS. Could not be measured is not failed.
+              </p>
+            )}
+          </div>
         )}
       </section>
 

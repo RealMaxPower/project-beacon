@@ -106,6 +106,21 @@ check(
   "[d-001, d-002, d-003]",
   "reset_verified",
   /*
+   * The comparison figure, and specifically its verdicts.
+   *
+   * The five verdicts must never be colour alone. `#b3261e` and `#8a5a00`
+   * separate by ΔE 0.7 under deuteranopia, so FAIL and INCOMPLETE are one
+   * colour for a red-green colourblind reader — and telling those two apart is
+   * what this product is for. `VerdictBadge` carries a shape and a word as
+   * well; an earlier version of this figure drew bare coloured dots.
+   */
+  "Tried to send",
+  "Said it finished",
+  "INCOMPLETE",
+  // The claim the figure makes, stated where a reader who cannot see it will
+  // still meet it.
+  "The changed field",
+  /*
    * The run that failed, and a legible one.
    *
    * It led with the hosted twelve-run baseline, which resolves INCOMPLETE —

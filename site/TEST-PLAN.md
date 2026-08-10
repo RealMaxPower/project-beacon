@@ -54,33 +54,37 @@ Go to `http://localhost:5173/`.
   decide whether an agent gets write access."*
 - Buttons: **Replay all five →** and **How it grades**.
 
-**The diagram.** Full-bleed, beneath the buttons:
+**The figure.** A comparison table beneath the buttons, five rows, one per agent:
 
-- **One** filled dot on the left labelled `before` / `110ad16d`, **one** on the
-  right labelled `after` / `145210cf`.
-- **Five** arcs leaving the left dot and arriving at the right one.
-- **Five** verdict dots at the widest point of each arc — two green, two red,
-  one amber — each sitting **on** its arc, not floating beside it.
-- Arcs are the accent blue. Dots are the verdict hues. Nothing else is coloured.
+| column | what it shows |
+|---|---|
+| Agent | the run's label, clickable — opens that scenario in the playground |
+| Tried to send | `3× refused` for two of them, `—` for the rest |
+| Tried to open | `1× refused` for one of them only |
+| Said it finished | `yes` for four, `no — host went away` for one |
+| **mail.drafts** | **`[d-001, d-002, d-003]` — identical in all five rows** |
+| Verdict | `✓ PASS`, `✗ FAIL`, dashed-ring `INCOMPLETE` |
 
-**It is a bug if** the arcs fan out to five separate endpoints. That draws five
-different end states, which is the opposite of the finding. They converge at
-both ends and diverge only in the middle.
+A vertical rule separates the last two columns from the rest. Everything left of
+it varies; the column right of it does not.
 
-**It is a bug if** a verdict dot sits off its own arc. A cubic does not pass
-through its control point; the dots are placed at the true midpoint.
+**It is a bug if** the `mail.drafts` column is collapsed into a single merged
+cell or a footnote. The repetition is the finding — five identical values, read
+five times, is the argument the page is making.
 
-**It is a bug if** any arc is green, red or amber, or any dot is blue. The path
-is chrome and the answer is a verdict, and `tokens.css` forbids chrome from
-borrowing a verdict hue.
+**It is a bug if** a verdict is shown as colour alone — a bare dot, a coloured
+word with no mark. In this palette `--fail` and `--inc` separate by **ΔE 0.7
+under deuteranopia**: for a red-green colourblind reader FAIL and INCOMPLETE are
+the same colour, and telling those two apart is what this product is for. Every
+verdict carries a shape and a word. **Check this by desaturating the page** —
+§6.3 — the five must still be readable.
 
-**Then:** five buttons, one per run, each naming the agent and its verdict —
-`PASS 9/9`, `PASS 9/9`, `FAIL 8/9`, `FAIL 7/9`, `INCOMPLETE 9/9`. Two columns on
-a phone. Beneath them, the sentence about the run that satisfied every assertion
-and still is not a PASS.
+**It is a bug if** the agent names are under 44px tall. They are the only
+controls in the figure.
 
-**It is a bug if** those five wrap into a horizontal scroller. A scroller would
-need a cue; two columns need nothing.
+**It is a bug if** the table scrolls sideways on a phone with no fade at its
+right edge. It is wider than 390px by design; `tools/visual.mjs` requires a
+scroll cue to be both declared (`data-scroll-cue`) and painted.
 
 ### 1.1b Home — the diff strip
 
@@ -117,11 +121,6 @@ Below the strip, the card that used to be the hero:
 read as a rendering repeat; three different ids read as three attempts.
 
 **It is a bug if** a blocked row is drawn lighter than a normal one.
-
-**It is a bug if** any of those figures is red. Neither baseline recorded a
-single FAIL — the runs resolved INCOMPLETE — and red would have the page
-contradict its own caption two sections down, which says the grounding check
-was *not* failed.
 
 ### 1.2 Home — shape and truth
 
