@@ -93,7 +93,7 @@ export function Scenarios({ onGo }: Props) {
 
     <NextSteps
       onGo={onGo}
-      lead="Every card above opens a recorded run of that scenario — including the subjects written to break it. The same seven are in the repository, as JSON you can copy and edit."
+      lead={`Every card above opens a recorded run of that scenario — including the subjects written to break it. The same ${facts.scenarios} are in the repository, as JSON you can copy and edit.`}
     />
     </>
   );

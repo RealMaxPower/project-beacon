@@ -19,6 +19,11 @@ interface Props {
 }
 
 const kindLabels: Record<string, string> = {
+  // Beacon narrows a scenario's declared limits to what the run was given.
+  // Without a label the very first row of every run reads as raw
+  // snake_case, which is a poor first impression of a timeline whose whole
+  // job is being readable.
+  limits_overridden: "limits set",
   subject_started: "started",
   tool_call: "calls",
   tool_result: "returns",

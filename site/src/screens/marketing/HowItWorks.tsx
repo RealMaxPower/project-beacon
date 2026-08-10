@@ -2,6 +2,7 @@ import { Disclosure } from "@/components/shell/Disclosure";
 import { NextSteps } from "@/components/shell/NextSteps";
 import { PipelineDiagram } from "@/components/shell/PipelineDiagram";
 import { TerminalBlock } from "@/components/shell/TerminalBlock";
+import { facts } from "@/data/fixtures";
 import type { Go } from "@/router";
 
 /**
@@ -209,7 +210,7 @@ export function HowItWorks({ onGo }: Props) {
 
     <NextSteps
       onGo={onGo}
-      lead="That is the whole pipeline. The playground walks one run through it end to end; the repository has the seven scenarios that ship, and the command to scaffold your own."
+      lead={`That is the whole pipeline. The playground walks one run through it end to end; the repository has the ${facts.scenarios} scenarios that ship, and the command to scaffold your own.`}
     />
     </>
   );

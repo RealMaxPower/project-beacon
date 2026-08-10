@@ -251,7 +251,7 @@ export function ForBuilders({ onGo }: Props) {
 
     <NextSteps
       onGo={onGo}
-      lead="Every command on this page runs against the seven scenarios that ship, so you can watch the shape of it before pointing anything at your own agent."
+      lead={`Every command on this page runs against the ${facts.scenarios} scenarios that ship, so you can watch the shape of it before pointing anything at your own agent.`}
     />
     </>
   );

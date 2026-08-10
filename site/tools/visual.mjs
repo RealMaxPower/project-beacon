@@ -49,6 +49,16 @@ let problems = 0;
 // a passing measurement with a tenth of a point of headroom, and a check that
 // only speaks when it fails cannot tell you that.
 let worstSticky = { where: "", share: 0 };
+/*
+ * A census of horizontal scrollers, printed on success.
+ *
+ * The hidden-controls check reports only failures, so a regression that
+ * stops it seeing scrollers at all produces silence — and silence is
+ * indistinguishable from a clean run. Counting what was inspected makes a
+ * zero visible.
+ */
+let scrollersSeen = 0;
+let scrollersCued = 0;
 const report = (where, what) => {
   console.error(`  ✗ ${where}\n      ${what}`);
   problems += 1;
@@ -149,29 +159,64 @@ const MEASURE = `() => {
      * nav items were unreachable unless the visitor guessed to swipe a row that
      * did not look swipeable.
      *
-     * So the rule is not "never hide": it is "if you hide, mark it". A mask, a
-     * gradient, or an ::after that paints something all count. Nothing at all
-     * does not.
+     * So the rule is not "never hide": it is "if you hide, mark it".
+     *
+     * What counts as marked used to be *any* gradient anywhere on the element
+     * or its ::after. That is far too loose to mean anything. A decorative
+     * background — a blueprint grid, a tint, a sheen — would satisfy it while
+     * telling the reader nothing, and this audit would then report "no layout
+     * problems" for a page with unreachable controls. A confident false
+     * negative is worse than no check, and worse here than anywhere, because
+     * the comment above says in as many words that the failure is invisible by
+     * nature.
+     *
+     * A cue now has to be both *declared* and *painted*:
+     *
+     *   - declared: \`data-scroll-cue\` on the scroller. The attribute alone
+     *     cannot satisfy this, or anyone can silence the audit by typing it.
+     *   - painted: a mask, or a horizontal fade to transparent. The paint
+     *     alone cannot satisfy it either, or a decorative gradient counts as a
+     *     promise the author never made.
+     *
+     * Vertical and radial gradients are deliberately not accepted: a fade at
+     * the bottom of a box says nothing about content lost off its right edge.
      */
     hiddenControls: (() => {
+      // Every backslash is doubled because this whole function is the body of
+      // a template literal in Node, and a single one is eaten before Chrome
+      // ever sees the source.
+      const HORIZONTAL_FADE = /^(?:-webkit-)?linear-gradient\\((?:to (?:right|left)|90deg|270deg)\\b/;
+      const TRANSPARENT = /transparent|rgba?\\([^)]*,\\s*0(?:\\.0+)?\\s*\\)/;
+      const fades = (value) =>
+        Boolean(value) &&
+        value !== "none" &&
+        HORIZONTAL_FADE.test(value) &&
+        TRANSPARENT.test(value);
+
       const out = [];
+      let scrollers = 0;
+      let cued = 0;
+
       for (const el of document.querySelectorAll("body *")) {
         if (el.scrollWidth <= el.clientWidth + 1) continue;
-        const box = el.getBoundingClientRect();
+        scrollers += 1;
 
+        const style = getComputedStyle(el);
+        const after = getComputedStyle(el, "::after");
+        const marked =
+          el.hasAttribute("data-scroll-cue") &&
+          (style.maskImage !== "none" ||
+            style.webkitMaskImage !== "none" ||
+            fades(style.backgroundImage) ||
+            (after.content !== "none" && fades(after.backgroundImage)));
+        if (marked) cued += 1;
+
+        const box = el.getBoundingClientRect();
         const lost = [...el.querySelectorAll("button, a[href], [role=button]")].filter((c) => {
           const r = c.getBoundingClientRect();
           return r.width > 0 && (r.right > box.right + 1 || r.left < box.left - 1);
         });
         if (lost.length === 0) continue;
-
-        const style = getComputedStyle(el);
-        const after = getComputedStyle(el, "::after");
-        const marked =
-          style.maskImage !== "none" ||
-          style.webkitMaskImage !== "none" ||
-          /gradient/.test(style.backgroundImage) ||
-          (after.content !== "none" && /gradient/.test(after.backgroundImage));
 
         if (!marked) {
           out.push({
@@ -181,7 +226,7 @@ const MEASURE = `() => {
           });
         }
       }
-      return out;
+      return { found: out, scrollers, cued };
     })(),
 
     smallTargets: [...document.querySelectorAll("button, a[href], [role=button]")]
@@ -250,7 +295,10 @@ for (const [name, hash] of ROUTES) {
       report(where, `sticky <${bar.tag}> is ${bar.h}px — ${bar.share}% of the viewport`);
     }
 
-    for (const scroller of hiddenControls) {
+    scrollersSeen += hiddenControls.scrollers;
+    scrollersCued += hiddenControls.cued;
+
+    for (const scroller of hiddenControls.found) {
       report(
         where,
         `<${scroller.tag}> hides ${scroller.hidden}px of controls with no scroll cue: ${scroller.labels.join(", ")}`,
@@ -282,4 +330,5 @@ if (problems > 0) {
 }
 console.log(`No layout problems found across ${ROUTES.length} pages × ${WIDTHS.length} widths.`);
 console.log(`Worst sticky furniture: ${worstSticky.share}% of the viewport (${worstSticky.where}), against a 15% limit.`);
+console.log(`Horizontal scrollers: ${scrollersSeen} inspected, ${scrollersCued} carrying a scroll cue.`);
 console.log(`Screenshots in site/.visual/`);

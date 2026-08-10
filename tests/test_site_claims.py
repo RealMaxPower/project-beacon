@@ -255,17 +255,30 @@ class CountingClaimTests(unittest.TestCase):
 
         The site derives every count it displays from the exports above, so a
         digit written into the prose layer is either wrong now or will be.
+
+        This used to read `copy.ts` alone, which is where the *scenario cards'*
+        prose lives — and every other authored sentence on the site was
+        invisible to it. Four of them said "seven scenarios": a terminal
+        comment on the home page and three section leads. All four would have
+        gone stale the day an eighth shipped, with nothing failing.
+
+        Comments are stripped first. A docstring explaining that seven
+        scenarios ship is documentation, not a claim rendered at a visitor.
         """
-        text = " ".join((SRC / "data" / "copy.ts").read_text(encoding="utf-8").split())
-        for pattern in (
-            r"\b(?:\d+|forty|twenty[- ]one|seven)\s+(?:adversarial\s+)?subjects\b",
-            r"\b(?:\d+|seven)\s+scenarios\b",
-        ):
-            with self.subTest(pattern=pattern):
-                self.assertIsNone(
-                    re.search(pattern, text, re.IGNORECASE),
-                    "counts belong in generated data, not in copy.ts",
-                )
+        surfaces = sorted((SRC / "screens").rglob("*.tsx")) + [SRC / "data" / "copy.ts"]
+        for path in surfaces:
+            text = " ".join(_without_comments(path.read_text(encoding="utf-8")).split())
+            for pattern in (
+                r"\b(?:\d+|forty|twenty[- ]one|seven)\s+(?:adversarial\s+)?subjects\b",
+                r"\b(?:\d+|seven)\s+scenarios\b",
+                r"\bthe\s+seven\s+that\s+ship\b",
+                r"\bthe\s+same\s+seven\b",
+            ):
+                with self.subTest(file=path.relative_to(ROOT), pattern=pattern):
+                    self.assertIsNone(
+                        re.search(pattern, text, re.IGNORECASE),
+                        "counts belong in generated data, not in authored prose",
+                    )
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
@@ -518,6 +531,390 @@ class CertificationLanguageTests(unittest.TestCase):
         for banned in ("testimonial", "logowall", "logocloud", "trustedby", "socialproof"):
             with self.subTest(component=banned):
                 self.assertNotIn(banned, names)
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class SocialCardTests(unittest.TestCase):
+    """
+    The Open Graph tags, against the page title and description they repeat.
+
+    They have to be a second copy — a crawler reads the served HTML and will
+    not run the app — and a second copy of a sentence is the shape that drifts.
+    Nothing else on this site states a fact twice without a test between the
+    copies.
+    """
+
+    INDEX = SITE / "index.html"
+
+    def _meta(self, attribute: str, name: str) -> str:
+        source = self.INDEX.read_text(encoding="utf-8")
+        match = re.search(
+            rf'<meta\s+{attribute}="{re.escape(name)}"\s+content="([^"]*)"',
+            source,
+            re.S,
+        ) or re.search(
+            rf'<meta\s*\n?\s*{attribute}="{re.escape(name)}"\s*\n?\s*content="([^"]*)"',
+            source,
+            re.S,
+        )
+        self.assertIsNotNone(match, f"no <meta {attribute}={name}>")
+        return " ".join(match.group(1).split())
+
+    def test_the_card_repeats_the_page_title(self) -> None:
+        source = self.INDEX.read_text(encoding="utf-8")
+        title = re.search(r"<title>(.*?)</title>", source, re.S)
+        self.assertIsNotNone(title)
+        self.assertEqual(self._meta("property", "og:title"), " ".join(title.group(1).split()))
+
+    def test_the_card_repeats_the_page_description(self) -> None:
+        self.assertEqual(
+            self._meta("property", "og:description"),
+            self._meta("name", "description"),
+        )
+
+    def test_the_card_declares_no_image(self) -> None:
+        """
+        `summary`, not `summary_large_image`, and no `og:image`.
+
+        There is no picture on this site, and a card that promises one renders
+        as a broken card rather than a small one.
+        """
+        source = self.INDEX.read_text(encoding="utf-8")
+        self.assertNotIn("og:image", source)
+        self.assertEqual(self._meta("name", "twitter:card"), "summary")
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class VisualVocabularyTests(unittest.TestCase):
+    """
+    The design rules `tokens.css` states in prose, made executable.
+
+    Every rule here was already written down and enforced by nothing. This
+    repository's own position, from `tests/test_falsifiability.py`, is that a
+    rule without a check is a suggestion — and these are the ones a redesign
+    would break first, quietly, while everything still looked fine.
+    """
+
+    def test_gradients_stay_semantic(self) -> None:
+        """
+        `tokens.css`: "FLAKY is a mix of the two hues rather than a fourth one.
+        A new colour would imply a fourth kind of answer."
+
+        Two exemptions, both load-bearing rather than convenient. The hatch
+        utilities are the semantic use the rule is about. A `mask-image`
+        gradient is not paint at all — it is the mechanism the sanctioned
+        scroll cue is built from, and `tools/visual.mjs` looks for exactly it.
+        """
+        for path in _site_sources():
+            if path.suffix not in {".css", ".tsx", ".ts"}:
+                continue
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            for match in re.finditer(r"gradient", source):
+                window = source[max(0, match.start() - 160) : match.end() + 40]
+                if "hatch-flaky" in window or "mask-image" in window:
+                    continue
+                with self.subTest(file=path.relative_to(ROOT), at=match.start()):
+                    self.fail(
+                        "a gradient outside the FLAKY hatch and outside a scroll-cue mask; "
+                        "gradient is a verdict vocabulary in this system"
+                    )
+
+    def test_no_weight_the_fonts_cannot_render(self) -> None:
+        """
+        `src/fonts.css` ships both families at `font-weight: 400 500`.
+
+        Anything heavier is synthesised by the browser, which at display sizes
+        is a visible smear. Emphasis here is size, tracking and colour.
+        """
+        pattern = re.compile(r"font-(?:semibold|bold|black|extrabold)|font-weight:\s*[6-9]00")
+        for path in _site_sources():
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(file=path.relative_to(ROOT)):
+                self.assertIsNone(
+                    pattern.search(source),
+                    "the shipped fonts stop at 500; this renders as a synthesised bold",
+                )
+
+    def test_full_bleed_never_uses_the_viewport_width(self) -> None:
+        """
+        `100vw` includes the classic scrollbar, so it makes the document wider
+        than the viewport — which `tools/visual.mjs` fails on. The sanctioned
+        bleed is a section with no max-width wrapping a div that has one.
+        """
+        pattern = re.compile(r"100vw|w-screen|-translate-x-1/2")
+        for path in _site_sources():
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(file=path.relative_to(ROOT)):
+                self.assertIsNone(
+                    pattern.search(source),
+                    "use a full-width section around a max-width div, not the viewport",
+                )
+
+    def test_faint_text_never_lands_on_the_sunken_surface(self) -> None:
+        """
+        `--text-faint` measures 4.78 on `--sunken` in light mode — under AA,
+        and `tokens.css` says so in the token's own comment. The contrast test
+        verifies the number; this stops the pairing being used.
+        """
+        for path in SRC.rglob("*.tsx"):
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            for value in re.findall(r'className=[{"]?["`]([^"`]+)["`]', source):
+                if "bg-sunken" in value and "text-text-faint" in value:
+                    with self.subTest(file=path.relative_to(ROOT)):
+                        self.fail("--text-faint on --sunken is 4.78 in light mode")
+
+    def test_no_motion_that_outlives_reduced_motion(self) -> None:
+        """
+        `tokens.css` kills CSS animation and transition globally — and nothing
+        else. SMIL, `scroll-behavior` and JS timers all run straight through
+        it, so a visitor who asked for no motion still gets it.
+
+        The playground timeline is the one sanctioned timer: the visitor
+        pressed Run, and the reveal is content rather than decoration.
+        """
+        allowed = {"RunTimeline.tsx"}
+        pattern = re.compile(r"<animate|<set\s|scroll-behavior|setInterval|requestAnimationFrame")
+        for path in SRC.rglob("*.tsx"):
+            if path.name in allowed:
+                continue
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(file=path.relative_to(ROOT)):
+                self.assertIsNone(
+                    pattern.search(source),
+                    "prefers-reduced-motion does not stop this; it is CSS-only",
+                )
+
+    def test_the_site_ships_no_raster_images(self) -> None:
+        """
+        The rule the five design mocks follow and no test enforced.
+
+        All five specify zero imagery — no `<img>`, no canvas, no
+        background-image, no photograph or illustration anywhere. That was a
+        decision, not an omission: "No invented proof… There is nothing to fill
+        in later." Until now an AI-generated hero could have been committed and
+        the whole suite would have stayed green.
+
+        Beyond taste, a raster is the one artifact here that cannot be pinned.
+        Every other claim is hashed or counted against a source in the
+        repository; a picture has no source to compare to, so it can go stale
+        the day the fixtures are re-recorded with nothing noticing.
+        """
+        rasters = [
+            p
+            for p in (SITE / "public").rglob("*")
+            if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
+        ]
+        self.assertEqual(rasters, [], "the site ships vector and text only")
+
+        for path in _site_sources():
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            with self.subTest(file=path.relative_to(ROOT)):
+                self.assertNotIn("<img", source)
+                self.assertNotIn("background-image", source)
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class HeadlineTests(unittest.TestCase):
+    """
+    The claim the home page leads with, against the runs it is about.
+
+    The headline is that five recorded agents leave the mailbox in an
+    identical state and still earn three different verdicts — so a harness
+    that grades by diffing before and after calls all five the same agent.
+    That is the strongest thing this project can say, and it is the one
+    sentence on the site whose truth depends on five separate bundles
+    continuing to agree.
+
+    Every other number here is derived at render time and cannot go stale. A
+    headline cannot be derived — somebody wrote it — so it is pinned instead.
+    If a subject is re-recorded and the runs stop agreeing, the page is making
+    a false claim and the build should say so rather than the sentence quietly
+    outliving its evidence.
+    """
+
+    SCENARIO = "inbox-briefing-draft-only"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        index = json.loads((GENERATED / "index.json").read_text(encoding="utf-8"))
+        keys = [f["key"] for f in index["fixtures"] if f["scenario"] == cls.SCENARIO]
+        cls.runs = {
+            key: json.loads((GENERATED / key / "evidence.json").read_text(encoding="utf-8"))
+            for key in keys
+        }
+
+    def test_there_are_runs_to_compare(self) -> None:
+        self.assertGreaterEqual(
+            len(self.runs), 3, "too few recorded runs for the headline to mean anything"
+        )
+
+    def test_every_run_leaves_the_same_state(self) -> None:
+        """
+        The load-bearing half. One end state across all of them.
+
+        Compared as `(before, after, diff)` rather than on the after digest
+        alone: two runs could coincidentally agree on a digest while having
+        changed different things along the way, and the claim is about the
+        report a diff-only harness would produce, which is the whole tuple.
+        """
+        shapes = {
+            (
+                run["state"]["before_digest"],
+                run["state"]["after_digest"],
+                json.dumps(run["state_diff"], sort_keys=True),
+            )
+            for run in self.runs.values()
+        }
+        self.assertEqual(
+            len(shapes),
+            1,
+            "the runs no longer share one end state; the home page headline is false",
+        )
+
+    def test_the_verdicts_disagree(self) -> None:
+        """Identical state is only interesting if the answers differ."""
+        verdicts = {run["result"] for run in self.runs.values()}
+        self.assertEqual(
+            verdicts,
+            {"PASS", "FAIL", "INCOMPLETE"},
+            "the headline says three different answers",
+        )
+
+    def test_one_run_passes_every_assertion_and_is_not_a_pass(self) -> None:
+        """
+        The sharpest line on the page, and the easiest to lose.
+
+        `disconnects` satisfies all nine assertions and still resolves
+        INCOMPLETE, because the host went away before signalling completion.
+        It is the clearest statement the site has that INCOMPLETE is not a soft
+        failure — and it survives only as long as some run has that shape.
+        """
+        unmeasured = [
+            key
+            for key, run in self.runs.items()
+            if run["result"] != "PASS" and all(a["passed"] for a in run["assertions"])
+        ]
+        self.assertTrue(
+            unmeasured,
+            "no run passes every assertion without being a PASS; that sentence must go",
+        )
+
+
+def _luminance(hex_colour: str) -> float:
+    """Relative luminance, WCAG 2.x."""
+    value = hex_colour.lstrip("#")
+    channels = [int(value[i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    linear = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def _contrast(a: str, b: str) -> float:
+    first, second = _luminance(a), _luminance(b)
+    lighter, darker = max(first, second), min(first, second)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class ContrastTests(unittest.TestCase):
+    """
+    The contrast ratios `tokens.css` publishes, against the colours it defines.
+
+    Eighteen ratios are written into that file as comments — `/* 5.92 */`,
+    `/* 5.04 bg · 5.21 surface · 4.78 sunken */` — and until now every one of
+    them was a claim with nothing behind it. The file itself says why that
+    matters: "Ratios in the comments are measured against the mode's own --bg.
+    A token's published ratio only holds on the backgrounds it was measured
+    against." A number that quietly stops being true is exactly the defect this
+    repository writes tests about everywhere else.
+
+    This recomputes each one from the hex literals in the same block. It is the
+    only check in the project that reads a comment as a specification, which is
+    worth doing here because the comment is the only place the measurement
+    lives.
+    """
+
+    TOKENS = SRC / "tokens.css"
+    #: Ratios are quoted to two decimals, so anything inside half a unit of the
+    #: last place is the same measurement rounded, not a different one.
+    TOLERANCE = 0.05
+
+    #: The surfaces a ratio may name. A bare number means `bg`, which is the
+    #: convention the file's own header states.
+    SURFACES = ("bg", "surface", "sunken")
+
+    def _blocks(self) -> dict[str, str]:
+        source = self.TOKENS.read_text(encoding="utf-8")
+        blocks = {}
+        for selector, name in ((r":root", "light"), (r'\[data-theme="dark"\]', "dark")):
+            match = re.search(rf"^{selector} \{{(.*?)^\}}", source, re.S | re.M)
+            self.assertIsNotNone(match, f"the {name} token block moved; repoint this guard")
+            blocks[name] = match.group(1)
+        return blocks
+
+    @staticmethod
+    def _declarations(block: str) -> dict[str, str]:
+        return {
+            name: value
+            for name, value in re.findall(r"--([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;", block)
+        }
+
+    def _claims(self, block: str) -> list[tuple[str, str, float]]:
+        """Every `(token, surface, ratio)` a comment in this block asserts."""
+        found = []
+        for token, comment in re.findall(
+            r"--([a-z-]+):\s*#[0-9a-fA-F]{6}\s*;\s*/\*([^*]+)\*/", block
+        ):
+            body = comment.split("—")[0]  # drop trailing notes like "non-text use only"
+            for chunk in body.split("·"):
+                parts = chunk.split()
+                if not parts:
+                    continue
+                try:
+                    ratio = float(parts[0])
+                except ValueError:
+                    continue
+                surface = parts[1] if len(parts) > 1 else "bg"
+                found.append((token, surface, ratio))
+        return found
+
+    def test_there_are_ratios_to_check(self) -> None:
+        """A guard that parsed nothing would pass silently forever."""
+        total = sum(len(self._claims(block)) for block in self._blocks().values())
+        self.assertGreaterEqual(
+            total, 16, "far fewer published ratios than expected; the comment format changed"
+        )
+
+    def test_every_published_ratio_is_the_measured_one(self) -> None:
+        for mode, block in self._blocks().items():
+            colours = self._declarations(block)
+            for token, surface, claimed in self._claims(block):
+                with self.subTest(mode=mode, token=token, against=surface):
+                    self.assertIn(surface, self.SURFACES, "unknown surface named in a comment")
+                    self.assertIn(token, colours)
+                    self.assertIn(surface, colours)
+                    actual = _contrast(colours[token], colours[surface])
+                    self.assertAlmostEqual(
+                        actual,
+                        claimed,
+                        delta=self.TOLERANCE,
+                        msg=(
+                            f"--{token} on --{surface} in {mode} measures {actual:.2f}, "
+                            f"and the comment says {claimed:.2f}"
+                        ),
+                    )
+
+    def test_body_text_clears_the_readable_threshold(self) -> None:
+        """
+        The two tokens that carry prose, against WCAG AA for normal text.
+
+        `--text-disabled` is exempt and says so in its own comment: it is
+        marked non-text use only, and 3.23 would fail this.
+        """
+        for mode, block in self._blocks().items():
+            colours = self._declarations(block)
+            for token in ("text", "text-muted"):
+                with self.subTest(mode=mode, token=token):
+                    self.assertGreaterEqual(_contrast(colours[token], colours["bg"]), 4.5)
 
 
 if __name__ == "__main__":

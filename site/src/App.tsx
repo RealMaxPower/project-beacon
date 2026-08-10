@@ -158,6 +158,12 @@ export function App() {
           <div className="relative lg:hidden">
             <nav
               aria-label="Main"
+              // Declared as well as painted. `tools/visual.mjs` used to accept
+              // any gradient anywhere on a scroller as proof it had advertised
+              // itself, which a decorative background would satisfy while
+              // telling the reader nothing. The attribute is the author saying
+              // the fade is a promise rather than a texture.
+              data-scroll-cue
               className="flex items-center gap-0.5 overflow-x-auto pb-1.5 [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]"
             >
             {routes

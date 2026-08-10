@@ -232,6 +232,27 @@ export function pathForTool(tool: string): string | null {
 export function describeEvent(event: BeaconEvent): string | null {
   const payload = (event.payload ?? {}) as Record<string, unknown>;
 
+  /*
+   * The run's limits, where they were narrowed.
+   *
+   * Beacon clamps a scenario's declared budget to what this run was actually
+   * given, and records both numbers. It is the first event in every run, so
+   * with no branch here the timeline opens on a labelled row with nothing
+   * beside it — the one place a reader is most likely to be deciding whether
+   * this log is worth reading.
+   */
+  if (event.kind === "limits_overridden") {
+    const narrowed = Object.entries(payload)
+      .map(([field, value]) => {
+        const pair = value as { declared?: unknown; applied?: unknown } | undefined;
+        if (!pair || pair.declared === undefined || pair.applied === undefined) return null;
+        const unit = field.endsWith("_seconds") ? "s" : "";
+        return `${field.replace(/_seconds$/, "")} ${pair.declared}${unit} → ${pair.applied}${unit}`;
+      })
+      .filter(Boolean);
+    return narrowed.length > 0 ? narrowed.join(" · ") : null;
+  }
+
   if (event.kind === "tool_result") {
     const result = payload.result;
     if (Array.isArray(result)) {

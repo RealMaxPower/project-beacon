@@ -233,7 +233,10 @@ export function Home({ onGo }: Props) {
         <div className="mb-13 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => onGo("playground")}
+            // Straight to the run this page is about. It used to open the
+            // scenario picker, which asks a reader who just clicked "watch
+            // an agent fail" to find the failing agent themselves.
+            onClick={() => onGo("playground", hero?.evidence.scenario.id)}
             className="hit-target inline-flex items-center rounded-md bg-text px-[22px] py-3.5 text-[15px] font-medium text-bg"
           >
             Watch an agent fail →
@@ -631,7 +634,7 @@ export function Home({ onGo }: Props) {
               "git clone https://github.com/RealMaxPower/project-beacon",
               "cd project-beacon",
               "",
-              "# the seven that ship",
+              `# the ${facts.scenarios} that ship`,
               "python3 -m beacon scenarios",
               "# run one, get an evidence bundle",
               "python3 -m beacon run inbox-briefing",

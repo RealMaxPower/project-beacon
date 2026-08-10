@@ -222,6 +222,13 @@
 /*
  * The timeline still streams under reduced motion — it is content, not
  * decoration — but nothing animates.
+ *
+ * Worth being precise about what this block does and does not reach, because
+ * it is widely read as "no motion" and it is narrower than that. It stops CSS
+ * animation, CSS transition, and smooth scrolling. It cannot stop a JS timer,
+ * an SVG SMIL element, or an animated image format — those run regardless of
+ * what the visitor asked for, which is why a test forbids all three rather
+ * than trusting this rule to catch them.
  */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -229,5 +236,6 @@
   *::after {
     animation: none !important;
     transition: none !important;
+    scroll-behavior: auto !important;
   }
 }
