@@ -15,6 +15,7 @@
     "agent-builders.md",
     "architecture.md",
     "beacon-test-run.md",
+    "production-readiness.md",
     "protocol-contracts.md",
     "running-it-yourself.md",
     "windows.md"

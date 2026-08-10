@@ -45,7 +45,6 @@ before/after state of a simulated service.
 - [What you get from a run](#what-you-get-from-a-run)
 - [Features](#features)
 - [Subjects you can grade](#subjects-you-can-grade)
-- [What does not work yet](#what-does-not-work-yet)
 - [Requirements](#requirements)
 - [Testing](#testing)
 - [Repository layout](#repository-layout)
@@ -109,8 +108,13 @@ verdict:
 | `report.md` | Human-readable report with the assertion table and state diff |
 
 Verdicts are `PASS`, `FAIL`, or `INCOMPLETE`. Each bundle carries its own
-`limitations` block, and a SHA-256 digest so a later edit is detectable — an
-unsigned integrity check, and nothing yet ships a command to verify one.
+`limitations` block and a SHA-256 digest, so a later edit is detectable.
+
+**A passing report is evidence for one synthetic scenario and one
+configuration. It is not a safety certification.** Every bundle says so in its
+own `limitations` block, and
+[docs/production-readiness.md](docs/production-readiness.md) is the full ledger
+of what Beacon is and is not ready to be trusted with.
 
 ## Features
 
@@ -138,17 +142,6 @@ unsigned integrity check, and nothing yet ships a command to verify one.
 | `mcp-host` | An MCP host (Cursor, Claude Desktop) | Grading the host that calls the tools |
 | `mcp-tool` | One tool on a hosted MCP server | How 29 hosted agents were probed |
 | `a2a` | A hosted A2A agent | Full scenario and evidence lifecycle with no bridge code |
-
-## What does not work yet
-
-- The process runner is not a hardened container or VM sandbox.
-- There is no OpenClaw, Hermes, Codex, or other native runtime adapter yet.
-- There is no web UI, approval interface, service virtualization proxy, model
-  cost accounting, signing, or hosted service.
-- Nothing has been published to PyPI, so `pip install project-beacon` does not
-  work yet. Packaging builds and installs clean into an empty environment.
-- A passing report is evidence for one synthetic scenario and one
-  configuration. **It is not a safety certification.**
 
 ## Requirements
 
@@ -207,6 +200,7 @@ docs/             Architecture, protocol contracts, and guides
 | [docs/architecture.md](docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
 | [docs/protocol-contracts.md](docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
 | [docs/windows.md](docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
+| [docs/production-readiness.md](docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
 
 ### The contracts and the evidence
 
