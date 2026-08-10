@@ -108,81 +108,166 @@ export function Integrity() {
         </p>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-[1fr_1.15fr]">
-          <div className="rounded-xl border border-b-line p-6">
-            <p className="b-eyebrow mb-4 text-b-faint">What it is for</p>
-            <p className="text-[13.5px] leading-relaxed text-b-muted">
-              An evidence bundle is meant to be handed to somebody who was not there. The digest
-              is what lets them tell whether the copy they are reading is the copy that was
-              written.
-            </p>
-            <p className="mt-4 border-t border-b-line pt-4 text-[13.5px] leading-relaxed text-b-muted">
-              It is <span className="text-b-review">unsigned</span>. An edit becomes detectable;
-              an author does not become provable. Anyone who can change the bundle can recompute
-              the digest, so this is a check against accident and drift, not against a determined
-              forger.
-            </p>
+          {/*
+            Two cards, because the claim is a contrast and prose flattened it.
+            The source design stages the same move — a dashed red card against a
+            solid green one — for approval that is vague against approval that is
+            bound. Beacon's version of that contrast is the true one about a
+            hash: it tells you the bytes changed, and it tells you nothing at all
+            about who changed them. The dashed edge is the second encoding the
+            palette rule requires, so the pair still separates without colour.
+          */}
+          <div className="flex flex-col gap-4">
+            <div
+              className="rounded-xl border p-6"
+              style={{
+                borderColor: "var(--b-ok)",
+                background: "color-mix(in oklab, var(--b-ok) 7%, transparent)",
+              }}
+            >
+              <p className="b-eyebrow mb-3" style={{ color: "var(--b-ok)" }}>
+                It detects
+              </p>
+              <p className="text-[15px] leading-snug text-b-text">
+                “These are not the bytes that were written.”
+              </p>
+              <p className="mt-3 text-[13px] leading-relaxed text-b-muted">
+                Recompute the hash, compare it to the one in the bundle, and a single altered
+                field shows up. That works for a reader who was not there and trusts nobody.
+              </p>
+            </div>
+
+            <div
+              className="rounded-xl border border-dashed p-6"
+              style={{
+                borderColor: "var(--b-bad)",
+                background: "color-mix(in oklab, var(--b-bad) 6%, transparent)",
+              }}
+            >
+              <p className="b-eyebrow mb-3" style={{ color: "var(--b-bad)" }}>
+                It does not prove
+              </p>
+              <p className="text-[15px] leading-snug text-b-text">
+                “These are the bytes Beacon wrote.”
+              </p>
+              <p className="mt-3 text-[13px] leading-relaxed text-b-muted">
+                The digest is <span className="text-b-review">unsigned</span>. Anyone who can
+                change the bundle can recompute it, so this is a check against accident and drift
+                — not against somebody who wants to deceive you.
+              </p>
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-xl border border-b-line bg-b-raised">
-            <div className="border-b border-b-line px-5 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-b-line px-5 py-3.5">
               <span className="font-b-mono text-[12px] text-b-src">bundle://{evidence.run_id}</span>
+              <span
+                className="b-eyebrow rounded-[4px] border px-2 py-1"
+                style={{ borderColor: "var(--b-review)", color: "var(--b-review)" }}
+              >
+                Unsigned
+              </span>
             </div>
 
+            {/*
+              Label left, value right — the design's arrangement, and the reason
+              it works is that the values are mono and the right edge lines them
+              up into a column a reader can scan for the one that changed.
+            */}
             <dl className="divide-y divide-b-line">
               {fields.map((field) => {
                 const changed = Boolean(edited[field.key]);
                 return (
-                  <div key={field.key} className="flex items-baseline gap-4 px-5 py-3">
-                    <dt className="w-32 flex-none text-[12.5px] text-b-faint">{field.label}</dt>
+                  <div
+                    key={field.key}
+                    className="flex items-baseline justify-between gap-4 px-5 py-3"
+                  >
+                    <dt className="flex-none text-[12.5px] text-b-faint">{field.label}</dt>
                     <dd
-                      className={`min-w-0 flex-1 font-b-mono text-[12.5px] break-all ${changed ? "text-b-bad" : "text-b-text"}`}
+                      className={`min-w-0 text-right font-b-mono text-[12.5px] break-all ${changed ? "text-b-bad" : "text-b-text"}`}
                     >
                       {changed ? field.altered : field.original}
+                      {changed && <span className="b-eyebrow ml-2 text-b-bad">edited</span>}
                     </dd>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEdited((current) => ({ ...current, [field.key]: !current[field.key] }))
-                      }
-                      className="hit-target flex-none rounded-md border border-b-line-strong px-2.5 text-[11.5px] text-b-muted hover:text-b-text"
-                    >
-                      {changed ? "undo" : "change"}
-                    </button>
                   </div>
                 );
               })}
-            </dl>
 
-            <div className="border-t border-b-line px-5 py-4">
-              <p className="b-eyebrow mb-2 text-b-faint">SHA-256 over those four fields</p>
-              <p className="font-b-mono text-[12px] break-all text-b-text">
-                {digest ? `${digest.slice(0, 48)}…` : "computing…"}
-              </p>
-            </div>
+              <div className="flex items-baseline justify-between gap-4 px-5 py-3">
+                <dt className="flex-none text-[12.5px] text-b-faint">SHA-256 over those four</dt>
+                <dd className="min-w-0 text-right font-b-mono text-[12.5px] break-all text-b-src">
+                  {digest ? `${digest.slice(0, 32)}…` : "computing…"}
+                </dd>
+              </div>
+            </dl>
 
             {/*
               A live region, because the verdict is the thing that changes and a
               reader operating the buttons by keyboard has no other way to know
               it did.
             */}
-            <p
+            <div
               aria-live="polite"
-              className={`flex flex-wrap items-center gap-2.5 border-t px-5 py-4 text-[13px] ${
-                matches ? "border-b-ok/30 bg-b-ok/10" : "border-b-bad/30 bg-b-bad/10"
-              }`}
+              className="border-t px-5 py-4"
+              style={{
+                borderColor: matches ? "var(--b-ok)" : "var(--b-bad)",
+                background: `color-mix(in oklab, var(${matches ? "--b-ok" : "--b-bad"}) 8%, transparent)`,
+              }}
             >
-              <span aria-hidden="true" className={matches ? "text-b-ok" : "text-b-bad"}>
-                {matches ? "✓" : "✗"}
-              </span>
-              <span className={matches ? "text-b-ok" : "text-b-bad"}>
+              <p
+                className="b-eyebrow flex items-center gap-2"
+                style={{ color: matches ? "var(--b-ok)" : "var(--b-bad)" }}
+              >
+                <span aria-hidden="true">{matches ? "✓" : "✗"}</span>
                 {matches ? "Digest matches" : "Digest does not match"}
-              </span>
-              <span className="text-b-muted">
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-b-muted">
                 {dirty
-                  ? "one field was changed, so this is not the bundle that was written"
-                  : "this is the bundle as recorded"}
-              </span>
-            </p>
+                  ? "One protected field was changed, so this is no longer the bundle that was written. Every field feeds the same hash, which is why one edit is enough."
+                  : "These are the four values as recorded. Change any one of them and the hash above stops agreeing with the bundle."}
+              </p>
+            </div>
+
+            {/*
+              The controls, gathered into one row rather than a button per line.
+              Per-row buttons put a permanent affordance beside every value and
+              made the list read as a form; here the values are just values, and
+              the row underneath says plainly what it is for.
+            */}
+            <div className="border-t border-b-line px-5 py-4">
+              <p className="b-eyebrow mb-3 text-b-faint">Change a protected field</p>
+              <div className="flex flex-wrap gap-2">
+                {fields.map((field) => {
+                  const changed = Boolean(edited[field.key]);
+                  return (
+                    <button
+                      key={field.key}
+                      type="button"
+                      aria-pressed={changed}
+                      onClick={() =>
+                        setEdited((current) => ({ ...current, [field.key]: !current[field.key] }))
+                      }
+                      className="hit-target rounded-md border px-3 font-b-mono text-[12px]"
+                      style={{
+                        borderColor: changed ? "var(--b-bad)" : "var(--b-line-strong)",
+                        color: changed ? "var(--b-bad)" : "var(--b-text)",
+                      }}
+                    >
+                      {field.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setEdited({})}
+                  disabled={!dirty}
+                  className="hit-target rounded-md border px-3 font-b-mono text-[12px] disabled:opacity-40"
+                  style={{ borderColor: "var(--b-src)", color: "var(--b-src)" }}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

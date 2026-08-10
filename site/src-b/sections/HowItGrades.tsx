@@ -60,7 +60,17 @@ export function HowItGrades() {
       <div className="b-cells grid sm:grid-cols-2 xl:grid-cols-4">
         {STEPS.map((step) => (
           <div key={step.n} className="px-5 py-6">
-            <p className={`b-eyebrow ${step.tone}`}>{step.n}</p>
+            {/*
+              The numeral and a rule that runs out from it to the cell's edge.
+              It is the source design's one memorable detail in this grid: the
+              rule ties the number to the width it governs, so four cells read
+              as one sequence rather than four unrelated boxes. `aria-hidden`
+              because the number beside it already says the same thing.
+            */}
+            <div className="flex items-center gap-3">
+              <p className={`b-eyebrow flex-none ${step.tone}`}>{step.n}</p>
+              <span aria-hidden="true" className="h-px flex-1 bg-b-line" />
+            </div>
             <p className="mt-3 font-b-display text-[17px] font-semibold tracking-[-0.015em]">
               {step.head}
             </p>

@@ -650,21 +650,31 @@ class VisualVocabularyTests(unittest.TestCase):
         A new colour would imply a fourth kind of answer."
 
         Two exemptions, both load-bearing rather than convenient. The hatch
-        utilities are the semantic use the rule is about. A `mask-image`
-        gradient is not paint at all — it is the mechanism the sanctioned
-        scroll cue is built from, and `tools/visual.mjs` looks for exactly it.
+        utilities are the semantic use the rule is about. A mask gradient is
+        not paint at all: it is an alpha ramp, it introduces no hue, and so it
+        cannot be mistaken for a fourth kind of answer — which is the entire
+        thing this rule exists to prevent.
+
+        That second exemption used to be written as the literal `mask-image`,
+        justified by the sanctioned scroll cue being built from one. Both parts
+        were too narrow. React spells the property `maskImage`, so the guard was
+        blind to every mask an inline style declared — the same camelCase hole
+        the raster guard had — and the scroll cue was never the reason, only the
+        first instance. The rule below is the one the reasoning supports: a
+        gradient may be a mask, in any spelling, and may not be paint.
         """
+        mask = re.compile(r"(?:-webkit-)?mask-image|(?:Webkit)?[Mm]askImage")
         for path in _site_sources():
             if path.suffix not in {".css", ".tsx", ".ts"}:
                 continue
             source = _without_comments(path.read_text(encoding="utf-8"))
             for match in re.finditer(r"gradient", source):
                 window = source[max(0, match.start() - 160) : match.end() + 40]
-                if "hatch-flaky" in window or "mask-image" in window:
+                if "hatch-flaky" in window or mask.search(window):
                     continue
                 with self.subTest(file=path.relative_to(ROOT), at=match.start()):
                     self.fail(
-                        "a gradient outside the FLAKY hatch and outside a scroll-cue mask; "
+                        "a gradient that is paint rather than the FLAKY hatch or a mask; "
                         "gradient is a verdict vocabulary in this system"
                     )
 

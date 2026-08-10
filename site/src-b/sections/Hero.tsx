@@ -1,4 +1,5 @@
 import { evidenceFor, facts, fixtures } from "@/data/fixtures";
+import { Blueprint } from "../components/Blueprint";
 import { Pipeline } from "../components/Pipeline";
 
 /**
@@ -49,7 +50,8 @@ export function Hero() {
   const identical = identicalRuns();
 
   return (
-    <section id="top" className="pt-16 pb-[clamp(48px,6vw,88px)]">
+    <section id="top" className="relative isolate pt-16 pb-[clamp(48px,6vw,88px)]">
+      <Blueprint />
       <div className="b-measure grid items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div>
         <p className="b-eyebrow inline-flex items-center rounded-full border border-b-src/30 px-3 py-1.5 text-b-src">
@@ -86,9 +88,17 @@ export function Hero() {
           >
             Read the source
           </a>
+          <a
+            href="#quickstart"
+            className="hit-target inline-flex items-center px-1 text-[14.5px] text-b-muted underline decoration-b-line-strong underline-offset-4 hover:text-b-text"
+          >
+            Run it yourself
+          </a>
         </div>
 
-          <p className="mt-8 font-b-mono text-[11.5px] text-b-faint">
+          {/* Muted, not faint: the blueprint grid behind this lifts the ground to
+              #25282d, where faint is 3.80 against AA’s 4.5. See Blueprint.tsx. */}
+          <p className="mt-8 font-b-mono text-[11.5px] text-b-muted">
             {facts.scenarios} scenarios · {facts.subjects} adversarial subjects · every fixture
             synthetic
           </p>

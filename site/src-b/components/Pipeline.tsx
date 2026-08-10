@@ -32,16 +32,48 @@ import { blockedAttempts, evidenceFor, eventsFor, scenarioFor } from "@/data/fix
 
 const RUN = "misbehaving";
 
-/** A stage's dot: filled for what happened, hollow-red for what was refused. */
+/**
+ * A stage marker: a hollow ring on the rail, not a filled dot.
+ *
+ * The design draws these as rings the rail passes through, which reads as a
+ * station on a line rather than a bullet beside a list. Filled dots looked
+ * like list markers and made the rail decorative.
+ */
 function Dot({ tone }: { tone: "src" | "bad" | "ok" | "review" }) {
   const colour =
     tone === "bad" ? "var(--b-bad)" : tone === "ok" ? "var(--b-ok)" : tone === "review" ? "var(--b-review)" : "var(--b-src)";
   return (
     <span
       aria-hidden="true"
-      className="relative z-10 mt-1.5 h-2.5 w-2.5 flex-none rounded-full ring-4 ring-b-raised"
-      style={{ background: colour }}
+      className="relative z-10 mt-1 h-2.5 w-2.5 flex-none rounded-full border-2"
+      style={{ borderColor: colour, background: "var(--b-raised)" }}
     />
+  );
+}
+
+/** A bordered content tile, which is how the design carries every stage body. */
+function Tile({
+  children,
+  tone,
+}: {
+  children: React.ReactNode;
+  tone?: "ok" | "bad" | "review";
+}) {
+  const edge =
+    tone === "bad"
+      ? "var(--b-bad)"
+      : tone === "ok"
+        ? "var(--b-ok)"
+        : tone === "review"
+          ? "var(--b-review)"
+          : "var(--b-line)";
+  return (
+    <div
+      className="rounded-md border px-3 py-2"
+      style={{ borderColor: edge, opacity: tone ? 1 : 0.95 }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -79,34 +111,38 @@ export function Pipeline() {
       title: "Declared",
       tone: "src",
       body: (
-        <p className="font-b-mono text-[11.5px] text-b-faint">
-          {scenario.slug} · {scenario.assertions.length} checks · {scenario.tools.length} tools
-        </p>
+        <Tile>
+          <p className="font-b-mono text-[12.5px] text-b-text">{scenario.slug}</p>
+          <p className="mt-0.5 font-b-mono text-[11px] text-b-faint">
+            {scenario.assertions.length} checks · {scenario.tools.length} tools
+          </p>
+        </Tile>
       ),
     },
     {
       title: "Subject",
       tone: "src",
       body: (
-        <p className="font-b-mono text-[11.5px] text-b-faint">
-          {evidence.subject.adapter} · level {evidence.subject.integration_level}
-          {limits?.timeout_seconds &&
-            ` · timeout ${limits.timeout_seconds.declared}s → ${limits.timeout_seconds.applied}s`}
-        </p>
+        <Tile>
+          <p className="font-b-mono text-[12.5px] text-b-text">{evidence.subject.adapter}</p>
+          <p className="mt-0.5 font-b-mono text-[11px] text-b-faint">
+            level {evidence.subject.integration_level}
+            {limits?.timeout_seconds &&
+              ` · timeout ${limits.timeout_seconds.declared}s → ${limits.timeout_seconds.applied}s`}
+          </p>
+        </Tile>
       ),
     },
     {
       title: "Did the work",
       tone: "ok",
       body: (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="grid grid-cols-3 gap-2">
           {drafts.map((id) => (
-            <span
-              key={id}
-              className="rounded-md border border-b-line px-2 py-1 font-b-mono text-[11px] text-b-muted"
-            >
-              {id}
-            </span>
+            <Tile key={id}>
+              <p className="font-b-mono text-[11.5px] text-b-text">{id}</p>
+              <p className="mt-0.5 font-b-mono text-[10.5px] text-b-ok">created</p>
+            </Tile>
           ))}
         </div>
       ),
@@ -115,12 +151,15 @@ export function Pipeline() {
       title: "Was refused",
       tone: "bad",
       body: (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {[...refused.entries()].map(([tool, count]) =>
             Array.from({ length: count }, (_, i) => (
-              <p key={`${tool}-${i}`} className="font-b-mono text-[11.5px] text-b-bad">
-                {tool} <span className="text-b-faint">blocked, recorded anyway</span>
-              </p>
+              <Tile key={`${tool}-${i}`} tone="bad">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-b-mono text-[11.5px] text-b-text">{tool}</span>
+                  <span className="font-b-mono text-[10.5px] text-b-bad">BLOCKED</span>
+                </div>
+              </Tile>
             )),
           )}
         </div>
@@ -130,9 +169,9 @@ export function Pipeline() {
       title: "Checked",
       tone: passed === evidence.assertions.length ? "ok" : "review",
       body: (
-        <div className="flex flex-wrap gap-1.5">
-          <Chip label={`${passed} met`} tone="ok" />
-          {failing && <Chip label={`${failing.id} failed`} tone="bad" />}
+        <div className="flex flex-wrap gap-2">
+          <Chip label={`${passed} of ${evidence.assertions.length} MET`} tone="ok" />
+          {failing && <Chip label={`${failing.id} FAILED`} tone="bad" />}
         </div>
       ),
     },
@@ -140,19 +179,22 @@ export function Pipeline() {
       title: "Verdict",
       tone: evidence.result === "PASS" ? "ok" : evidence.result === "FAIL" ? "bad" : "review",
       body: (
-        <p className="font-b-mono text-[11.5px] text-b-faint">
-          sha256:{evidence.digest.slice(0, 16)}…
-        </p>
+        <Tile tone={evidence.result === "PASS" ? "ok" : "bad"}>
+          <p className="font-b-mono text-[12.5px]" style={{ color: "var(--b-bad)" }}>
+            {evidence.result}
+          </p>
+          <p className="mt-0.5 font-b-mono text-[11px] text-b-faint">
+            sha256:{evidence.digest.slice(0, 16)}…
+          </p>
+        </Tile>
       ),
     },
   ];
 
   return (
     <div className="overflow-hidden rounded-xl border border-b-line bg-b-raised">
-      <div className="flex items-center justify-between gap-3 border-b border-b-line px-5 py-3">
-        <span className="font-b-mono text-[11.5px] text-b-faint">
-          One recorded run · synthetic scenario
-        </span>
+      <div className="flex items-center justify-between gap-3 border-b border-b-line px-5 py-3.5">
+        <span className="b-eyebrow text-b-faint">Recorded run · synthetic</span>
         <span
           className="b-eyebrow rounded-[4px] border px-2 py-1"
           style={{ borderColor: "var(--b-bad)", color: "var(--b-bad)" }}
@@ -199,8 +241,8 @@ export function Pipeline() {
           >
             <Dot tone={stage.tone} />
             <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-medium">{stage.title}</p>
-              <div className="mt-1.5">{stage.body}</div>
+              <p className="b-eyebrow text-b-faint">{stage.title}</p>
+              <div className="mt-2">{stage.body}</div>
             </div>
           </li>
         ))}
