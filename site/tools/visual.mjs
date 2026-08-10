@@ -277,6 +277,28 @@ const MEASURE = `() => {
       .map((el) => ({ el, r: el.getBoundingClientRect() }))
       .filter(({ r }) => r.height > 0 && r.height < 44)
       .map(({ el, r }) => ({ text: (el.textContent || el.getAttribute("aria-label") || "?").trim().slice(0, 40), h: Math.round(r.height) })),
+
+    /*
+     * Pressable controls that do not offer a hand.
+     *
+     * Tailwind v3's Preflight gave buttons \`cursor: pointer\`; v4 dropped it,
+     * and the whole site went to an arrow while every link kept a hand — two
+     * controls that do the same thing telling a reader different stories about
+     * whether they can be pressed. Nothing failed, nothing logged, and no
+     * screenshot shows a cursor, so this is the only audit that can see it.
+     *
+     * Disabled controls are excluded rather than exempted: an arrow is the
+     * correct cursor there, and requiring a hand would be requiring a lie.
+     */
+    handless: [...document.querySelectorAll("button:not(:disabled), summary, [role=button]:not([aria-disabled=true])")]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && getComputedStyle(el).cursor !== "pointer";
+      })
+      .map((el) => ({
+        text: (el.textContent || el.getAttribute("aria-label") || "?").trim().slice(0, 40),
+        cursor: getComputedStyle(el).cursor,
+      })),
   };
 }`;
 
@@ -308,7 +330,7 @@ for (const [name, hash] of ROUTES) {
     // Invoked, not just evaluated: a string passed to `evaluate` is treated as
     // an expression, and a bare arrow function is an expression whose value is
     // the function itself.
-    const { boxes, collisions, docWidth, viewport, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
+    const { boxes, collisions, docWidth, viewport, handless, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
 
     for (const message of errors) report(where, `console error: ${message}`);
 
@@ -341,6 +363,10 @@ for (const [name, hash] of ROUTES) {
 
     for (const target of smallTargets) {
       report(where, `hit target ${target.h}px, under the 44px the design system requires: "${target.text}"`);
+    }
+
+    for (const control of handless) {
+      report(where, `pressable but shows "${control.cursor}" rather than a hand: "${control.text}"`);
     }
 
     for (const hit of collisions) {

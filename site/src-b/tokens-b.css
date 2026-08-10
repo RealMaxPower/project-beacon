@@ -206,6 +206,30 @@
     border-radius: 4px;
   }
 
+
+  /*
+   * The hand cursor, on anything that can be pressed.
+   *
+   * Tailwind v3's Preflight set `cursor: pointer` on buttons. v4 dropped it to
+   * match the browser default and neither stylesheet noticed, so every
+   * `<button>` on this site showed an arrow while every `<a>` showed a hand —
+   * ninety-three of them across the two designs. To a reader those are the
+   * same kind of control saying two different things about whether it can be
+   * pressed, and the one that looks inert is the one nobody clicks.
+   *
+   * `:not(:disabled)` is the point of the selector rather than a nicety: a
+   * disabled control keeps the arrow, which is the only cursor that tells the
+   * truth about what pressing it will do.
+   *
+   * `<summary>` is here because it is a button that is not a `<button>`, and
+   * `Disclosure.tsx` is built on one.
+   */
+  button:not(:disabled),
+  summary,
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   [id] {
     scroll-margin-top: 88px;
   }
