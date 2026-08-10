@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-beacon.dev/schemas/evidence-0.1.json",
+  "$id": "https://beaconlab.dev/schemas/evidence-0.2.json",
   "title": "Project Beacon Evidence",
   "type": "object",
   "required": [

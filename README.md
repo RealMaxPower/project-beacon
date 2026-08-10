@@ -202,6 +202,7 @@ docs/             Architecture, protocol contracts, and guides
 | [docs/protocol-contracts.md](docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
 | [docs/windows.md](docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
 | [docs/production-readiness.md](docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
+| [docs/releasing.md](docs/releasing.md) | How a version reaches PyPI, and the configuration that lives outside the repository |
 
 ### The contracts and the evidence
 

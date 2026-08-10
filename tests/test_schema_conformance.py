@@ -76,6 +76,28 @@ class SchemaAndCodeAgreeTests(unittest.TestCase):
             with self.subTest(schema=path.name):
                 self.assertFalse(_load(path)["additionalProperties"])
 
+    def test_each_schema_identifies_the_version_it_describes(self) -> None:
+        """
+        The evidence schema was `$id`-ed `evidence-0.1.json` while requiring
+        `evidence_version` to be exactly "0.2" — so the document's own name for
+        itself disagreed with the only value it would accept. Harmless while
+        nobody could fetch it; a URL people cite once the package is public.
+        """
+        evidence = _load(EVIDENCE_SCHEMA)
+        version = evidence["properties"]["evidence_version"]["const"]
+        self.assertTrue(
+            evidence["$id"].endswith(f"evidence-{version}.json"),
+            f'$id {evidence["$id"]!r} does not name version {version!r}',
+        )
+
+        scenario = _load(SCENARIO_SCHEMA)
+        declared = scenario["properties"]["schema_version"]
+        expected = declared.get("const") or declared["enum"][-1]
+        self.assertTrue(
+            scenario["$id"].endswith(f"scenario-{expected}.json"),
+            f'$id {scenario["$id"]!r} does not name version {expected!r}',
+        )
+
 
 class StarterScenarioTests(unittest.TestCase):
     def test_the_starter_scenario_conforms(self) -> None:

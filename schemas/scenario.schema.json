@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-beacon.dev/schemas/scenario-0.1.json",
+  "$id": "https://beaconlab.dev/schemas/scenario-0.1.json",
   "title": "Project Beacon Scenario",
   "type": "object",
   "required": [

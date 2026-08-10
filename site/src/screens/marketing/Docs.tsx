@@ -56,6 +56,8 @@ const descriptions: Record<string, string> = {
     "The manual test plan for this site, walked end to end against a dev server. Three defects and seven notes, written down whether or not they were flattering.",
   "windows.md":
     "Why a literal python3 is a Store alias stub on Windows, and the two tests that spawned one and passed for weeks without running anything.",
+  "releasing.md":
+    "How a version reaches PyPI, and the three pieces of state that live outside the repository: the trusted publisher, the environment, and the workflow switch a clone cannot see.",
   "production-readiness.md":
     "What Beacon is ready to be trusted with and what it is not, one limitation at a time, each with the file or command behind it and what would change the answer.",
   "a2a-survey.md":
