@@ -1,23 +1,29 @@
 import { Footer, Header } from "./components/Chrome";
+import { Case } from "./sections/Case";
+import { Close } from "./sections/Close";
+import { Compare } from "./sections/Compare";
+import { Contribute } from "./sections/Contribute";
 import { Facts } from "./sections/Facts";
 import { Hero } from "./sections/Hero";
+import { HowItGrades } from "./sections/HowItGrades";
+import { Integrity } from "./sections/Integrity";
 import { MissingLayer } from "./sections/MissingLayer";
 import { Quickstart } from "./sections/Quickstart";
+import { Stack } from "./sections/Stack";
 import { Status } from "./sections/Status";
 
 /**
  * The second design.
  *
- * Built from `design/Outcome Assurance.dc.html`, with its visual system kept
- * and its content replaced. The design markets a product with claims, review
- * tasks, bound approvals and reconciled external outcomes; this repository has
- * scenarios, recorded tool calls, deterministic assertions and a verdict. The
- * sections that described the former are gone rather than filled with
- * plausible substitutes, and the ones that remain read their numbers from the
- * same recorded runs the first design uses.
- *
- * Two sections are still to come — the case explorer on Beacon's own tabs, and
- * the integrity panel that recomputes a bundle digest with real SHA-256.
+ * Built from `Outcome Assurance.dc.html`, keeping its visual system and its
+ * section rhythm — ink and paper alternating, one argument per band — and
+ * replacing its content wholesale. The design markets a product with claims,
+ * review tasks, bound approvals and reconciled external outcomes. This
+ * repository has scenarios, recorded tool calls, deterministic assertions and
+ * a verdict, so the two sections that turned on the former were rebuilt on the
+ * latter rather than filled with plausible substitutes: the case explorer runs
+ * on Beacon's own tabs, and the approval panel became an integrity panel that
+ * recomputes a real SHA-256.
  */
 
 export function SiteB() {
@@ -28,8 +34,15 @@ export function SiteB() {
         <Hero />
         <Facts />
         <MissingLayer />
+        <Case />
+        <Integrity />
+        <HowItGrades />
+        <Stack />
+        <Compare />
         <Status />
+        <Contribute />
         <Quickstart />
+        <Close />
       </main>
       <Footer />
     </>

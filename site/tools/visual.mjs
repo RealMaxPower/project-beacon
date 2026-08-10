@@ -91,6 +91,31 @@ const MEASURE = `() => {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) continue;
 
+    /*
+     * Skip what a scroll container has scrolled out of sight.
+     *
+     * \`getBoundingClientRect\` reports where an element *would* be, not
+     * whether anyone can see it — so a row scrolled past the bottom of a
+     * panel still returns a position, and that position lands on top of
+     * whatever follows the panel. Two elements a reader can never see at the
+     * same moment are not a collision, and reporting them buries the pairs
+     * that are: one scrolling list produced a hundred and seventy of these.
+     *
+     * Only the clipping ancestors are consulted, and only on the axis they
+     * actually clip.
+     */
+    let hidden = false;
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const ps = getComputedStyle(p);
+      const clipsY = ps.overflowY === "auto" || ps.overflowY === "scroll" || ps.overflowY === "hidden";
+      const clipsX = ps.overflowX === "auto" || ps.overflowX === "scroll" || ps.overflowX === "hidden";
+      if (!clipsY && !clipsX) continue;
+      const pr = p.getBoundingClientRect();
+      if (clipsY && (r.bottom < pr.top + 1 || r.top > pr.bottom - 1)) { hidden = true; break; }
+      if (clipsX && (r.right < pr.left + 1 || r.left > pr.right - 1)) { hidden = true; break; }
+    }
+    if (hidden) continue;
+
     measured.push({
       el,
       tag: el.tagName.toLowerCase(),
