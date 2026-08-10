@@ -154,7 +154,7 @@ function audit(where: string, html: string) {
  * so a stub is enough to steer the route. Effects do not run under
  * `renderToStaticMarkup`; only the initial state matters.
  */
-function shellAt(hash: string): string {
+function withHash<T>(hash: string, render: () => T): T {
   const media = { matches: false, addEventListener() {}, removeEventListener() {} };
   const store = new Map<string, string>();
   const previous = (globalThis as Record<string, unknown>).window;
@@ -172,12 +172,25 @@ function shellAt(hash: string): string {
   };
 
   try {
-    return renderToStaticMarkup(<App />);
+    return render();
   } finally {
     (globalThis as Record<string, unknown>).window = previous;
     delete (globalThis as Record<string, unknown>).localStorage;
   }
 }
+
+const shellAt = (hash: string) => withHash(hash, () => renderToStaticMarkup(<App />));
+
+/*
+ * The second design at a given fragment.
+ *
+ * Its router reads `window.location.hash` exactly as the first one's does, so
+ * the same stub steers it — and the fragments below are chosen for the one
+ * thing this router does that the other cannot: `#case` has no leading slash
+ * and must render the marketing page, not a not-found. That distinction is
+ * invisible to a check that only ever renders the default.
+ */
+const siteBAt = (hash: string) => withHash(hash, () => renderToStaticMarkup(<SiteB />));
 
 const SHELL_ROUTES = [
   "",
@@ -194,14 +207,23 @@ const SHELL_ROUTES = [
 
 const screens: [string, () => string][] = [
   /*
-   * The second design, as one page.
+   * The second design, at every fragment its router distinguishes.
    *
-   * It has no router — it is a single document — so it is audited as a screen
-   * rather than as a shell route. The landmark rule below matters more here
-   * than anywhere: this design brings its own header, main and footer, and
-   * rendering it inside the first design's shell would be two of each.
+   * The landmark rule below matters more here than anywhere: this design
+   * brings its own header, main and footer, and it now wraps the first
+   * design's playground — which brings its own `<main>` in the shell it was
+   * written for. Two mains is exactly the defect that rule exists to catch,
+   * and it is why the playground route is audited rather than assumed.
    */
-  ["Site B", () => renderToStaticMarkup(<SiteB />)],
+  ["Site B · marketing", () => siteBAt("")],
+  ["Site B · #case anchor", () => siteBAt("#case")],
+  ["Site B · #/playground", () => siteBAt("#/playground")],
+  [
+    "Site B · #/playground/<id>",
+    () => siteBAt("#/playground/inbox-briefing-draft-only"),
+  ],
+  ["Site B · #/playground/<unknown>", () => siteBAt("#/playground/no-such-scenario")],
+  ["Site B · #/not-a-page", () => siteBAt("#/not-a-page")],
   ...SHELL_ROUTES.map(
     (route) =>
       [`App shell · #/${route}`, () => shellAt(`#/${route}`)] as [string, () => string],

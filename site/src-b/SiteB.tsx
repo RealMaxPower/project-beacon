@@ -1,4 +1,6 @@
+import { Playground } from "@/screens/playground/Playground";
 import { Footer, Header } from "./components/Chrome";
+import { NotFound } from "./sections/NotFound";
 import { Case } from "./sections/Case";
 import { Close } from "./sections/Close";
 import { Compare } from "./sections/Compare";
@@ -11,6 +13,7 @@ import { MissingLayer } from "./sections/MissingLayer";
 import { Quickstart } from "./sections/Quickstart";
 import { Stack } from "./sections/Stack";
 import { Status } from "./sections/Status";
+import { B_NOT_FOUND, useBRoute } from "./router-b";
 
 /**
  * The second design.
@@ -24,26 +27,51 @@ import { Status } from "./sections/Status";
  * latter rather than filled with plausible substitutes: the case explorer runs
  * on Beacon's own tabs, and the approval panel became an integrity panel that
  * recomputes a real SHA-256.
+ *
+ * The playground is the first design's, imported rather than rebuilt. Its
+ * utilities resolve through token *names*, so `tokens-b.css` declares those
+ * names against this palette and all of it repaints — see the alias block
+ * there for why a second copy was the wrong answer. What arrives here is one
+ * implementation of a seven-step flow, and one place for its claims to be
+ * checked.
+ *
+ * It is a route rather than a band because it is not an argument. Every
+ * section above makes one and can be read by scrolling past it; the playground
+ * asks the visitor to choose a scenario, choose a subject, and go — and a
+ * multi-step flow embedded in a marketing scroll would leave them mid-run when
+ * they meant to keep reading.
  */
 
 export function SiteB() {
+  const [location] = useBRoute();
+
   return (
     <>
-      <Header />
-      <main>
-        <Hero />
-        <Facts />
-        <MissingLayer />
-        <Case />
-        <Integrity />
-        <HowItGrades />
-        <Stack />
-        <Compare />
-        <Status />
-        <Contribute />
-        <Quickstart />
-        <Close />
-      </main>
+      <Header route={location.route} />
+      {location.route === "playground" ? (
+        <main>
+          <Playground scenarioId={location.param} />
+        </main>
+      ) : location.route === B_NOT_FOUND ? (
+        <main>
+          <NotFound />
+        </main>
+      ) : (
+        <main>
+          <Hero />
+          <Facts />
+          <MissingLayer />
+          <Case />
+          <Integrity />
+          <HowItGrades />
+          <Stack />
+          <Compare />
+          <Status />
+          <Contribute />
+          <Quickstart />
+          <Close />
+        </main>
+      )}
       <Footer />
     </>
   );

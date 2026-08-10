@@ -44,6 +44,11 @@ const ROUTES = [
   // dist/ without the host's rewrites, so /b resolves only in production and
   // /b.html resolves in both.
   ["b", "b.html"],
+  // The shared playground inside the second design's shell. Same seven-step
+  // flow as `#/playground` above, a different header above it and a different
+  // palette under it — so its geometry is a separate measurement, not an
+  // inference from the first design's.
+  ["b-playground", "b.html#/playground"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];

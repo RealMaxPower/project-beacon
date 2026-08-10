@@ -1,4 +1,5 @@
 import { facts } from "@/data/fixtures";
+import type { BResolved } from "../router-b";
 
 /**
  * Header and footer.
@@ -11,12 +12,22 @@ import { facts } from "@/data/fixtures";
 
 const REPO = "https://github.com/RealMaxPower/project-beacon";
 
+/*
+ * Section anchors and one route, in one list.
+ *
+ * The anchors keep working from the playground without any handling: clicking
+ * "The case" there sets the hash to `#case`, which has no leading slash, so
+ * `router-b.ts` resolves HOME, the marketing page renders, and the browser
+ * scrolls to the section. The route is the only entry that needs the slash,
+ * and it is the only one that changes what is rendered.
+ */
 const NAV = [
   ["The case", "#case"],
   ["How it grades", "#how"],
   ["Your stack", "#stack"],
   ["What exists", "#status"],
   ["Quickstart", "#quickstart"],
+  ["Playground", "#/playground"],
 ] as const;
 
 function Mark() {
@@ -32,7 +43,15 @@ function Mark() {
   );
 }
 
-export function Header() {
+export function Header({ route }: { route: BResolved }) {
+  /*
+   * `aria-current` on the route only. The section anchors are destinations on
+   * the page rather than pages, and marking one current would be a claim about
+   * where the reader is that this header cannot check — it does not know what
+   * is in the viewport.
+   */
+  const current = (href: string) => (route === "playground" && href === "#/playground" ? "page" : undefined);
+
   return (
     <header className="sticky top-0 z-50 border-b border-b-line bg-b-bg/90 backdrop-blur">
       {/*
@@ -60,7 +79,10 @@ export function Header() {
               <a
                 key={href}
                 href={href}
-                className="hit-target inline-flex flex-none items-center rounded-md px-2.5 text-[13.5px] text-b-muted hover:text-b-text"
+                aria-current={current(href)}
+                className={`hit-target inline-flex flex-none items-center rounded-md px-2.5 text-[13.5px] hover:text-b-text ${
+                  current(href) ? "text-b-src" : "text-b-muted"
+                }`}
               >
                 {label}
               </a>
@@ -87,7 +109,10 @@ export function Header() {
             <a
               key={href}
               href={href}
-              className="hit-target inline-flex flex-none items-center rounded-md px-2.5 text-[13.5px] text-b-muted"
+              aria-current={current(href)}
+              className={`hit-target inline-flex flex-none items-center rounded-md px-2.5 text-[13.5px] ${
+                current(href) ? "text-b-src" : "text-b-muted"
+              }`}
             >
               {label}
             </a>

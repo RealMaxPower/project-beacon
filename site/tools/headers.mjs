@@ -109,6 +109,11 @@ const ROUTES = [
   // but proves nothing about it until it is actually loaded — which is what
   // the rewrite-aware resolver above exists to make true.
   "/b",
+  // The shared playground under the second design's shell. Same document and
+  // so the same policy, but not the same code path: this route is where
+  // `crypto.subtle` and the blob download run, and a policy that held on the
+  // marketing page says nothing about the screen that actually uses them.
+  "/b#/playground",
 ];
 
 let failures = 0;
@@ -152,6 +157,38 @@ const widths = await page.evaluate(() =>
 const sized = widths.filter((w) => w && w !== "0%" && w !== "0px");
 console.log(`\n  ${sized.length > 0 ? "ok  " : "FAIL"} inline widths survive style-src 'self': ${JSON.stringify(widths)}`);
 if (sized.length === 0) failures += 1;
+
+/*
+ * The alias block, checked where it can actually be wrong.
+ *
+ * The shared playground is styled with the first design's utility names, and
+ * `tokens-b.css` declares those names against this design's palette. Nothing in
+ * the markup can show whether that worked: the class is `text-text-muted`
+ * either way, and had the alias been missing the rule would simply not exist
+ * and the text would inherit. So this asks the browser what colour it ended up
+ * and compares it to the token — which is the only form of this check capable
+ * of failing.
+ */
+await page.goto(`${base}/b#/playground`, { waitUntil: "networkidle" });
+const paint = await page.evaluate(() => {
+  const el = document.querySelector(".text-text-muted");
+  if (!el) return null;
+  const probe = document.createElement("span");
+  probe.style.color = getComputedStyle(document.documentElement).getPropertyValue("--b-muted");
+  document.body.appendChild(probe);
+  const want = getComputedStyle(probe).color;
+  probe.remove();
+  return { got: getComputedStyle(el).color, want };
+});
+if (!paint) {
+  console.log("  FAIL no .text-text-muted on /b#/playground — the shared playground did not render");
+  failures += 1;
+} else if (paint.got !== paint.want) {
+  console.log(`  FAIL the playground kept another palette: ${paint.got} is not --b-muted ${paint.want}`);
+  failures += 1;
+} else {
+  console.log(`  ok   the shared playground repaints from --b-muted: ${paint.got}`);
+}
 
 /*
  * A download uses a blob: URL. Nothing in the policy should stop it.

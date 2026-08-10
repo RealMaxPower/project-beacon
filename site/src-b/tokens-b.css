@@ -122,9 +122,53 @@
   --color-b-bad: var(--b-bad);
   --color-b-on-accent: var(--b-on-accent);
 
+  /*
+   * The first design's token names, pointed at this design's palette.
+   *
+   * The playground is one implementation serving both designs, and this block
+   * is the whole mechanism. Its 1,237 lines are styled with utilities like
+   * `bg-surface` and `text-pass`, which Tailwind resolves through
+   * `--color-surface` and `--color-pass` — names, not values. Declaring those
+   * names here against `--b-*` makes every one of them repaint in this
+   * design's palette without a line of it changing.
+   *
+   * The alternative was a second copy in this design's vocabulary, and the
+   * objection is not the typing. Every claim in those files is checked —
+   * assertion copy, verdict language, the certification ban — and a copy means
+   * two places for a claim to be true in and one place for it to rot.
+   *
+   * No ratio is published here because none is new: `pass` is `--b-ok`,
+   * `fail` is `--b-bad`, `inc` is `--b-review`, and each was measured against
+   * both grounds where it was declared. The tints are the only additions, and
+   * they are backgrounds that carry text in the already-measured tokens.
+   */
+  --color-bg: var(--b-bg);
+  --color-surface: var(--b-raised);
+  --color-sunken: var(--b-deep);
+  --color-line: var(--b-line);
+  --color-line-strong: var(--b-line-strong);
+
+  --color-text: var(--b-text);
+  --color-text-muted: var(--b-muted);
+  --color-text-faint: var(--b-faint);
+  --color-text-disabled: var(--b-faint);
+
+  --color-accent: var(--b-src);
+  --color-on-accent: var(--b-on-accent);
+
+  --color-pass: var(--b-ok);
+  --color-fail: var(--b-bad);
+  --color-inc: var(--b-review);
+  --color-pass-tint: color-mix(in oklab, var(--b-ok) 12%, var(--b-bg));
+  --color-fail-tint: color-mix(in oklab, var(--b-bad) 12%, var(--b-bg));
+  --color-inc-tint: color-mix(in oklab, var(--b-review) 12%, var(--b-bg));
+
   --font-b-display: Archivo, system-ui, sans-serif;
   --font-b-ui: Inter, system-ui, sans-serif;
   --font-b-mono: "Azeret Mono", ui-monospace, monospace;
+
+  /* The first design's font name, for the shared playground's `font-mono`. */
+  --font-mono: "Azeret Mono", ui-monospace, monospace;
 }
 
 @layer base {
@@ -209,6 +253,32 @@
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+  }
+
+  /*
+   * Two of the first design's utilities, redeclared against this design's
+   * scale. The shared playground uses `measure` three times and `on-tint`
+   * once; without these its content would run edge to edge and one caption
+   * would sit at whatever colour it inherited.
+   */
+  .measure {
+    margin-inline: auto;
+    max-width: var(--b-measure);
+    padding-inline: var(--b-gutter);
+  }
+
+  /*
+   * Text on a verdict tint.
+   *
+   * Same rule as the first design's and a different reason for the number. Its
+   * tints are lighter than its surface; these are 12% of an accent mixed into
+   * the ground, so they are darker than the raised surface on ink and lighter
+   * on paper. Either way the tint is not the ground any ratio was measured
+   * against, and `--b-faint` has the least headroom to give — so text on a
+   * tint takes `--b-muted`, which is measured below on both.
+   */
+  .on-tint {
+    color: var(--b-muted);
   }
 
   /*

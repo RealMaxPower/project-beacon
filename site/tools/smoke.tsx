@@ -420,6 +420,27 @@ check(
  * automated tests — and the whole job of the port was replacing every one of
  * those with something the code actually does.
  */
+/**
+ * The second design at a given fragment.
+ *
+ * Its router reads `window.location.hash`; effects do not run under
+ * `renderToString`, so stubbing the initial read is enough to steer it.
+ */
+function siteBAt(hash: string): string {
+  const previous = (globalThis as Record<string, unknown>).window;
+  (globalThis as Record<string, unknown>).window = {
+    location: { hash },
+    addEventListener() {},
+    removeEventListener() {},
+    scrollTo() {},
+  };
+  try {
+    return renderToString(<SiteB />);
+  } finally {
+    (globalThis as Record<string, unknown>).window = previous;
+  }
+}
+
 check(
   "Site B",
   () => renderToString(<SiteB />),
@@ -434,6 +455,50 @@ check(
   "Not adoption metrics",
   // Limitations are read out of a recorded bundle rather than written here.
   "not a safety certification",
+);
+
+/*
+ * The second design's router, at the three fragments that behave differently.
+ *
+ * The middle one is the whole reason this router is not the first design's. In
+ * this document `#case` is an in-page anchor and `#/playground` is a route, and
+ * a router that could not tell them apart would render a not-found page every
+ * time a visitor clicked "The case" in the header. That failure is silent — it
+ * throws nothing and logs nothing — so it is asserted rather than trusted.
+ */
+check(
+  "Site B · #/playground carries the shared playground inside B's shell",
+  () => siteBAt("#/playground"),
+  // The playground's own first step...
+  "What should the agent try?",
+  // ...under this design's header, not the first design's.
+  "Outcome Assurance",
+  // The header knows which route it is on. Asserting the class name
+  // `text-text-muted` here would have proved nothing — the markup carries it
+  // whatever the stylesheet does or does not declare, which is the vacuous
+  // shape this file has been caught in twice. Whether the alias block actually
+  // repaints anything is a question about computed colour, so `npm run
+  // headers` asks it in a browser.
+  'aria-current="page"',
+);
+
+check(
+  "Site B · #case is an anchor, so the marketing page renders",
+  () => siteBAt("#case"),
+  "Agent work you can actually defend.",
+);
+
+check(
+  "Site B · #/not-a-page is a route that misses",
+  () => siteBAt("#/not-a-page"),
+  "That address does not name a page here.",
+);
+
+check(
+  "Site B · #/playground/<id> opens already pointed at it",
+  () => siteBAt("#/playground/inbox-briefing-draft-only"),
+  // Step two, not step one — the link resolved.
+  "Which agent should try it?",
 );
 
 console.log();
