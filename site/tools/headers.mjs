@@ -46,12 +46,33 @@ function headersFor(pathname) {
   return out;
 }
 
+/**
+ * The document a path resolves to, following the config's own rewrites.
+ *
+ * This used to answer `index.html` for every extensionless path, which was
+ * correct only while the site had one page. The moment a second entry exists,
+ * a request for its URL would be served the *first* page, painted more than
+ * the check's minimum, and reported as passing — the audit would be confirming
+ * a policy on a document it had never loaded. A tool whose job is to prove the
+ * real headers hold has to resolve paths the way the real host does, so it
+ * reads the same `rewrites` array it is testing.
+ */
+function documentFor(pathname) {
+  for (const rule of config.rewrites ?? []) {
+    if (!new RegExp(`^${rule.source}$`).test(pathname)) continue;
+    const target = rule.destination === "/" ? "/index.html" : rule.destination;
+    const file = join(DIST, extname(target) ? target : `${target}.html`);
+    if (existsSync(file)) return { file, served: rule.destination };
+  }
+  return { file: join(DIST, "index.html"), served: "/" };
+}
+
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, "http://x").pathname;
-  // Filesystem first, then the catch-all rewrite — the order Vercel uses.
+  // Filesystem first, then the rewrites — the order Vercel uses.
   const candidate = join(DIST, pathname);
-  const file = existsSync(candidate) && extname(candidate) ? candidate : join(DIST, "index.html");
-  const served = existsSync(candidate) && extname(candidate) ? pathname : "/";
+  const onDisk = existsSync(candidate) && extname(candidate);
+  const { file, served } = onDisk ? { file: candidate, served: pathname } : documentFor(pathname);
 
   const body = await readFile(file);
   res.writeHead(200, {

@@ -29,13 +29,28 @@ def _without_comments(source: str) -> str:
     return re.sub(r"^\s*//.*$", "", source, flags=re.M)
 
 
+#: Every source tree a marketing surface is built from.
+#:
+#: `src-b` is the second design, and it is listed here deliberately. A tree
+#: that ships to visitors and is not scanned by these guards is a tree where
+#: the rules are suggestions — and this file exists because a marketing site is
+#: the largest surface of unpinned claims the project has. Adding a third
+#: design means adding it here, not inheriting silence.
+SOURCE_TREES = (SRC, SITE / "src-b")
+
+ENTRY_POINTS = ("index.html", "b.html")
+
+
 def _site_sources() -> list[Path]:
     """Every file the site is built from. Excludes the design mocks."""
-    return [
+    found = [
         path
-        for path in sorted(SRC.rglob("*"))
+        for tree in SOURCE_TREES
+        if tree.is_dir()
+        for path in sorted(tree.rglob("*"))
         if path.is_file() and path.suffix in SOURCE_SUFFIXES
-    ] + [SITE / "index.html"]
+    ]
+    return found + [SITE / name for name in ENTRY_POINTS if (SITE / name).is_file()]
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
@@ -265,7 +280,13 @@ class CountingClaimTests(unittest.TestCase):
         Comments are stripped first. A docstring explaining that seven
         scenarios ship is documentation, not a claim rendered at a visitor.
         """
-        surfaces = sorted((SRC / "screens").rglob("*.tsx")) + [SRC / "data" / "copy.ts"]
+        surfaces = [
+            path
+            for tree in SOURCE_TREES
+            if tree.is_dir()
+            for path in sorted(tree.rglob("*.tsx"))
+            if "screens" in path.parts
+        ] + [SRC / "data" / "copy.ts"]
         for path in surfaces:
             text = " ".join(_without_comments(path.read_text(encoding="utf-8")).split())
             for pattern in (
@@ -619,21 +640,71 @@ class VisualVocabularyTests(unittest.TestCase):
                         "gradient is a verdict vocabulary in this system"
                     )
 
-    def test_no_weight_the_fonts_cannot_render(self) -> None:
-        """
-        `src/fonts.css` ships both families at `font-weight: 400 500`.
+    #: Tailwind's named weights, so a class can be checked against the ceiling.
+    NAMED_WEIGHTS = {
+        "font-thin": 100,
+        "font-extralight": 200,
+        "font-light": 300,
+        "font-normal": 400,
+        "font-medium": 500,
+        "font-semibold": 600,
+        "font-bold": 700,
+        "font-extrabold": 800,
+        "font-black": 900,
+    }
 
-        Anything heavier is synthesised by the browser, which at display sizes
-        is a visible smear. Emphasis here is size, tracking and colour.
+    def _heaviest_shipped_weight(self) -> int:
         """
-        pattern = re.compile(r"font-(?:semibold|bold|black|extrabold)|font-weight:\s*[6-9]00")
+        The heaviest weight any `@font-face` in the site actually provides.
+
+        Derived rather than written down. This guard used to hardcode 500,
+        which was right for the two families the site shipped and would have
+        been wrong the moment it shipped a third — the rule is not "500 is the
+        limit", it is "do not ask for a weight the font files do not contain",
+        because the browser answers by synthesising one and at display sizes
+        that is a visible smear.
+
+        `font-weight: 400 500` is a variable range, so the second number is the
+        ceiling; a single value is its own ceiling.
+        """
+        heaviest = 0
+        for path in sorted(SRC.parent.rglob("fonts*.css")):
+            for declaration in re.findall(r"font-weight:\s*([0-9\s]+);", path.read_text(encoding="utf-8")):
+                heaviest = max(heaviest, *(int(n) for n in declaration.split()))
+        return heaviest
+
+    def test_the_shipped_fonts_are_discoverable(self) -> None:
+        """A ceiling of zero would make the guard below pass on anything."""
+        self.assertGreaterEqual(
+            self._heaviest_shipped_weight(), 400, "no @font-face weights found; repoint this guard"
+        )
+
+    def test_no_weight_the_fonts_cannot_render(self) -> None:
+        ceiling = self._heaviest_shipped_weight()
+        numeric = re.compile(r"font-weight:\s*(\d{3})\b")
+        named = re.compile(r"\b(font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black))\b")
+
         for path in _site_sources():
             source = _without_comments(path.read_text(encoding="utf-8"))
-            with self.subTest(file=path.relative_to(ROOT)):
-                self.assertIsNone(
-                    pattern.search(source),
-                    "the shipped fonts stop at 500; this renders as a synthesised bold",
-                )
+            # The @font-face declarations are the source of the ceiling, not a
+            # use of it.
+            if path.name.startswith("fonts") and path.suffix == ".css":
+                continue
+
+            for weight in numeric.findall(source):
+                with self.subTest(file=path.relative_to(ROOT), weight=weight):
+                    self.assertLessEqual(
+                        int(weight),
+                        ceiling,
+                        f"the shipped fonts stop at {ceiling}; this is synthesised",
+                    )
+            for name in named.findall(source):
+                with self.subTest(file=path.relative_to(ROOT), weight=name):
+                    self.assertLessEqual(
+                        self.NAMED_WEIGHTS[name],
+                        ceiling,
+                        f"{name} is {self.NAMED_WEIGHTS[name]}; the shipped fonts stop at {ceiling}",
+                    )
 
     def test_full_bleed_never_uses_the_viewport_width(self) -> None:
         """
@@ -672,10 +743,13 @@ class VisualVocabularyTests(unittest.TestCase):
         The playground timeline is the one sanctioned timer: the visitor
         pressed Run, and the reveal is content rather than decoration.
         """
-        allowed = {"RunTimeline.tsx"}
+        # A path, not a basename. As a basename, any file anywhere called
+        # RunTimeline.tsx inherited the exemption — including one in a second
+        # design tree that had never earned it.
+        allowed = {SRC / "screens" / "playground" / "RunTimeline.tsx"}
         pattern = re.compile(r"<animate|<set\s|scroll-behavior|setInterval|requestAnimationFrame")
         for path in SRC.rglob("*.tsx"):
-            if path.name in allowed:
+            if path in allowed:
                 continue
             source = _without_comments(path.read_text(encoding="utf-8"))
             with self.subTest(file=path.relative_to(ROOT)):
@@ -706,11 +780,16 @@ class VisualVocabularyTests(unittest.TestCase):
         ]
         self.assertEqual(rasters, [], "the site ships vector and text only")
 
+        # Both spellings. React inline styles are camelCase, so a JSX
+        # `style={{ backgroundImage: ... }}` slipped past a check that only
+        # knew the CSS casing — which is most of how a background would
+        # actually arrive in this codebase.
+        painted = re.compile(r"background-image|backgroundImage")
         for path in _site_sources():
             source = _without_comments(path.read_text(encoding="utf-8"))
             with self.subTest(file=path.relative_to(ROOT)):
                 self.assertNotIn("<img", source)
-                self.assertNotIn("background-image", source)
+                self.assertIsNone(painted.search(source), "a painted background")
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
