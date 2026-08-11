@@ -279,6 +279,65 @@ const MEASURE = `() => {
       .map(({ el, r }) => ({ text: (el.textContent || el.getAttribute("aria-label") || "?").trim().slice(0, 40), h: Math.round(r.height) })),
 
     /*
+     * Header bands whose two ends are padded differently.
+     *
+     * The idiom is everywhere on this site: a panel with a caption bar across
+     * the top, a label at one end and a control at the other. It is drawn by
+     * hand each time, so the padding is retyped each time, and the copy button
+     * on every terminal block spent months 19px from the left and 9px from the
+     * right. Nobody sees 10px as a number; they see a button that looks shoved
+     * against the edge.
+     *
+     * The vertical half is the same defect turned ninety degrees. A control
+     * with hit-target is 44px, and a bar with no padding of its own becomes
+     * exactly that control's height — so it reads as a slot the button was
+     * jammed into rather than a bar it sits in.
+     *
+     * Only two-ended bars qualify, or the right-hand measurement is the width
+     * of the last word rather than a padding. "Pushed to the far side" is
+     * detected as a void between the last two children, and that is the second
+     * attempt: the first asked whether the last child had margin-left auto,
+     * which computed style never reports. It resolves the keyword to a used
+     * value — 415.656px on the block that prompted all this — so the filter was
+     * dead code for precisely the case it was written for, and reported a
+     * confident all-clear while the defect was on screen. A void is a fact
+     * about the rendered box and cannot be resolved away.
+     */
+    lopsidedBands: [...document.querySelectorAll("figcaption, div, header")]
+      .filter((row) => {
+        const s = getComputedStyle(row);
+        if (s.display !== "flex" || s.flexDirection.startsWith("column")) return false;
+        const banded =
+          s.borderBottomWidth !== "0px" ||
+          s.borderTopWidth !== "0px" ||
+          (s.backgroundColor !== "rgba(0, 0, 0, 0)" && s.backgroundColor !== "transparent");
+        if (!banded) return false;
+        const kids = [...row.children].filter((k) => k.getBoundingClientRect().width > 0);
+        if (kids.length < 2) return false;
+        if (s.justifyContent === "space-between") return true;
+        const prev = kids[kids.length - 2].getBoundingClientRect();
+        const last = kids[kids.length - 1].getBoundingClientRect();
+        // Adjacent children — a tab strip, a row of chips — are not two-ended.
+        return last.left - prev.right > 24;
+      })
+      .map((row) => {
+        const kids = [...row.children].filter((k) => k.getBoundingClientRect().width > 0);
+        const r = row.getBoundingClientRect();
+        const f = kids[0].getBoundingClientRect();
+        const l = kids[kids.length - 1].getBoundingClientRect();
+        const tall = kids.map((k) => k.getBoundingClientRect()).filter((k) => k.height >= 40);
+        return {
+          text: (kids[0].textContent || "?").trim().slice(0, 34),
+          left: Math.round(f.left - r.left),
+          right: Math.round(r.right - l.right),
+          vGap: tall.length
+            ? Math.round(Math.min(...tall.map((k) => Math.min(k.top - r.top, r.bottom - k.bottom))))
+            : null,
+        };
+      })
+      .filter((b) => Math.abs(b.left - b.right) > 3 || (b.vGap !== null && b.vGap < 4)),
+
+    /*
      * Pressable controls that do not offer a hand.
      *
      * Tailwind v3's Preflight gave buttons \`cursor: pointer\`; v4 dropped it,
@@ -330,7 +389,7 @@ for (const [name, hash] of ROUTES) {
     // Invoked, not just evaluated: a string passed to `evaluate` is treated as
     // an expression, and a bare arrow function is an expression whose value is
     // the function itself.
-    const { boxes, collisions, docWidth, viewport, handless, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
+    const { boxes, collisions, docWidth, viewport, handless, lopsidedBands, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
 
     for (const message of errors) report(where, `console error: ${message}`);
 
@@ -363,6 +422,15 @@ for (const [name, hash] of ROUTES) {
 
     for (const target of smallTargets) {
       report(where, `hit target ${target.h}px, under the 44px the design system requires: "${target.text}"`);
+    }
+
+    for (const band of lopsidedBands) {
+      report(
+        where,
+        band.vGap !== null && band.vGap < 4
+          ? `header bar gives a ${44}px control ${band.vGap}px of room: "${band.text}"`
+          : `header bar padded ${band.left}px one end and ${band.right}px the other: "${band.text}"`,
+      );
     }
 
     for (const control of handless) {

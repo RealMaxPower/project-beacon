@@ -51,8 +51,24 @@ export function TerminalBlock({ lines, label, copyable = false }: Props) {
 
   return (
     <figure className="overflow-hidden rounded-card border border-[#262A31] bg-[#16191E]">
+      {/*
+        The caption is padded on all four sides, and the reason is the copy
+        button.
+
+        This row was `pl-[18px] pr-2`, so the label sat 19px from the left edge
+        and the button 9px from the right — and because `hit-target` makes the
+        button 44px while the row had no vertical padding of its own, the button
+        *was* the row: zero pixels above it, one below. It read as a control
+        jammed into a slot rather than one sitting in a bar.
+
+        `py-1.5` is what a 44px target costs to inset: the row becomes 57px,
+        which is taller than it was, and that is the correct trade. The
+        alternative is a button that looks inset while its clickable box still
+        runs to the edges, and `tools/visual.mjs` would be measuring 44px that
+        nobody can see.
+      */}
       {(label || copyable) && (
-        <figcaption className="flex items-center gap-3 border-b border-[#262A31] pr-2 pl-[18px] font-mono text-[11.5px] text-[#828A99]">
+        <figcaption className="flex items-center gap-3 border-b border-[#262A31] px-[18px] py-1.5 font-mono text-[11.5px] text-[#828A99]">
           {/* A caption element is still needed when there is no label, or the
               copy button has nothing to sit in. */}
           <span className="py-2.5">{label ?? "bash"}</span>
