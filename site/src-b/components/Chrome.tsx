@@ -160,7 +160,23 @@ export function Footer() {
         </p>
 
         <p className="mt-5 font-b-mono text-[11.5px] text-b-faint">
-          Apache 2.0 · every scenario fixture is synthetic · {facts.scenarios} scenarios ·{" "}
+          © 2026 Project Beacon contributors · Apache 2.0 · every scenario fixture is
+          synthetic · {facts.scenarios} scenarios
+        </p>
+
+        {/*
+         * The licensing and privacy page belongs to the origin rather than to
+         * either design — same policy, same fonts, same bundled packages — so
+         * this links the one that exists instead of restating it in this
+         * design's voice. A second copy would be a second place for a claim
+         * about what the site collects to be wrong, and that is the one claim
+         * here that must not be.
+         */}
+        <p className="mt-1.5 font-b-mono text-[11.5px] text-b-faint">
+          <a href="/#/legal" className="hover:text-b-text">
+            Licensing and privacy
+          </a>{" "}
+          ·{" "}
           <a href={REPO} rel="noreferrer" className="hover:text-b-text">
             github.com/RealMaxPower/project-beacon
           </a>

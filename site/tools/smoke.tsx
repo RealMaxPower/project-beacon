@@ -491,6 +491,12 @@ check(
   "Not adoption metrics",
   // Limitations are read out of a recorded bundle rather than written here.
   "not a safety certification",
+  // Both documents are published, so both need a route to the licensing and
+  // privacy terms. This design links the other's page rather than restating
+  // it: the terms describe the origin, and one copy cannot disagree with
+  // itself. A visitor landing on /b had no way to reach them at all.
+  "/#/legal",
+  "© 2026 Project Beacon contributors",
 );
 
 /*
