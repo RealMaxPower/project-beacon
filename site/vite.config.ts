@@ -33,4 +33,20 @@ export default defineConfig({
     // that is simply large.
     assetsInlineLimit: 0,
   },
+  /*
+   * Keep the licence blocks the minifier would otherwise discard.
+   *
+   * React is MIT, which permits redistribution only with its notice attached,
+   * and every visitor receives a compiled copy of it. The default drops
+   * `@license` comments, so the built assets carried none — the same omission
+   * the fonts had, arrived at through a lockfile instead of a download.
+   *
+   * `public/THIRD-PARTY-NOTICES.txt` is the authoritative copy and is what the
+   * site links to; this keeps the notice in the artifact itself as well, so a
+   * bundle that gets copied somewhere without the rest of the origin still
+   * carries its own terms.
+   */
+  esbuild: {
+    legalComments: "inline",
+  },
 });

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -162,6 +163,68 @@ class FontLicenceTests(unittest.TestCase):
                 css = path.read_text(encoding="utf-8")
                 self.assertTrue(css.startswith(header.group(1).rstrip("\n")))
 
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class BundledPackageLicenceTests(unittest.TestCase):
+    """
+    The compiled site redistributes its dependencies to every visitor, and
+    their licences require the notice to travel with the copy.
+
+    Nothing published it. `dist/assets/*.js` carried no copyright line and no
+    permission text, because the minifier discards comments and no step put
+    them back — the same failure the fonts had, reached through a lockfile
+    rather than a download, which is why it survived longer. A dependency
+    nobody chose to vendor is still one being redistributed.
+    """
+
+    def test_the_bundled_packages_ship_their_notices(self) -> None:
+        """
+        React is MIT, every visitor receives a compiled copy of it, and MIT
+        permits that only with its notice attached. The built assets carried
+        none: the minifier dropped the `@license` blocks and nothing replaced
+        them. The same omission the fonts had, arrived at through a lockfile
+        instead of a download, which is why it went unnoticed for longer.
+
+        Derived from the lockfile rather than a list, so a new runtime
+        dependency is covered the moment it is installed.
+        """
+        notices = SITE / "public" / "THIRD-PARTY-NOTICES.txt"
+        self.assertTrue(notices.is_file(), "nothing publishes the bundled licences")
+        text = notices.read_text(encoding="utf-8")
+
+        lock = json.loads((SITE / "package-lock.json").read_text(encoding="utf-8"))
+        shipped = {
+            path.split("node_modules/")[-1]
+            for path, meta in lock.get("packages", {}).items()
+            if path.startswith("node_modules/") and not meta.get("dev")
+        }
+        self.assertTrue(shipped, "the lockfile lists nothing that reaches a browser")
+        for name in sorted(shipped):
+            with self.subTest(package=name):
+                self.assertIn(name, text)
+
+    def test_the_notices_carry_licence_text_rather_than_a_licence_name(self) -> None:
+        """
+        "MIT" is the name of a licence, not the notice it requires. The file
+        has to contain the permission text a redistributor is obliged to pass
+        on, and the copyright line naming who holds it.
+        """
+        text = (SITE / "public" / "THIRD-PARTY-NOTICES.txt").read_text(encoding="utf-8")
+        self.assertIn("Permission is hereby granted, free of charge", text)
+        self.assertIn("Copyright (c) Meta Platforms", text)
+
+    def test_the_site_points_at_both_notice_files(self) -> None:
+        """
+        Two licences with an attachment requirement, and a page that names
+        neither is a page that satisfies neither in practice — the files would
+        sit on the origin with nothing linking them.
+        """
+        legal = (SITE / "src" / "screens" / "marketing" / "Legal.tsx").read_text(
+            encoding="utf-8"
+        )
+        for target in ("/THIRD-PARTY-NOTICES.txt", "/fonts/OFL.txt"):
+            with self.subTest(target=target):
+                self.assertIn(target, legal)
 
 if __name__ == "__main__":
     unittest.main()

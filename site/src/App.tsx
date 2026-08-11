@@ -7,7 +7,8 @@ import { Scenarios } from "@/screens/marketing/Scenarios";
 import { ForBuilders } from "@/screens/marketing/ForBuilders";
 import { Docs } from "@/screens/marketing/Docs";
 import { HostedLab } from "@/screens/marketing/HostedLab";
-import { NOT_FOUND, routes, useRoute, type Go, type Resolved } from "@/router";
+import { Legal } from "@/screens/marketing/Legal";
+import { NOT_FOUND, navRoutes, useRoute, type Go, type Resolved } from "@/router";
 
 /**
  * The shell.
@@ -58,6 +59,8 @@ function screenFor(route: Resolved, param: string | null, go: Go) {
       return <Docs onGo={go} />;
     case "hosted":
       return <HostedLab onGo={go} />;
+    case "legal":
+      return <Legal onGo={go} />;
     default:
       return <Home onGo={go} />;
   }
@@ -108,8 +111,7 @@ export function App() {
               aria-label="Main"
               className="-mx-1 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex"
             >
-              {routes
-                .filter((r) => r.path !== "playground" && r.path !== "hosted")
+              {navRoutes
                 .map((r) => (
                   <button
                     key={r.path}
@@ -166,8 +168,7 @@ export function App() {
               data-scroll-cue
               className="flex items-center gap-0.5 overflow-x-auto pb-1.5 [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]"
             >
-            {routes
-              .filter((r) => r.path !== "playground" && r.path !== "hosted")
+            {navRoutes
               .map((r) => (
                 <button
                   key={r.path}
@@ -198,7 +199,18 @@ export function App() {
             and it says nothing about behaviour outside the scenario that produced it.
           </p>
           <p className="mt-3 font-mono text-[11px] text-text-faint">
-            Apache 2.0 · all scenario fixtures are synthetic ·{" "}
+            © 2026 Project Beacon contributors · Apache 2.0 · all scenario
+            fixtures are synthetic
+          </p>
+          <p className="mt-1.5 font-mono text-[11px] text-text-faint">
+            <button
+              type="button"
+              onClick={() => go("legal")}
+              className="hover:text-text"
+            >
+              Licensing and privacy
+            </button>{" "}
+            ·{" "}
             <a href="https://github.com/RealMaxPower/project-beacon" className="hover:text-text">
               github.com/RealMaxPower/project-beacon
             </a>

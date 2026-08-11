@@ -219,6 +219,48 @@ creates an obligation with nothing behind it. That page stays. An open question
 asked in public is not the same as a roadmap item, and this document should not
 pretend the question has been closed when it has only been answered *for now*.
 
+## Licensing, and the file that is deliberately absent
+
+Project Beacon is Apache 2.0. The `LICENSE` file carries the full text, the
+appendix, and a copyright line naming the Project Beacon contributors —
+matching `pyproject.toml`, pinned to it by `tests/test_licensing.py` so the two
+cannot drift into naming different parties.
+
+**There is no `NOTICE` file, and that is a decision.** Apache 2.0 §4(d) obliges
+a redistributor to propagate one only *if it exists*. The Python package has
+`dependencies = []` and vendors nothing, so there is no third-party
+attribution to carry. A `NOTICE` here would repeat what `LICENSE` already says
+while creating a propagation obligation for everyone downstream — a rule with
+nothing behind it, which is the shape of thing this project argues against.
+
+Two other licences do have attachment requirements, and both are met by files
+rather than by sentences:
+
+- **The typefaces** are redistributed under the SIL Open Font Licence 1.1,
+  which permits that only with the licence attached.
+  `site/public/fonts/OFL.txt` carries it, with each upstream's copyright notice
+  reproduced verbatim. Subsetting makes these Modified Versions, and OFL
+  clause 3 forbids a Modified Version from using a Reserved Font Name — which
+  is why IBM Plex could not ship and Inter took its place.
+- **The bundled JavaScript** is MIT, and every visitor receives a compiled copy
+  of React. The built assets carried no notice at all until
+  `site/public/THIRD-PARTY-NOTICES.txt` was added — generated from the
+  installed packages, and pinned by a test that reads the lockfile so a new
+  runtime dependency is covered the moment it is installed. The build also
+  keeps the inline `@license` blocks it used to discard.
+
+The site's `#/legal` page links both, states the licence, and describes what
+the site collects. That page is short because the answer is short: no cookies,
+no analytics, no forms, and a Content-Security-Policy declaring
+`connect-src 'none'`, so the page cannot transmit anything anywhere. What
+remains is what any web server sees, and the page says so rather than implying
+the logs do not exist.
+
+**Not resolved:** the name. The pre-build proposal scheduled a naming and
+trademark screen that never happened, and "Beacon" is a heavily used word. The
+wordmark is monochrome geometry specifically so that a rename costs one string,
+but the search itself is still outstanding.
+
 ## Security posture
 
 [SECURITY.md](../SECURITY.md) is the authority and is candid about the known

@@ -103,6 +103,10 @@ const ROUTES = [
   "/#/for-builders",
   "/#/docs",
   "/#/hosted",
+  // The licensing and privacy page. Its claims about what this site collects
+  // are claims about this policy, so it is the one page where a violation
+  // would make the prose false rather than merely break a feature.
+  "/#/legal",
   "/#/playground",
   "/#/playground/inbox-briefing-draft-only",
   // The second design. It is a separate document, so it inherits the policy

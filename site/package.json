@@ -2,6 +2,7 @@
   "name": "beacon-site",
   "private": true,
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -14,8 +15,10 @@
     "smoke": "vite build --ssr tools/smoke.tsx --outDir .smoke --logLevel warn && node .smoke/smoke.js",
     "fixtures": "python3 tools/build_fixtures.py",
     "fixtures:check": "python3 tools/build_fixtures.py --check",
+    "notices": "python3 tools/build_notices.py",
+    "notices:check": "python3 tools/build_notices.py --check",
     "lint:render": "vite build --ssr tools/lint.tsx --outDir .lint --logLevel warn && node .lint/lint.js",
-    "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check",
+    "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check && npm run notices:check",
     "visual": "vite preview --port 4173 & sleep 2 && node tools/visual.mjs; kill %1",
     "headers": "npm run build && node tools/headers.mjs"
   },

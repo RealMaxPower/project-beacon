@@ -17,9 +17,24 @@ export const routes = [
   { path: "playground", label: "Playground" },
   { path: "docs", label: "Docs" },
   { path: "hosted", label: "Hosted lab" },
+  { path: "legal", label: "Legal" },
 ] as const;
 
 export type Route = (typeof routes)[number]["path"];
+
+/**
+ * Pages the main navigation does not list, and where each is reached instead.
+ *
+ * The playground and the hosted page have their own entry points in the body
+ * of the site; `legal` is reached from the footer, which is where a visitor
+ * looks for it and the only place it belongs. Naming them here rather than
+ * filtering inline is what stops the two navigations — desktop and the
+ * horizontally scrolling one — from drifting apart, which they were already
+ * one edit away from doing.
+ */
+const OFF_NAV: ReadonlySet<string> = new Set(["playground", "hosted", "legal"]);
+
+export const navRoutes = routes.filter((r) => !OFF_NAV.has(r.path));
 
 /**
  * The routes that accept a second segment, and what it names.
