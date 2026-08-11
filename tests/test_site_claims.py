@@ -250,7 +250,11 @@ class CountingClaimTests(unittest.TestCase):
         fails here rather than shipping the fallback.
         """
         facts = json.loads((GENERATED / "facts.json").read_text(encoding="utf-8"))
-        source = (SRC / "screens" / "marketing" / "Docs.tsx").read_text(encoding="utf-8")
+        # The blurbs moved out of the screen when a second design started
+        # rendering the same list — a card is described in one place now, and
+        # this reads that place rather than whichever screen happens to import
+        # it.
+        source = (SRC / "screens" / "marketing" / "docs-index.ts").read_text(encoding="utf-8")
         described = set(re.findall(r'"([\w.-]+\.md)":', source))
 
         for name in facts["docs"] + facts["surveys"]:
@@ -976,8 +980,13 @@ class ContrastTests(unittest.TestCase):
     TOKEN_BLOCKS = (
         (SRC / "tokens.css", r":root", "light"),
         (SRC / "tokens.css", r'\[data-theme="dark"\]', "dark"),
-        (SITE / "src-b" / "tokens-b.css", r":root", "b-ink"),
-        (SITE / "src-b" / "tokens-b.css", r'\[data-ground="paper"\]', "b-paper"),
+        # The second design keeps both its palettes in one block, under
+        # `--ink-*` and `--paper-*`, and the blocks that follow only say which
+        # is the page and which is the alternating band in a given theme. There
+        # is therefore one place to read here rather than two, and every ratio
+        # names the ground it was measured against because two of them are in
+        # scope at once.
+        (SITE / "src-b" / "tokens-b.css", r":root", "b"),
     )
     #: Ratios are quoted to two decimals, so anything inside half a unit of the
     #: last place is the same measurement rounded, not a different one.
@@ -1097,13 +1106,28 @@ class ContrastTests(unittest.TestCase):
         `--text-disabled` is exempt and says so in its own comment: it is
         marked non-text use only, and 3.23 would fail this.
         """
+        #: Each ground, with the two tokens that carry prose on it. The second
+        #: design keeps both its palettes in one block, so a single pair of
+        #: names would silently check one ground and skip the other — which is
+        #: the ground a light visitor is reading.
+        GROUNDS = (
+            ("bg", "text", "text-muted"),
+            ("b-bg", "b-text", "b-muted"),
+            ("ink-bg", "ink-text", "ink-muted"),
+            ("paper-bg", "paper-text", "paper-muted"),
+        )
+        checked = 0
         for mode, block in self._blocks().items():
             colours = self._declarations(block)
-            prose = ("text", "text-muted") if "text" in colours else ("b-text", "b-muted")
-            ground = "bg" if "bg" in colours else "b-bg"
-            for token in prose:
-                with self.subTest(mode=mode, token=token):
-                    self.assertGreaterEqual(_contrast(colours[token], colours[ground]), 4.5)
+            for ground, *prose in GROUNDS:
+                if ground not in colours:
+                    continue
+                for token in prose:
+                    with self.subTest(mode=mode, ground=ground, token=token):
+                        self.assertGreaterEqual(_contrast(colours[token], colours[ground]), 4.5)
+                        checked += 1
+        # Renaming a token must not turn this into a loop over nothing.
+        self.assertGreaterEqual(checked, 8, "far fewer prose colours checked than expected")
 
 
 if __name__ == "__main__":

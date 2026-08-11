@@ -25,7 +25,7 @@ export function Contribute() {
   return (
     <Band
       id="contribute"
-      eyebrow="07 — Open source"
+      eyebrow="09 — Open source"
       heading="A lab is only useful if you can read what it did."
       lede={
         <>

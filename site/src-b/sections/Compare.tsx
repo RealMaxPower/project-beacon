@@ -36,7 +36,7 @@ export function Compare() {
   return (
     <Band
       id="compare"
-      ground="paper"
+      ground="alt"
       eyebrow="06 — Not another framework"
       heading="Runtimes execute. Traces explain. Neither one grades."
       lede="Beacon does not run your agent in production and does not want to. It asks a narrower question — did this behave, on work you can describe — and answers it the same way twice."

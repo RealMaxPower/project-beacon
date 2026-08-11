@@ -30,7 +30,8 @@ import { Scenarios } from "@/screens/marketing/Scenarios";
 import { ForBuilders } from "@/screens/marketing/ForBuilders";
 import { Docs } from "@/screens/marketing/Docs";
 import { HostedLab } from "@/screens/marketing/HostedLab";
-import { routes } from "@/router";
+import { Legal } from "@/screens/marketing/Legal";
+import { navRoutes } from "@/router";
 import {
   forbiddenOutcomes,
   injectionIn,
@@ -193,17 +194,39 @@ check(
 
 check("HostedLab", () => renderToString(<HostedLab onGo={() => {}} />), "no form", "discussion");
 
+// The privacy claims are only true while the policy that enforces them is in
+// place, so the page names the directives rather than describing the behaviour
+// loosely. If `connect-src 'none'` is ever relaxed, this page is the thing
+// that becomes false.
+check(
+  "Legal",
+  () => renderToString(<Legal onGo={() => {}} />),
+  "Apache License 2.0",
+  // As React emits it: the apostrophes in the directive are HTML-escaped, so
+  // the literal source string never appears in the served markup.
+  "connect-src &#x27;none&#x27;",
+  "THIRD-PARTY-NOTICES.txt",
+  "OFL.txt",
+  "no cookies",
+);
+
 check(
   "App shell · every route reachable",
   () => renderToString(<App />),
   // Home is reached through the wordmark, and the playground through a filled
-  // button on the right, so neither appears as a nav link.
-  ...routes
-    .filter((r) => r.path !== "" && r.path !== "playground" && r.path !== "hosted")
-    .map((r) => r.label),
+  // button on the right, so neither appears as a nav link. `navRoutes` is the
+  // one place that decides which pages the navigation lists — this used to
+  // repeat the filter, which is how a route could be added to the site and
+  // silently checked against a navigation that never carried it.
+  ...navRoutes.filter((r) => r.path !== "").map((r) => r.label),
   "Playground",
   // The footer carries the limitation on every page, including this one.
   "not a safety certification",
+  // And the route to the licensing and privacy page, which is reached from
+  // the footer rather than the navigation. A legal page nothing links to is
+  // a legal page nobody can find.
+  "Licensing and privacy",
+  "© 2026 Project Beacon contributors",
 );
 
 check("Playground shell", () => renderToString(<Playground />), "Beacon", "Scenario");
@@ -428,16 +451,29 @@ check(
  */
 function siteBAt(hash: string): string {
   const previous = (globalThis as Record<string, unknown>).window;
+  const store = new Map<string, string>();
   (globalThis as Record<string, unknown>).window = {
     location: { hash },
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
     addEventListener() {},
     removeEventListener() {},
     scrollTo() {},
+  };
+  /*
+   * `localStorage` as well as `window`, because this design's header now reads
+   * the theme preference. The stub was written when it did not, and adding the
+   * toggle turned four passing checks into four that threw — which is the right
+   * failure: a partial browser stub renders a page the browser would not.
+   */
+  (globalThis as Record<string, unknown>).localStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
   };
   try {
     return renderToString(<SiteB />);
   } finally {
     (globalThis as Record<string, unknown>).window = previous;
+    delete (globalThis as Record<string, unknown>).localStorage;
   }
 }
 

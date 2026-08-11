@@ -56,7 +56,88 @@ function textOf(html: string): string {
     .replace(/&[a-z]+;/g, " ");
 }
 
+/**
+ * A semantic colour may not travel alone.
+ *
+ * `tokens-b.css` has stated this rule in prose since it was written, and said
+ * plainly that nothing enforced it: four accents at AA on a warm light ground
+ * leave `ok` against `review` at ΔE 6.1 under protanopia, inside the band the
+ * palette validator permits *only* when a second encoding is present. The file
+ * promised the check would land with the first section that had anything for it
+ * to examine. There are eleven of them now.
+ *
+ * The rule: an element carrying one of the four accents — as text colour, as a
+ * border, by class or by inline style — must have a word. Its own text counts;
+ * so does its parent's, because a coloured mark beside a label is exactly the
+ * shape the rule permits and is how the pipeline's rings and the verdict chips
+ * are built. What fails is a coloured element sitting in a container with no
+ * text anywhere in it, which is a swatch that means something to whoever wrote
+ * it and nothing to a reader who cannot see the hue.
+ *
+ * Scoped to this design's vocabulary. The shared playground is styled in the
+ * first design's names and carries its own encoding — every verdict there
+ * ships a glyph and a word — and that is checked by the palette work behind
+ * `AssertionRow` rather than here.
+ */
+const ACCENT = /(?:text|border)-b-(?:ok|bad|review|src)\b|var\(--b-(?:ok|bad|review|src)\)/;
+
+function auditColourNeverAlone(where: string, html: string) {
+  interface Frame {
+    accent: boolean;
+    text: string;
+    parent: Frame | null;
+  }
+
+  const root: Frame = { accent: false, text: "", parent: null };
+  const stack: Frame[] = [root];
+  const naked: Frame[] = [];
+  const VOID = new Set([
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
+  ]);
+
+  const token = /<\/?([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>|([^<]+)/g;
+  for (const [whole, tag, attrs, text] of html.matchAll(token)) {
+    if (text !== undefined) {
+      const words = text.replace(/&[a-z]+;/g, " ").trim();
+      if (words) for (const frame of stack) frame.text += words + " ";
+      continue;
+    }
+    // Ask the match whether it is a closing tag. The first version of this
+    // computed the position of the slash from lastIndex and the lengths of the
+    // captures, got it wrong, and so never popped the stack — which made every
+    // element a child of the last one that opened, gave every accent a parent
+    // full of text, and reported a clean page no matter what was on it.
+    if (whole.startsWith("</")) {
+      if (stack.length > 1) stack.pop();
+      continue;
+    }
+    const frame: Frame = {
+      accent: ACCENT.test(attrs),
+      text: "",
+      parent: stack[stack.length - 1],
+    };
+    // An accessible name is a word, even when the element shows none.
+    const label = /aria-label="([^"]+)"/.exec(attrs);
+    if (label) frame.text += label[1] + " ";
+    if (frame.accent) naked.push(frame);
+    if (!VOID.has(tag.toLowerCase()) && !attrs.trimEnd().endsWith("/")) stack.push(frame);
+  }
+
+  const alone = naked.filter(
+    (f) => !f.text.trim() && !(f.parent && f.parent.text.trim()),
+  );
+  if (alone.length) {
+    report(
+      where,
+      "a semantic colour with no word beside it",
+      `${alone.length} element(s); the palette separates ok from review by ΔE 6.1 on paper, which needs a second encoding`,
+    );
+  }
+}
+
 function audit(where: string, html: string) {
+  auditColourNeverAlone(where, html);
   const text = textOf(html);
 
   for (const { needle, what } of POISON) {
@@ -223,6 +304,7 @@ const screens: [string, () => string][] = [
     () => siteBAt("#/playground/inbox-briefing-draft-only"),
   ],
   ["Site B · #/playground/<unknown>", () => siteBAt("#/playground/no-such-scenario")],
+  ["Site B · #/docs", () => siteBAt("#/docs")],
   ["Site B · #/not-a-page", () => siteBAt("#/not-a-page")],
   ...SHELL_ROUTES.map(
     (route) =>

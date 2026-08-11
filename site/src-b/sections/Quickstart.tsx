@@ -22,8 +22,8 @@ export function Quickstart() {
   return (
     <Band
       id="quickstart"
-      ground="paper"
-      eyebrow="05 — Quickstart"
+      ground="alt"
+      eyebrow="10 — Quickstart"
       heading="Clone it, run one scenario, read the bundle."
       lede="Nothing to install: Beacon is standard library only, and the scenarios that ship are synthetic worlds rather than anything that reaches your network."
     >

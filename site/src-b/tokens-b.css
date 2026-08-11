@@ -6,7 +6,7 @@
  *
  * Two grounds, alternating by section: ink for the dark bands, paper for the
  * warm light ones. Rather than two sets of token names, there is one set and a
- * `[data-ground="paper"]` scope that re-declares every one of them — the same
+ * `[data-ground="alt"]` scope that re-declares every one of them — the same
  * construction the first design uses for its inverted plate, for the same
  * reason. A partial override keeps the names and breaks the values, so the
  * ratios published below would silently stop being true while still reading as
@@ -51,22 +51,61 @@
  */
 
 :root {
-  --b-bg: #0e1116;
-  --b-raised: #12161d;
-  --b-deep: #0b0d12;
-  --b-line: #232830;
-  --b-line-strong: #333a45;
+  /*
+   * Both palettes, and every hex declared exactly once.
+   *
+   * This file used to hold ink under `:root` and paper under a `[data-ground]`
+   * scope, each with its own copy of `--b-bg`, `--b-text` and the rest. That
+   * was fine while there was one theme. A light theme needs the same two
+   * palettes in the opposite roles, and writing them out again would have put
+   * every value in this file twice — the exact failure the paragraph below
+   * warns about, committed by the fix for it.
+   *
+   * So the values live here under their own names, and the four blocks that
+   * follow only say which palette is doing which job. A colour cannot drift
+   * between themes because there is only one of it.
+   */
 
-  --b-text: #f5f7fa; /* 17.62 b-bg */
-  --b-muted: #98a1ae; /* 7.24 b-bg */
-  --b-faint: #79828f; /* 4.87 b-bg */
+  /* Ink. */
+  --ink-bg: #0e1116;
+  --ink-raised: #12161d;
+  --ink-deep: #0b0d12;
+  --ink-line: #232830;
+  --ink-line-strong: #333a45;
 
-  --b-src: #4ed8ea; /* 11.11 b-bg */
-  --b-review: #f0ac3a; /* 9.61 b-bg */
-  --b-ok: #5bdd93; /* 10.99 b-bg */
-  --b-bad: #ff6e55; /* 6.86 b-bg */
+  --ink-text: #f5f7fa; /* 17.62 ink-bg */
+  --ink-muted: #98a1ae; /* 7.24 ink-bg */
+  --ink-faint: #79828f; /* 4.87 ink-bg */
 
-  --b-on-accent: #08181c; /* 10.65 b-src */
+  --ink-src: #4ed8ea; /* 11.11 ink-bg */
+  --ink-review: #f0ac3a; /* 9.61 ink-bg */
+  --ink-ok: #5bdd93; /* 10.99 ink-bg */
+  --ink-bad: #ff6e55; /* 6.86 ink-bg */
+
+  --ink-on-accent: #08181c; /* 10.65 ink-src */
+
+  /*
+   * Paper. Every accent is a different hex from its ink counterpart rather
+   * than the same colour on a lighter field — a hue that clears AA on #0e1116
+   * does not on #f4f1ea, and reusing it would publish four ratios that no
+   * longer hold.
+   */
+  --paper-bg: #f4f1ea;
+  --paper-raised: #fffdf9;
+  --paper-deep: #ffffff;
+  --paper-line: #d8d3c8;
+  --paper-line-strong: #bdb7a9;
+
+  --paper-text: #14171c; /* 15.92 paper-bg */
+  --paper-muted: #4e5661; /* 6.58 paper-bg */
+  --paper-faint: #616873; /* 4.98 paper-bg */
+
+  --paper-src: #00737f; /* 4.95 paper-bg */
+  --paper-review: #9a5300; /* 5.16 paper-bg */
+  --paper-ok: #00753f; /* 5.15 paper-bg */
+  --paper-bad: #b5341d; /* 5.36 paper-bg */
+
+  --paper-on-accent: #ffffff; /* 5.59 paper-src */
 
   --b-display: clamp(38px, 5.4vw, 72px);
   --b-h2: clamp(30px, 3.9vw, 54px);
@@ -78,33 +117,93 @@
 }
 
 /*
- * The paper ground: the whole palette, re-declared.
+ * Which palette is the page, and which is the band.
  *
- * Every accent here is a different hex from its ink counterpart rather than the
- * same colour on a lighter field — a hue that clears AA on #0e1116 does not on
- * #f4f1ea, and reusing it would publish four ratios that no longer hold.
+ * The design's rhythm is one ground for the page and the other for alternating
+ * bands, and that rhythm is what a theme swaps — not the colours. Dark is ink
+ * with paper bands; light is paper with ink bands. Both are the same two
+ * validated palettes, so a light visitor gets colours that were measured
+ * rather than lightened.
+ *
+ * The attribute is `alt` rather than `paper` because in light mode the
+ * alternating band is the dark one. Naming it for its colour was accurate in
+ * exactly one theme.
  */
-[data-ground="paper"] {
-  --b-bg: #f4f1ea;
-  --b-raised: #fffdf9;
-  --b-deep: #ffffff;
-  --b-line: #d8d3c8;
-  --b-line-strong: #bdb7a9;
+:root {
+  --b-bg: var(--ink-bg);
+  --b-raised: var(--ink-raised);
+  --b-deep: var(--ink-deep);
+  --b-line: var(--ink-line);
+  --b-line-strong: var(--ink-line-strong);
+  --b-text: var(--ink-text);
+  --b-muted: var(--ink-muted);
+  --b-faint: var(--ink-faint);
+  --b-src: var(--ink-src);
+  --b-review: var(--ink-review);
+  --b-ok: var(--ink-ok);
+  --b-bad: var(--ink-bad);
+  --b-on-accent: var(--ink-on-accent);
+  /* See Blueprint.tsx: this is a contrast budget, not a taste. */
+  --b-grid: 0.1;
+  color-scheme: dark;
+}
 
-  --b-text: #14171c; /* 15.92 b-bg */
-  --b-muted: #4e5661; /* 6.58 b-bg */
-  --b-faint: #616873; /* 4.98 b-bg */
+[data-ground="alt"] {
+  --b-bg: var(--paper-bg);
+  --b-raised: var(--paper-raised);
+  --b-deep: var(--paper-deep);
+  --b-line: var(--paper-line);
+  --b-line-strong: var(--paper-line-strong);
+  --b-text: var(--paper-text);
+  --b-muted: var(--paper-muted);
+  --b-faint: var(--paper-faint);
+  --b-src: var(--paper-src);
+  --b-review: var(--paper-review);
+  --b-ok: var(--paper-ok);
+  --b-bad: var(--paper-bad);
+  --b-on-accent: var(--paper-on-accent);
+  color-scheme: light;
+}
 
-  --b-src: #00737f; /* 4.95 b-bg */
-  --b-review: #9a5300; /* 5.16 b-bg */
-  --b-ok: #00753f; /* 5.15 b-bg */
-  --b-bad: #b5341d; /* 5.36 b-bg */
+:root[data-theme="light"] {
+  --b-bg: var(--paper-bg);
+  --b-raised: var(--paper-raised);
+  --b-deep: var(--paper-deep);
+  --b-line: var(--paper-line);
+  --b-line-strong: var(--paper-line-strong);
+  --b-text: var(--paper-text);
+  --b-muted: var(--paper-muted);
+  --b-faint: var(--paper-faint);
+  --b-src: var(--paper-src);
+  --b-review: var(--paper-review);
+  --b-ok: var(--paper-ok);
+  --b-bad: var(--paper-bad);
+  --b-on-accent: var(--paper-on-accent);
+  --b-grid: 0.04;
+  color-scheme: light;
+}
 
-  --b-on-accent: #ffffff; /* 5.59 b-src */
+:root[data-theme="light"] [data-ground="alt"] {
+  --b-bg: var(--ink-bg);
+  --b-raised: var(--ink-raised);
+  --b-deep: var(--ink-deep);
+  --b-line: var(--ink-line);
+  --b-line-strong: var(--ink-line-strong);
+  --b-text: var(--ink-text);
+  --b-muted: var(--ink-muted);
+  --b-faint: var(--ink-faint);
+  --b-src: var(--ink-src);
+  --b-review: var(--ink-review);
+  --b-ok: var(--ink-ok);
+  --b-bad: var(--ink-bad);
+  --b-on-accent: var(--ink-on-accent);
+  color-scheme: dark;
+}
 
+/* A band paints itself; the page is painted by `body` below. */
+[data-ground="alt"] {
   background: var(--b-bg);
   color: var(--b-text);
-  color-scheme: light;
 }
 
 @theme inline {
@@ -187,10 +286,13 @@
     box-sizing: border-box;
   }
 
-  html {
-    color-scheme: dark;
-  }
-
+  /*
+   * No `color-scheme` on html here. It is set by the role blocks above,
+   * alongside the palette each of them selects, so the scrollbars and form
+   * controls the browser draws follow the theme rather than being pinned to
+   * whichever one this file was written in. A rule here would win by being in
+   * `@layer base`... and then be wrong in light mode.
+   */
   body {
     margin: 0;
     background: var(--b-bg);

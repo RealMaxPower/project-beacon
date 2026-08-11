@@ -52,7 +52,7 @@ export function HowItGrades() {
   return (
     <Band
       id="how"
-      ground="paper"
+      ground="alt"
       eyebrow="04 — How it grades"
       heading="Four steps, and a model in none of them."
       lede="The scenario is a file. The checks are declared in it before the agent is told anything, which is what stops a result being written to fit whatever came back."

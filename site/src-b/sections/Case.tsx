@@ -273,6 +273,27 @@ export function Case() {
           with it.
         </p>
 
+        {/*
+          The way into the playground, pointed at this scenario.
+          
+          `router-b.ts` has resolved `#/playground/<id>` since the day it was
+          written and nothing linked to it, so the feature existed and had no
+          door. Matched on `id` rather than `slug` because they differ for this
+          one — the directory is `inbox-briefing` and the id is
+          `inbox-briefing-draft-only` — and this is the scenario with five
+          recorded subjects, so a slug link would fail on exactly the card most
+          likely to be clicked.
+        */}
+        <p className="mt-6">
+          <a
+            href={`#/playground/${encodeURIComponent(evidence.scenario.id)}`}
+            className="hit-target inline-flex items-center gap-2 rounded-md border border-b-line-strong px-4 text-[14px] text-b-text"
+          >
+            Run this scenario yourself
+            <span aria-hidden="true">→</span>
+          </a>
+        </p>
+
         <div className="mt-10 overflow-hidden rounded-xl border border-b-line bg-b-raised">
           <div className="flex flex-wrap items-center gap-3 border-b border-b-line px-5 py-3">
             <span className="font-b-mono text-[12px] text-b-src">run://{evidence.run_id}</span>

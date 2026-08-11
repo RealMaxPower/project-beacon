@@ -49,6 +49,17 @@ const ROUTES = [
   // palette under it — so its geometry is a separate measurement, not an
   // inference from the first design's.
   ["b-playground", "b.html#/playground"],
+  /*
+   * The second design in light, which is not a lighter version of the same
+   * page: the two validated palettes swap roles, so the page becomes paper and
+   * every alternating band becomes ink. Different colours, different composited
+   * grounds, and the same geometry only if nothing here depends on the theme.
+   * Auditing one and inferring the other would be inferring the half that
+   * changed.
+   */
+  ["b-docs", "b.html#/docs"],
+  ["b-light", "b.html", "light"],
+  ["b-playground-light", "b.html#/playground", "light"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];
@@ -373,9 +384,12 @@ const browser = await chromium.launch(
   process.env.BEACON_BROWSER === "bundled" ? {} : { channel: "chrome" },
 );
 
-for (const [name, hash] of ROUTES) {
+for (const [name, hash, scheme] of ROUTES) {
   for (const width of WIDTHS) {
-    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    const page = await browser.newPage({
+      viewport: { width, height: 900 },
+      ...(scheme ? { colorScheme: scheme } : {}),
+    });
     const where = `${name} @ ${width}px`;
 
     const errors = [];

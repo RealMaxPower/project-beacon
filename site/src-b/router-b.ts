@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
  *
  *   #case          an anchor — the browser handles it, this router says HOME
  *   #/playground   a route — React swaps the view
+ *   #/docs         also a route
  *   #/             HOME, explicitly
  *
  * That split is not a convention borrowed from anywhere; it is forced by the
@@ -28,7 +29,7 @@ import { useEffect, useState } from "react";
  * hides the typo that got them there.
  */
 
-export const B_ROUTES = ["", "playground"] as const;
+export const B_ROUTES = ["", "playground", "docs"] as const;
 
 export type BRoute = (typeof B_ROUTES)[number];
 

@@ -1,7 +1,9 @@
 import { Playground } from "@/screens/playground/Playground";
 import { Footer, Header } from "./components/Chrome";
+import { DocsScreen } from "./sections/DocsScreen";
 import { NotFound } from "./sections/NotFound";
 import { Case } from "./sections/Case";
+import { Checks } from "./sections/Checks";
 import { Close } from "./sections/Close";
 import { Compare } from "./sections/Compare";
 import { Contribute } from "./sections/Contribute";
@@ -52,6 +54,10 @@ export function SiteB() {
         <main data-shared-screen>
           <Playground scenarioId={location.param} />
         </main>
+      ) : location.route === "docs" ? (
+        <main>
+          <DocsScreen />
+        </main>
       ) : location.route === B_NOT_FOUND ? (
         <main>
           <NotFound />
@@ -67,6 +73,7 @@ export function SiteB() {
           <Stack />
           <Compare />
           <Status />
+          <Checks />
           <Contribute />
           <Quickstart />
           <Close />

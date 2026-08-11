@@ -114,6 +114,7 @@ const ROUTES = [
   // `crypto.subtle` and the blob download run, and a policy that held on the
   // marketing page says nothing about the screen that actually uses them.
   "/b#/playground",
+  "/b#/docs",
 ];
 
 let failures = 0;

@@ -38,7 +38,7 @@ export function Status() {
   return (
     <Band
       id="status"
-      eyebrow="04 — What exists"
+      eyebrow="07 — What exists"
       heading="An early lab, and an accurate list of what it does not do."
       lede={
         <>

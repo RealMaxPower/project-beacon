@@ -1,3 +1,4 @@
+import { ThemeToggle, useTheme } from "@/components/shell/ThemeToggle";
 import { facts } from "@/data/fixtures";
 import type { BResolved } from "../router-b";
 
@@ -28,6 +29,7 @@ const NAV = [
   ["What exists", "#status"],
   ["Quickstart", "#quickstart"],
   ["Playground", "#/playground"],
+  ["Docs", "#/docs"],
 ] as const;
 
 function Mark() {
@@ -45,12 +47,26 @@ function Mark() {
 
 export function Header({ route }: { route: BResolved }) {
   /*
+   * The first design's hook, unchanged. It writes `data-theme` to the root
+   * element and knows nothing about either palette — which is the whole of
+   * what a theme switch is here, because every colour is a custom property.
+   * Its toggle is reusable for the same reason the playground was: every class
+   * on it is a token name this design already declares.
+   *
+   * What the attribute means differs between the designs, and that is fine.
+   * On the first it swaps a light palette for a dark one; here it swaps which
+   * of two validated palettes is the page and which is the alternating band.
+   */
+  const [theme, toggleTheme] = useTheme();
+
+  /*
    * `aria-current` on the route only. The section anchors are destinations on
    * the page rather than pages, and marking one current would be a claim about
    * where the reader is that this header cannot check — it does not know what
    * is in the viewport.
    */
-  const current = (href: string) => (route === "playground" && href === "#/playground" ? "page" : undefined);
+  const current = (href: string) =>
+    href.startsWith("#/") && href.slice(2) === route ? "page" : undefined;
 
   return (
     <header className="sticky top-0 z-50 border-b border-b-line bg-b-bg/90 backdrop-blur">
@@ -89,13 +105,16 @@ export function Header({ route }: { route: BResolved }) {
             ))}
           </nav>
 
-          <a
-            href={REPO}
-            rel="noreferrer"
-            className="hit-target ml-auto inline-flex flex-none items-center rounded-md bg-b-text px-3.5 text-[13px] font-medium text-b-bg"
-          >
-            Source
-          </a>
+          <div className="ml-auto flex flex-none items-center gap-2">
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            <a
+              href={REPO}
+              rel="noreferrer"
+              className="hit-target inline-flex flex-none items-center rounded-md bg-b-text px-3.5 text-[13px] font-medium text-b-bg"
+            >
+              Source
+            </a>
+          </div>
         </div>
 
         {/* Declared and painted: the cue the audit requires, on the row that
@@ -125,7 +144,7 @@ export function Header({ route }: { route: BResolved }) {
 
 export function Footer() {
   return (
-    <footer className="border-t border-b-line" data-ground="paper">
+    <footer className="border-t border-b-line" data-ground="alt">
       <div className="b-measure py-12">
         <div className="flex items-center gap-2.5 text-b-text">
           <Mark />

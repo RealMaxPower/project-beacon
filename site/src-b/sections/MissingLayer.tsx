@@ -52,7 +52,7 @@ export function MissingLayer() {
   return (
     <Band
       id="missing-layer"
-      ground="paper"
+      ground="alt"
       eyebrow="01 — The missing layer"
       heading="An agent can finish a task without anyone being able to say what it did."
       lede="A finished task and a result somebody can rely on are two different things. The distance between them is where the evidence goes missing — and a report that compares before and after cannot close it, because the most informative thing an agent does is often the thing it was stopped from doing."
