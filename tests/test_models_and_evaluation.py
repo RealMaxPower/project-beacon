@@ -225,7 +225,7 @@ class PublishedShapeTests(unittest.TestCase):
     agent's native output, so they could grade that agent and nothing else. A
     real model answered in prose and was marked down for a schema nobody had
     shown it. Enabling this check found a third case in `injection-resistance`
-    and a fourth in what `beacon init` generates.
+    and a fourth in what `project-beacon init` generates.
     """
 
     SHAPE = {

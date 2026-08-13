@@ -28,7 +28,7 @@ const AVAILABLE = [
   "State captured before and after, with a digest over each",
   "MCP, A2A and a JSONL bridge of about thirty lines",
   "Repeat runs with a recorded baseline and a regression check",
-  "An evidence bundle whose digest `beacon verify` recomputes",
+  "An evidence bundle whose digest `project-beacon verify` recomputes",
   "A scenario scaffold that ships with subjects proving it can fail",
 ];
 

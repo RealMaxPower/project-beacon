@@ -64,21 +64,29 @@ deliberate act even when a tag is pushed by accident.
 overrides the trigger blocks in the YAML. A tag pushed today runs nothing at
 all, silently.
 
-```bash
-gh api -X PUT /repos/RealMaxPower/project-beacon/actions/workflows/323853820/enable  # release
-gh api -X PUT /repos/RealMaxPower/project-beacon/actions/workflows/323853816/enable  # CI
-```
-
-Leave `323853819` (Conformance) disabled. It calls third-party MCP servers and
-hosted agents belonging to people who did not ask to be measured, and it should
-stay manual permanently — see the header comment in `conformance/`'s workflow.
-
-Confirm with:
+Workflow ids are per-repository, so read them rather than copying them from
+anywhere — including from an earlier version of this file, which carried three
+that belonged to a repository that no longer exists:
 
 ```bash
-gh api /repos/RealMaxPower/project-beacon/actions/workflows \
-  --jq '.workflows[] | "\(.state)\t\(.name)"'
+REPO=RealMaxPower/project-beacon
+gh api /repos/$REPO/actions/workflows \
+  --jq '.workflows[] | "\(.id)\t\(.state)\t\(.name)"'
 ```
+
+Enable CI and release by the ids that prints:
+
+```bash
+gh api -X PUT /repos/$REPO/actions/workflows/<ci-id>/enable
+gh api -X PUT /repos/$REPO/actions/workflows/<release-id>/enable
+```
+
+**Leave Conformance disabled.** It calls third-party MCP servers and hosted
+agents belonging to people who did not ask to be measured, and it should stay
+manual permanently — see the header comment in that workflow.
+
+Re-run the listing afterwards. An `enable` against an id that does not exist
+returns quietly enough to be mistaken for success.
 
 ## Cutting a release
 
@@ -98,8 +106,8 @@ python -m build
 python -m twine check --strict dist/*
 python -m venv /tmp/fresh && /tmp/fresh/bin/pip install --quiet dist/*.whl
 mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
-/tmp/fresh/bin/beacon --version && /tmp/fresh/bin/beacon scenarios
-/tmp/fresh/bin/beacon run inbox-briefing
+/tmp/fresh/bin/project-beacon --version && /tmp/fresh/bin/project-beacon scenarios
+/tmp/fresh/bin/project-beacon run inbox-briefing
 ```
 
 **The version lives in two files** and nothing but a test keeps them together:

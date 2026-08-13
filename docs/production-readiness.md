@@ -88,10 +88,10 @@ should never hold.
 ### Evidence integrity
 
 Every bundle carries a SHA-256 digest over its canonical form, and
-`beacon verify <evidence.json>` recomputes it:
+`project-beacon verify <evidence.json>` recomputes it:
 
 ```console
-$ beacon verify .beacon/runs/run-29c153bbe9f5/evidence.json
+$ project-beacon verify .beacon/runs/run-29c153bbe9f5/evidence.json
 VERIFIED: .beacon/runs/run-29c153bbe9f5/evidence.json
 ```
 

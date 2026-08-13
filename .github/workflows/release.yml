@@ -68,12 +68,12 @@ jobs:
           python -m venv /tmp/fresh
           /tmp/fresh/bin/pip install --quiet dist/*.whl
           mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
-          /tmp/fresh/bin/beacon --version
-          /tmp/fresh/bin/beacon scenarios
-          /tmp/fresh/bin/beacon validate inbox-briefing
-          /tmp/fresh/bin/beacon run inbox-briefing
-          /tmp/fresh/bin/beacon init smoke-probe
-          /tmp/fresh/bin/beacon run scenarios/smoke-probe/scenario.json \
+          /tmp/fresh/bin/project-beacon --version
+          /tmp/fresh/bin/project-beacon scenarios
+          /tmp/fresh/bin/project-beacon validate inbox-briefing
+          /tmp/fresh/bin/project-beacon run inbox-briefing
+          /tmp/fresh/bin/project-beacon init smoke-probe
+          /tmp/fresh/bin/project-beacon run scenarios/smoke-probe/scenario.json \
             --adapter command \
             --command "/tmp/fresh/bin/python scenarios/smoke-probe/subjects/compliant.py"
 

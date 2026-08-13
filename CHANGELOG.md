@@ -28,7 +28,7 @@ against a clean environment, so the first tag will publish.
   a claim by the party under evaluation rather than something Beacon watched.
   The command adapter previously recorded no usage at all, on the one path that
   actually spends money.
-- `beacon verify`, which recomputes an evidence bundle's digest and reports
+- `project-beacon verify`, which recomputes an evidence bundle's digest and reports
   whether it still matches. Checked against the raw published document rather
   than a round-trip through `Evidence`, because the digest was taken over what
   was published and a verifier that normalises the thing it is checking is not
@@ -39,9 +39,9 @@ against a clean environment, so the first tag will publish.
 - Seven scenarios: three graded on the state of a synthetic service, four on
   what a hosted agent returned — grounding, fabrication, output-schema
   conformance, and injection resistance at two integration levels.
-- `beacon init`, which scaffolds a scenario that runs immediately together
+- `project-beacon init`, which scaffolds a scenario that runs immediately together
   with the subject that violates it.
-- `beacon scenarios`, and scenario resolution by bare name so a shipped
+- `project-beacon scenarios`, and scenario resolution by bare name so a shipped
   scenario needs no path.
 - `conforms_to` and `contains_none` assertions. The first reports every
   violation with its path rather than the first, and refuses a misspelled
@@ -84,7 +84,7 @@ against a clean environment, so the first tag will publish.
   itself — so each fixture whose command names a path shipped a digest taken
   over a document that no longer existed. They were displayed beside a
   paragraph promising that a digest makes a later edit detectable. Nothing
-  caught it because nothing could check a digest until `beacon verify` was
+  caught it because nothing could check a digest until `project-beacon verify` was
   written, and the first thing it was pointed at was these. The published
   document is now sealed over itself and says in its own `limitations` that a
   path was substituted; the alternative, leaving the stale digest, hid a real
@@ -153,7 +153,7 @@ against a clean environment, so the first tag will publish.
   unreadable bundle. `KeyError` is deliberately still not caught at the top
   level: it is this codebase's most common internal-bug signature, and
   swallowing it would turn a Beacon defect into `error: 'some_key'`.
-- **`beacon adapters` advertised routes that did not exist and hid one that
+- **`project-beacon adapters` advertised routes that did not exist and hid one that
   did.** The `--adapter` choices, the dispatch, and the printed table were
   three hand-written lists, and they drifted apart in both directions: the
   table listed `mcp-serve`, `mcp-stdio` and `a2a-http`, none of which are
@@ -231,7 +231,7 @@ against a clean environment, so the first tag will publish.
   `measured: false`, prints as `NOT MEASURED`, and resolves the run to
   INCOMPLETE. `evidence_version` is `0.2`: the field is new and the same
   subject behaviour that reported FAIL now reports INCOMPLETE.
-- **Three scenarios and `beacon init` graded a shape they never published.**
+- **Three scenarios and `project-beacon init` graded a shape they never published.**
   `output_contract` is the only part of a scenario the subject is told, so a
   `conforms_to` on the contracted artifact is unmeetable unless the same schema
   appears there. `web-extraction-contract` and `web-extraction-grounding`
@@ -329,5 +329,12 @@ against a clean environment, so the first tag will publish.
 - No native runtime adapter for OpenClaw, Hermes, Codex or similar.
 - The MCP façade has never been driven by a GUI host. It needs a person; see
   [docs/running-it-yourself.md](docs/running-it-yourself.md).
+- The façade binds to loopback, so only a host whose MCP client runs on the
+  same machine can reach it — Cursor directly, Claude Desktop through a stdio
+  proxy. Cowork, claude.ai and the mobile apps add a *remote* server that
+  Claude connects to from Anthropic's cloud, which cannot see `127.0.0.1`, so
+  those need a tunnel and the loss of the loopback control that implies. The
+  instructions said to use Claude Desktop's connector settings, which is the
+  cloud path and never could have worked.
 - A passing report is evidence for one scenario and one configuration. It is
   not a safety certification.

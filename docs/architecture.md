@@ -181,7 +181,7 @@ required before running untrusted subjects.
 
 Beacon both consumes and serves MCP, and the two do different jobs.
 
-The **client** (`beacon mcp-inspect`) connects to someone else's server. It
+The **client** (`project-beacon mcp-inspect`) connects to someone else's server. It
 grades a tool provider, not an agent.
 
 The **façade** (`ScenarioMCPServer`) serves the scenario's own tool surface, so

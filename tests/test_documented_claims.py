@@ -58,7 +58,7 @@ class SubjectCountTests(unittest.TestCase):
     def test_the_manifest_has_subjects_to_count(self) -> None:
         self.assertGreater(self.expected, 0)
 
-    # Only claims about *this* suite. `beacon init` writes two subjects and the
+    # Only claims about *this* suite. `project-beacon init` writes two subjects and the
     # subjects README has a section about a different pair; both are correct
     # and neither is a count of the adversarial suite.
     CLAIMS = (

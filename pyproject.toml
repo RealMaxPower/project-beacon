@@ -43,8 +43,18 @@ Changelog = "https://github.com/RealMaxPower/project-beacon/blob/main/CHANGELOG.
 [project.optional-dependencies]
 validate = ["jsonschema>=4.21"]
 
+# The installed command is `project-beacon`, matching the distribution name.
+#
+# A bare `beacon` collides on PATH with two currently-shipping Go tools that
+# install a binary of that name, and it is a dictionary word already taken on
+# PyPI, npm and crates.io. The distribution name was never the problem; the
+# command was. Nothing has been published, so there is no installed base to
+# migrate and no alias to keep.
+#
+# The import name stays `beacon` — `python3 -m beacon` still works. It collides
+# with nothing on PATH and is not the string anyone reads as a brand.
 [project.scripts]
-beacon = "beacon.cli:main"
+project-beacon = "beacon.cli:main"
 
 [tool.setuptools]
 packages = [

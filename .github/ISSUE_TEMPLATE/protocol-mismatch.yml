@@ -30,7 +30,7 @@ body:
     attributes:
       label: What Beacon said
       description: >
-        Output of `beacon a2a-inspect <url>` or `beacon mcp-inspect
+        Output of `project-beacon a2a-inspect <url>` or `project-beacon mcp-inspect
         --command ...` is ideal — it shows discovery separately from the call.
       render: text
     validations:

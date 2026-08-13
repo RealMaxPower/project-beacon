@@ -215,7 +215,7 @@ def _reseal(evidence: dict[str, Any]) -> dict[str, Any]:
 
     `_scrub` runs after the run has already sealed itself, so every fixture
     whose command names a path used to ship a digest taken over a document that
-    no longer existed. `beacon verify` reported them MODIFIED — correctly, and
+    no longer existed. `project-beacon verify` reported them MODIFIED — correctly, and
     embarrassingly, since the page displaying them says a digest makes an edit
     detectable. Publishing a hash that does not match the thing beside it
     teaches a reader that the check is decorative.

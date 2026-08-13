@@ -124,7 +124,7 @@ class ReachabilityTests(unittest.TestCase):
         """
         The listing constructs an adapter purely to read its descriptor, so
         every `__init__` has to stay free of I/O. If one starts opening
-        sockets or spawning processes, `beacon adapters` becomes a command
+        sockets or spawning processes, `project-beacon adapters` becomes a command
         that reaches out to the network to print a table.
         """
         def explode(*_args: Any, **_kwargs: Any) -> Any:

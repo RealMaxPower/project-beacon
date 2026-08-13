@@ -7,7 +7,7 @@ import { evidenceFor } from "@/data/fixtures";
  * This is the source design's approval-binding panel, rebuilt on something
  * this repository has. The design binds an approval to an action digest, and
  * Beacon has no actions and no approvals — but it does hash every bundle it
- * writes, and `beacon verify` recomputes that hash. So the interaction
+ * writes, and `project-beacon verify` recomputes that hash. So the interaction
  * survives intact and becomes a demonstration of a real property rather than
  * an illustration of an imagined one.
  *

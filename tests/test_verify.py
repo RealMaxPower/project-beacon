@@ -169,7 +169,7 @@ class PublishedBundleTests(unittest.TestCase):
     command names a path carried a digest over a document that no longer
     existed — published beside a paragraph promising the digest makes an edit
     detectable. Nothing caught it because nothing could check a digest until
-    `beacon verify` existed. Rebuilding now reseals the scrubbed document and
+    `project-beacon verify` existed. Rebuilding now reseals the scrubbed document and
     records the substitution in its own `limitations`.
     """
 

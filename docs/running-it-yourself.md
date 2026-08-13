@@ -66,9 +66,16 @@ model-backed subject is close to meaningless.
 
 ## A GUI host as the subject
 
-Claude Desktop, Cursor, or anything else that speaks MCP and that you drive by
+Cursor, Claude Desktop, or anything else that speaks MCP and that you drive by
 hand. Beacon serves the scenario's synthetic tools over loopback HTTP and waits
 for the host to connect.
+
+Loopback is the constraint that decides which hosts can do this without extra
+work. A host whose MCP client runs on your machine — Cursor directly, Claude
+Desktop through a stdio proxy — connects to `127.0.0.1` and is done. A host
+that connects from a vendor's cloud, which is how Cowork, claude.ai and the
+mobile apps add a remote server, needs a tunnel. See [Wiring it
+up](#wiring-it-up) for both.
 
 ```bash
 export BEACON_MCP_TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
@@ -94,7 +101,12 @@ fixed token is a weaker token and only a hand-configured host needs one.
 
 ### Wiring it up
 
-The generated `mcp-config.json` is already in the shape most hosts expect:
+The façade is a Streamable HTTP MCP endpoint on **loopback**, with a bearer
+token. That one word decides how each host connects, so it is worth stating
+before the recipes: a host that runs its MCP client on your machine can reach
+`127.0.0.1` directly, and a host that connects from somewhere else cannot.
+
+The generated `mcp-config.json` is in the shape a local host expects:
 
 ```json
 {
@@ -108,10 +120,62 @@ The generated `mcp-config.json` is already in the shape most hosts expect:
 }
 ```
 
-- **Cursor** reads `~/.cursor/mcp.json`. Merge the `mcpServers` entry in.
-- **Claude Desktop** takes a remote MCP server through its connector settings;
-  point it at the URL and supply the same bearer token.
-- Anything else: it is a Streamable HTTP MCP endpoint with a bearer token.
+**Cursor** reads `~/.cursor/mcp.json`. Merge the `mcpServers` entry in. Its
+client runs locally, so loopback works and there is nothing else to do.
+
+**Claude Desktop** speaks stdio to local servers, not HTTP, so it needs a
+proxy in between. [`mcp-remote`](https://github.com/geelen/mcp-remote) is one,
+and it runs on your machine, so the façade stays on loopback:
+
+```json
+{
+  "mcpServers": {
+    "beacon": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://127.0.0.1:8899/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": { "AUTH_HEADER": "Bearer <token>" }
+    }
+  }
+}
+```
+
+The missing space in `Authorization:${AUTH_HEADER}` is deliberate. Spaces
+inside `args` are mangled when the config invokes `npx` on Windows, so the
+space lives in the environment variable instead.
+
+**Claude Desktop's *connector* settings will not work**, and neither will
+Cowork, claude.ai, or the mobile apps. Those add a *remote* MCP server, and
+Claude connects to one "from Anthropic's cloud infrastructure, rather than
+from your local device" — so `127.0.0.1` is your machine, not theirs, and the
+connection never arrives. This page said to use connector settings for longer
+than it should have, which is the kind of claim the rest of this project
+exists to catch.
+
+To drive one of those, the façade has to be reachable from the public
+internet, which means a tunnel:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8899   # or: ngrok http 8899
+```
+
+Add the tunnel's `https://…/mcp` as a custom connector, with an
+`authorization` request header whose value is `Bearer <token>` — the scheme
+included, because the value is sent exactly as entered.
+
+**Weigh that before doing it.** `SECURITY.md` lists loopback binding as a
+control, and a tunnel removes it: the run's synthetic services become
+reachable by anyone with the URL, and the per-run token is the only thing left
+in front of them. The fixtures are synthetic and the token is fresh per run
+unless you pinned it, so this is defensible for a scenario you are driving by
+hand. It is not something to leave running.
+
+Anything else: it is a Streamable HTTP MCP endpoint with a bearer token, and
+the question to ask of it is where its client runs.
 
 Then paste the printed goal into the host and let it work. **The agent must
 call `beacon_submit` when it is finished** — that tool is what ends the wait

@@ -304,11 +304,11 @@ attempt, not a cause.
 - **State changes** includes a `mail.sent` row that is **unchanged** (`[]` →
   `[]`), tinted as a failure, tagged **3 attempts blocked**.
 - The digest is followed by the line saying it is an **unsigned** SHA-256 that
-  **`beacon verify` recomputes**, so an edit is detectable but an author is not
+  **`project-beacon verify` recomputes**, so an edit is detectable but an author is not
   provable.
 
 **It is a bug if** that line still says no command verifies a digest. It said so
-until `beacon verify` shipped, which is exactly the kind of sentence that
+until `project-beacon verify` shipped, which is exactly the kind of sentence that
 outlives the code it describes.
 - **Limitations** is present, and there is **no way to dismiss it**.
 

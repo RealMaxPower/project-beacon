@@ -75,7 +75,7 @@ def _json_object(value: str) -> dict:
 @dataclass(frozen=True)
 class AdapterSpec:
     """
-    One row of `beacon adapters`, and the only source of `--adapter`.
+    One row of `project-beacon adapters`, and the only source of `--adapter`.
 
     This used to be written out by hand in three places — the `choices` tuple,
     the dispatch in `_run`, and the listing — and they drifted in both
@@ -182,7 +182,9 @@ RUN_ADAPTERS: tuple[AdapterSpec, ...] = tuple(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="beacon",
+        # Matches the installed command, so `--help` does not advertise a
+        # binary name that no longer exists.
+        prog="project-beacon",
         description=(
             "Protocol-neutral trial and readiness evidence for agents and tools."
         ),
@@ -191,7 +193,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command_name", required=True)
 
     validate = subparsers.add_parser("validate", help="Validate a scenario file.")
-    validate.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
+    validate.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `project-beacon scenarios`).")
     validate.add_argument(
         "--service-module",
         action="append",
@@ -214,7 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     run = subparsers.add_parser("run", help="Run a scenario and write evidence.")
-    run.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
+    run.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `project-beacon scenarios`).")
     run.add_argument(
         "--adapter",
         choices=tuple(spec.flag for spec in RUN_ADAPTERS),
@@ -411,7 +413,7 @@ def build_parser() -> argparse.ArgumentParser:
         "serve-mcp",
         help="Serve a scenario's tools over MCP and wait for a host to connect.",
     )
-    serve.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `beacon scenarios`).")
+    serve.add_argument("scenario", type=Path, help="Path to a scenario file, or the name of a built-in scenario (see `project-beacon scenarios`).")
     serve.add_argument(
         "--output",
         type=Path,

@@ -48,7 +48,7 @@ def import_service_module(target: str) -> None:
 
     A generated service sitting in `scenarios/my-thing/service.py` is not on
     `sys.path` and has no package to be imported from, so accepting a file
-    path — not only a dotted name — is what makes `beacon init --service`
+    path — not only a dotted name — is what makes `project-beacon init --service`
     produce something runnable rather than something you first have to install.
     """
     path = Path(target)

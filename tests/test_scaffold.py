@@ -154,7 +154,7 @@ class GeneratedScenarioRunsTests(unittest.TestCase):
 
 class GeneratedSourceCompilesTests(unittest.TestCase):
     """
-    `beacon init` writes the scaffold's own location into the docstrings of
+    `project-beacon init` writes the scaffold's own location into the docstrings of
     the subjects it generates. On Windows that is a backslash path, so
     `C:\\Users\\...` puts `\\U` inside a string literal where Python reads a
     truncated unicode escape. Every subject generated on Windows was a syntax

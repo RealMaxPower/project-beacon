@@ -271,7 +271,7 @@ bundle under `usage`.
 ## Test your own domain
 
 A scenario graded on *state* needs a synthetic service. Beacon ships `mail`
-and `files`; `beacon init --service <name>` generates a third, or write one
+and `files`; `project-beacon init --service <name>` generates a third, or write one
 and register it without touching Beacon's source:
 
 ```python

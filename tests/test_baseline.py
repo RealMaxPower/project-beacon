@@ -429,7 +429,7 @@ class EvidenceRoundTripTests(unittest.TestCase):
         """
         ValueError, not KeyError, and the message has to name the field.
 
-        `beacon run` prints the exception and nothing else, so a bare
+        `project-beacon run` prints the exception and nothing else, so a bare
         KeyError reached the operator as `error: 'run_id'` — which does not
         say what was being read or what was wrong with it.
         """

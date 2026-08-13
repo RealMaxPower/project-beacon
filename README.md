@@ -109,7 +109,7 @@ verdict:
 
 Verdicts are `PASS`, `FAIL`, or `INCOMPLETE`. Each bundle carries its own
 `limitations` block and a SHA-256 digest, so a later edit is detectable —
-`beacon verify <evidence.json>` recomputes it.
+`project-beacon verify <evidence.json>` recomputes it.
 
 **A passing report is evidence for one synthetic scenario and one
 configuration. It is not a safety certification.** Every bundle says so in its
@@ -128,7 +128,7 @@ of what Beacon is and is not ready to be trusted with.
 | **Output-schema conformance** | Reports every violation with its path, and refuses a misspelled keyword instead of ignoring it |
 | **Determinism and reset** | Before/after state digests, human-readable diffs, and exact reset verification |
 | **Regression detection** | Cross-run flakiness rates against a committed baseline or the last N runs, with a significance test so a flaky subject does not fail CI at random |
-| **`beacon init`** | Generates a scenario that runs immediately together with the subject that violates it |
+| **`project-beacon init`** | Generates a scenario that runs immediately together with the subject that violates it |
 | **Scenario packs** | [examples/scenario-pack/](examples/scenario-pack/) brings its own service, with a test that runs it from outside the repository so "no need to edit Beacon" is evidence rather than a claim |
 | **MCP** | Stdio and Streamable HTTP clients, plus a server façade so any MCP host can be the subject over HTTP with a per-run bearer token |
 | **A2A** | Discovery across both well-known card paths, replies accepted as a Task or a bare Message — checked against reference servers built with all five official SDKs, which found five defects the specification alone did not |
@@ -181,7 +181,7 @@ beacon/
   evidence.py     JSON and Markdown evidence output
   outputschema.py Output-shape checking for `conforms_to`
   runner.py       Scenario lifecycle orchestration
-  scaffold.py     `beacon init` scenario and service generation
+  scaffold.py     `project-beacon init` scenario and service generation
 baselines/        Recorded pass rates the documentation cites
 conformance/      Protocol surveys and reference agents for all five A2A SDKs
 examples/         JSONL subjects, the adversarial suite, and a scenario pack
