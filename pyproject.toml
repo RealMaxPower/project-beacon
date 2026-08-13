@@ -15,7 +15,7 @@ requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
-  { name = "Project Beacon contributors" }
+  { name = "Marshall Cahill and Project Beacon contributors" }
 ]
 keywords = ["agents", "mcp", "a2a", "evaluation", "simulation"]
 classifiers = [

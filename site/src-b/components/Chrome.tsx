@@ -160,7 +160,7 @@ export function Footer() {
         </p>
 
         <p className="mt-5 font-b-mono text-[11.5px] text-b-faint">
-          © 2026 Project Beacon contributors · Apache 2.0 · every scenario fixture is
+          © 2026 Marshall Cahill and Project Beacon contributors · Apache 2.0 · every scenario fixture is
           synthetic · {facts.scenarios} scenarios
         </p>
 

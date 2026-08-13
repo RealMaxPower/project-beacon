@@ -226,7 +226,7 @@ check(
   // the footer rather than the navigation. A legal page nothing links to is
   // a legal page nobody can find.
   "Licensing and privacy",
-  "© 2026 Project Beacon contributors",
+  "© 2026 Marshall Cahill and Project Beacon contributors",
 );
 
 check("Playground shell", () => renderToString(<Playground />), "Beacon", "Scenario");
@@ -496,7 +496,7 @@ check(
   // it: the terms describe the origin, and one copy cannot disagree with
   // itself. A visitor landing on /b had no way to reach them at all.
   "/#/legal",
-  "© 2026 Project Beacon contributors",
+  "© 2026 Marshall Cahill and Project Beacon contributors",
 );
 
 /*

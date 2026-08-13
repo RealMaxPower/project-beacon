@@ -199,7 +199,7 @@ export function App() {
             and it says nothing about behaviour outside the scenario that produced it.
           </p>
           <p className="mt-3 font-mono text-[11px] text-text-faint">
-            © 2026 Project Beacon contributors · Apache 2.0 · all scenario
+            © 2026 Marshall Cahill and Project Beacon contributors · Apache 2.0 · all scenario
             fixtures are synthetic
           </p>
           <p className="mt-1.5 font-mono text-[11px] text-text-faint">
