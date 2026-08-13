@@ -145,3 +145,52 @@ jobs:
           python -m coverage run --source=beacon --branch -m unittest discover -s tests
           python -m coverage report --skip-covered
           python -m coverage report --fail-under=80
+
+  site:
+    name: site build, screens, and the security headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Both toolchains: `fixtures:check` re-records the playground's evidence
+      # by importing beacon and running real scenarios, and `notices:check`
+      # reads the installed packages. Neither is a Node-only check despite
+      # living behind an npm script.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install the site's dependencies
+        working-directory: site
+        run: npm ci
+
+      # Typecheck, render every screen headless, lint the rendered output, and
+      # assert the recorded fixtures and third-party notices are current.
+      - name: Build and check
+        working-directory: site
+        run: npm run check
+
+      # The policy is the site's whole privacy claim, and until now nothing
+      # automated checked it.
+      #
+      # `/legal` names `connect-src 'none'` and `default-src 'none'` verbatim,
+      # deliberately, so the page is falsifiable rather than vague — relax the
+      # policy and the published page becomes untrue. That only helps if
+      # something notices. `vercel.json` is a file a pull request can edit, the
+      # deployment is automatic, and this check ran on one laptop.
+      #
+      # Chromium is fetched explicitly: the npm install brings the Playwright
+      # library, not a browser, and `headers.mjs` drives a real one because
+      # `vite preview` serves none of the headers under test.
+      - name: Install Chromium for the header check
+        working-directory: site
+        run: npx playwright install --with-deps chromium
+
+      - name: Assert the security headers reach the wire
+        working-directory: site
+        run: npm run headers

@@ -64,7 +64,14 @@ no wording should imply otherwise.
 
 Every push to `main` and every pull request runs the full matrix — three
 operating systems by three Python versions — plus the schema-conformance job,
-the CLI vertical slice, and the coverage floor.
+the CLI vertical slice, the coverage floor, and the site.
+
+The site job is the newest and exists for one reason. `vercel.json` carries a
+Content-Security-Policy that the licensing and privacy page names directive by
+directive, so relaxing the policy makes a published page untrue. Deployment is
+automatic on merge, `vercel.json` is a file a pull request can edit, and until
+that job existed the only thing checking it was `npm run headers` on one
+laptop.
 
 It did not, for the first months of this project. Actions minutes are billed on
 private repositories and the runner multipliers are uneven — Linux 1x, Windows

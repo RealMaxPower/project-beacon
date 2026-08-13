@@ -70,6 +70,18 @@ against a clean environment, so the first tag will publish.
 
 ### Fixed
 
+- **The site's security headers were enforced by one laptop.** `vercel.json`
+  carries a Content-Security-Policy whose `connect-src 'none'` and
+  `default-src 'none'` the licensing and privacy page names verbatim — written
+  that way so relaxing the policy makes a published page provably untrue rather
+  than vaguely stale. Nothing automated checked it: `npm run headers` drives a
+  real browser against the declared headers, and CI ran no npm command at all.
+  A pull request could have weakened the policy, merged, and deployed
+  automatically to the custom domain while the page kept claiming the site
+  cannot transmit anything. CI now builds the site, renders every screen,
+  checks the recorded fixtures and third-party notices, and walks every page
+  under the real headers.
+
 - **Two scenarios declared a cost nothing read.** `estimated_cost_usd: 0.25`
   was in `inbox-briefing` and `document-organization`, consumed by no code, and
   copied into every bundle they produced — a dollar figure published beside
