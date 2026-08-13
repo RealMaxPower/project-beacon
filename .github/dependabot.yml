@@ -34,3 +34,17 @@ updates:
       site:
         patterns:
           - "*"
+    ignore:
+      # Vite 8 replaces esbuild with Rolldown, and `esbuild.legalComments` goes
+      # with it. That option is not a preference: it is what keeps React's MIT
+      # notice inside the built assets, and a build without it ships a compiled
+      # copy of React carrying none of its terms. `tsc` catches the removed
+      # option, so the bump fails loudly rather than quietly stripping the
+      # notice — but it fails every month until someone does the migration.
+      #
+      # Held here until `vite.config.ts` has the Rolldown equivalent and a
+      # built bundle is confirmed to still carry `@license`. Minor and patch
+      # versions of Vite still come through; only the major waits.
+      - dependency-name: vite
+        update-types:
+          - version-update:semver-major
