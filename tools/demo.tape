@@ -31,11 +31,21 @@ Require python3
 Set Shell zsh
 Set FontSize 15
 Set Width 1180
-Set Height 620
+Set Height 560
 Set Padding 22
 Set Theme "GitHub Dark"
 Set TypingSpeed 28ms
 Set PlaybackSpeed 1.0
+
+# Window chrome, so the recording reads as a terminal rather than as a slab of
+# text that has lost its edges against a dark README. The margin keeps it off
+# the page edge; the fill is the theme's own background one step darker, so the
+# frame reads as depth rather than as a second colour.
+Set WindowBar Colorful
+Set WindowBarSize 40
+Set BorderRadius 10
+Set Margin 36
+Set MarginFill "#0d1117"
 
 # Recorded from a throwaway clone at a neutral path, for two reasons.
 #
