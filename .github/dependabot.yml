@@ -48,3 +48,11 @@ updates:
       - dependency-name: vite
         update-types:
           - version-update:semver-major
+      # Held with Vite, not on its own merits. `@vitejs/plugin-react@6` declares
+      # `peer vite@^8`, so the two majors are one migration and not two. Holding
+      # only Vite produced a lockfile that would not install at all — npm could
+      # not resolve the peer, which is a worse failure than the type error it
+      # was meant to avoid. Release this at the same time as the line above.
+      - dependency-name: "@vitejs/plugin-react"
+        update-types:
+          - version-update:semver-major
