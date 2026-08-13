@@ -17,6 +17,12 @@ Named by commit *subject* rather than by hash so the check survives a rebase,
 and so a reader can find the boundary without consulting the test. It is the
 commit that introduced this file, which is the earliest one that could
 honestly be held to a rule nothing had been checking.
+
+A history that does not contain it is a history that began *after* the policy,
+so every commit in it is in scope. That case is not hypothetical: this project
+was published as a squashed tree, and for that history the boundary subject
+does not exist. Skipping there — which is what this check used to do — left the
+rule with no enforcement at all in the only repository anyone can clone.
 """
 
 
@@ -61,7 +67,10 @@ class SignOffPolicyTests(unittest.TestCase):
         """
         text = CONTRIBUTING.read_text(encoding="utf-8")
         self.assertRegex(text, r"applies from the commit .* onward")
-        self.assertIn("Every\ncommit before it is unsigned", text)
+        self.assertIn("Any commit\nbefore it is unsigned", text)
+        # And that it says what happens where there is no boundary to apply
+        # from, which is the shape of the published history.
+        self.assertIn("began after the policy, so the walk covers all of it", text)
 
     def test_commits_since_the_policy_are_signed_off(self) -> None:
         """
@@ -79,15 +88,19 @@ class SignOffPolicyTests(unittest.TestCase):
             if entry.strip()
         ]
         subjects = [subject for _, subject, _ in commits]
-        if not any(s.startswith(POLICY_START) for s in subjects):
-            self.skipTest("policy boundary commit is not in this history")
 
         # `git log` is newest first, so the boundary and everything before it
-        # in this list is the boundary and everything after it in time.
+        # in this list is the boundary and everything after it in time. Absent
+        # a boundary the whole history is in scope — see POLICY_START. The one
+        # thing this must never do is decline to answer, which is how the rule
+        # came to be enforced nowhere.
         boundary = next(
-            index
-            for index, subject in enumerate(subjects)
-            if subject.startswith(POLICY_START)
+            (
+                index
+                for index, subject in enumerate(subjects)
+                if subject.startswith(POLICY_START)
+            ),
+            len(commits) - 1,
         )
         unsigned = [
             f"{sha[:9]} {subject}"

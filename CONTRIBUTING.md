@@ -146,14 +146,19 @@ between the two is where every missing sign-off in this project's history came
 from — including three that arrived *after* the test existed and were repaired
 by rewriting history, which is a worse outcome than the flag it replaced.
 
-The policy applies from the commit that added this sentence onward. Every
-commit before it is unsigned — the requirement was written and then not
-followed, by the only person contributing, for the whole of the project's
-history so far. It is recorded here rather than fixed by rewriting those
-commits, because a sign-off retroactively added by someone else certifies
-nothing. `tests/test_contributing_policy.py` checks that this paragraph and
-the requirement above stay together, so the rule cannot go back to being
-stated without being kept.
+The policy applies from the commit that added this sentence onward. Any commit
+before it is unsigned — the requirement was written and then not followed, by
+the only person contributing, until this. Those are recorded rather than fixed
+by rewriting them, because a sign-off retroactively added by someone else
+certifies nothing.
+
+`tests/test_contributing_policy.py` walks the log and fails on any commit in
+scope without the trailer. A history that does not contain that boundary commit
+began after the policy, so the walk covers all of it — this repository's
+published history is a single squashed commit, and the check used to skip
+outright there, which left the rule enforced nowhere anybody could clone. The
+same test keeps this paragraph and the requirement above together, so the rule
+cannot go back to being stated without being kept.
 
 **CI runs on your pull request** — see above. Say what you ran locally anyway,
 and what you could not: a green check covers the matrix, not the judgement
