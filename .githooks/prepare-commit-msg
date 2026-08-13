@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Add the Developer Certificate of Origin trailer if it is missing.
+#
+# CONTRIBUTING.md asks for `git commit -s` and `tests/test_contributing_policy.py`
+# fails the suite when a commit arrives without it. Between those two sits a
+# person having to remember a flag, and thirty-eight commits went in without
+# one before anything checked — then three more after the check existed, each
+# discovered by a red suite well after the fact.
+#
+# A rule enforced only by a test that runs later is a rule that gets broken and
+# then repaired by rewriting history. This closes it at the point the mistake
+# would be made.
+#
+# Install:
+#     git config core.hooksPath .githooks
+#
+# The hook is committed rather than written into .git/hooks so a clone gets it,
+# but `core.hooksPath` is per-clone: git will not run repository files as hooks
+# without being told to, which is the correct default and not one to work
+# around.
+#
+# Deliberately does nothing on merge, squash, or an amend that already carries
+# the trailer — and nothing at all if a sign-off is present, so `git commit -s`
+# stays exactly as it was.
+
+message_file="$1"
+source="$2"
+
+case "$source" in
+    merge|squash) exit 0 ;;
+esac
+
+if grep -qiE '^Signed-off-by: .+ <.+>' "$message_file"; then
+    exit 0
+fi
+
+name=$(git config user.name)
+email=$(git config user.email)
+
+if [ -z "$name" ] || [ -z "$email" ]; then
+    echo "prepare-commit-msg: user.name or user.email is unset, so no" >&2
+    echo "  Signed-off-by trailer was added. The suite will fail on this" >&2
+    echo "  commit until it carries one." >&2
+    exit 0
+fi
+
+# `interpret-trailers` places it correctly against whatever else is there,
+# rather than appending a line and hoping the message had no trailer block.
+git interpret-trailers --in-place \
+    --trailer "Signed-off-by: $name <$email>" \
+    "$message_file"

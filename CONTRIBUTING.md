@@ -126,6 +126,19 @@ Sign off your commits (`git commit -s`) to certify the
 [Developer Certificate of Origin](https://developercertificate.org/). Describe
 what you changed, how you verified it, and what the change does *not* cover.
 
+Turn on the hook that adds the trailer for you, once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It is opt-in because git will not run a repository's files as hooks without
+being told to, which is the right default and not one to work around. Without
+it the rule is enforced only by a test that runs afterwards, and the gap
+between the two is where every missing sign-off in this project's history came
+from — including three that arrived *after* the test existed and were repaired
+by rewriting history, which is a worse outcome than the flag it replaced.
+
 The policy applies from the commit that added this sentence onward. Every
 commit before it is unsigned — the requirement was written and then not
 followed, by the only person contributing, for the whole of the project's
