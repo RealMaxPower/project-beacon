@@ -97,28 +97,30 @@ page.on("console", (m) => {
 page.on("pageerror", (e) => violations.push(`pageerror: ${e.message}`));
 
 const ROUTES = [
+  // The root now serves the second design, so these are B's routes. The first
+  // design is still built and reachable at /a while it is under review; when
+  // it goes, its entries here and its rewrite go with it.
   "/",
-  "/#/how-it-works",
-  "/#/scenarios",
-  "/#/for-builders",
   "/#/docs",
-  "/#/hosted",
-  // The licensing and privacy page. Its claims about what this site collects
-  // are claims about this policy, so it is the one page where a violation
-  // would make the prose false rather than merely break a feature.
   "/#/legal",
   "/#/playground",
   "/#/playground/inbox-briefing-draft-only",
-  // The second design. It is a separate document, so it inherits the policy
-  // but proves nothing about it until it is actually loaded — which is what
-  // the rewrite-aware resolver above exists to make true.
+  "/#case",
+  // The retired design, still deployed at /a pending a decision. It is a
+  // separate document, so it inherits the policy but proves nothing about it
+  // until it is actually loaded.
+  "/a",
+  "/a#/how-it-works",
+  "/a#/scenarios",
+  "/a#/for-builders",
+  "/a#/docs",
+  "/a#/hosted",
+  "/a#/legal",
+  "/a#/playground",
+  // /b still resolves to the same document as the root, which is worth
+  // checking: a stale link to /b must not 404 once the root moved.
   "/b",
-  // The shared playground under the second design's shell. Same document and
-  // so the same policy, but not the same code path: this route is where
-  // `crypto.subtle` and the blob download run, and a policy that held on the
-  // marketing page says nothing about the screen that actually uses them.
   "/b#/playground",
-  "/b#/docs",
 ];
 
 let failures = 0;
@@ -155,12 +157,18 @@ console.log(
 // The one place an inline style is load-bearing: the pass-rate bars are sized
 // by `style={{ width }}`. A CSP that blocked them would leave a bar at zero
 // width and nothing in the console, so it is asserted rather than eyeballed.
-await page.goto(`${base}/`, { waitUntil: "networkidle" });
+// Checked on the playground rather than the root: the bars live in the shared
+// playground screens, which both designs embed, so this survives whichever
+// design owns `/`. Pointing it at the root broke the moment the root changed.
+const widthProbe = `${base}/#/playground`;
+await page.goto(widthProbe, { waitUntil: "networkidle" });
 const widths = await page.evaluate(() =>
   [...document.querySelectorAll("[style*='width']")].map((el) => el.style.width),
 );
 const sized = widths.filter((w) => w && w !== "0%" && w !== "0px");
-console.log(`\n  ${sized.length > 0 ? "ok  " : "FAIL"} inline widths survive style-src 'self': ${JSON.stringify(widths)}`);
+console.log(
+  `\n  ${sized.length > 0 ? "ok  " : "FAIL"} inline widths survive style-src 'self' on ${widthProbe}: ${JSON.stringify(widths)}`,
+);
 if (sized.length === 0) failures += 1;
 
 /*

@@ -42,7 +42,7 @@ def _without_comments(source: str) -> str:
 #: design means adding it here, not inheriting silence.
 SOURCE_TREES = (SRC, SITE / "src-b")
 
-ENTRY_POINTS = ("index.html", "b.html")
+ENTRY_POINTS = ("index.html", "a.html")
 
 
 def _site_sources() -> list[Path]:
@@ -724,7 +724,7 @@ class VisualVocabularyTests(unittest.TestCase):
         for tree in SOURCE_TREES:
             if tree in path.parents:
                 return tree
-        return SITE / "src-b" if path.name == "b.html" else SRC
+        return SRC if path.name == "a.html" else SITE / "src-b"
 
     def test_the_shipped_fonts_are_discoverable(self) -> None:
         """A ceiling of zero would make the guard below pass on anything."""

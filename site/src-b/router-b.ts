@@ -29,7 +29,7 @@ import { useEffect, useState } from "react";
  * hides the typo that got them there.
  */
 
-export const B_ROUTES = ["", "playground", "docs"] as const;
+export const B_ROUTES = ["", "playground", "docs", "legal"] as const;
 
 export type BRoute = (typeof B_ROUTES)[number];
 

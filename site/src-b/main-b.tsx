@@ -18,7 +18,7 @@ import { SiteB } from "./SiteB";
  */
 
 const root = document.getElementById("root");
-if (!root) throw new Error("No #root in b.html.");
+if (!root) throw new Error("No #root in index.html.");
 
 createRoot(root).render(
   <StrictMode>

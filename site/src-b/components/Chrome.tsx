@@ -86,7 +86,7 @@ export function Header({ route }: { route: BResolved }) {
           >
             <Mark />
             <span className="font-b-display text-[15.5px] font-semibold tracking-[-0.02em]">
-              Outcome Assurance
+              Project Beacon
             </span>
           </a>
 
@@ -149,7 +149,7 @@ export function Footer() {
         <div className="flex items-center gap-2.5 text-b-text">
           <Mark />
           <span className="font-b-display text-[15.5px] font-semibold tracking-[-0.02em]">
-            Outcome Assurance
+            Project Beacon
           </span>
         </div>
 

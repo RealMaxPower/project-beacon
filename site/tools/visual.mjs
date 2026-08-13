@@ -42,13 +42,13 @@ const ROUTES = [
   ["playground", "#/playground"],
   // The second design, by filename rather than by route: `vite preview` serves
   // dist/ without the host's rewrites, so /b resolves only in production and
-  // /b.html resolves in both.
-  ["b", "b.html"],
+  // The second design is the root now; /a is the first, pending removal.
+  ["b", "/"],
   // The shared playground inside the second design's shell. Same seven-step
   // flow as `#/playground` above, a different header above it and a different
   // palette under it — so its geometry is a separate measurement, not an
   // inference from the first design's.
-  ["b-playground", "b.html#/playground"],
+  ["b-playground", "/#/playground"],
   /*
    * The second design in light, which is not a lighter version of the same
    * page: the two validated palettes swap roles, so the page becomes paper and
@@ -57,9 +57,9 @@ const ROUTES = [
    * Auditing one and inferring the other would be inferring the half that
    * changed.
    */
-  ["b-docs", "b.html#/docs"],
-  ["b-light", "b.html", "light"],
-  ["b-playground-light", "b.html#/playground", "light"],
+  ["b-docs", "/#/docs"],
+  ["b-light", "/", "light"],
+  ["b-playground-light", "/#/playground", "light"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];

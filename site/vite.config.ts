@@ -24,7 +24,7 @@ export default defineConfig({
        */
       input: {
         main: new URL("./index.html", import.meta.url).pathname,
-        b: new URL("./b.html", import.meta.url).pathname,
+        a: new URL("./a.html", import.meta.url).pathname,
       },
     },
     // The recorded bundles are imported as JSON and inlined. They are the

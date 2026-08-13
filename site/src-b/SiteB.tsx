@@ -1,6 +1,7 @@
 import { Playground } from "@/screens/playground/Playground";
 import { Footer, Header } from "./components/Chrome";
 import { DocsScreen } from "./sections/DocsScreen";
+import { LegalScreen } from "./sections/LegalScreen";
 import { NotFound } from "./sections/NotFound";
 import { Case } from "./sections/Case";
 import { Checks } from "./sections/Checks";
@@ -20,9 +21,15 @@ import { B_NOT_FOUND, useBRoute } from "./router-b";
 /**
  * The second design.
  *
- * Built from `Outcome Assurance.dc.html`, keeping its visual system and its
- * section rhythm — ink and paper alternating, one argument per band — and
- * replacing its content wholesale. The design markets a product with claims,
+ * Built from a supplied mock that is not in this repository — the design/
+ * directory holds the first design's files only — keeping its visual system
+ * and its section rhythm, ink and paper alternating, one argument per band,
+ * and replacing its content wholesale.
+ *
+ * That mock branded itself "Outcome Assurance". The wordmark here says Project
+ * Beacon instead: outcome assurance is the category this sits in, the way
+ * "continuous integration" is a category, and the body copy called the product
+ * Beacon throughout while only the header disagreed. The design markets a product with claims,
  * review tasks, bound approvals and reconciled external outcomes. This
  * repository has scenarios, recorded tool calls, deterministic assertions and
  * a verdict, so the two sections that turned on the former were rebuilt on the
@@ -57,6 +64,10 @@ export function SiteB() {
       ) : location.route === "docs" ? (
         <main>
           <DocsScreen />
+        </main>
+      ) : location.route === "legal" ? (
+        <main>
+          <LegalScreen />
         </main>
       ) : location.route === B_NOT_FOUND ? (
         <main>

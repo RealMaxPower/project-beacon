@@ -477,6 +477,21 @@ function siteBAt(hash: string): string {
   }
 }
 
+// The footer links this on every page, and it renders the 404 screen if the
+// route is missing — which is exactly what happened when this design took the
+// root and `/#/legal` stopped resolving across to the other one. A legal page
+// reachable only through a broken link is worse than no link at all.
+check(
+  "Site B · #/legal",
+  () => siteBAt("#/legal"),
+  "Apache License 2.0",
+  "connect-src &#x27;none&#x27;",
+  "THIRD-PARTY-NOTICES.txt",
+  "OFL.txt",
+  "no cookies",
+  "conduct@beaconlab.dev",
+);
+
 check(
   "Site B",
   () => renderToString(<SiteB />),
@@ -514,7 +529,10 @@ check(
   // The playground's own first step...
   "What should the agent try?",
   // ...under this design's header, not the first design's.
-  "Outcome Assurance",
+  // The wordmark. "Outcome assurance" is the category this sits in, not the
+  // name of the thing — the body copy always said Beacon, and only the
+  // header disagreed.
+  "Project Beacon",
   // The header knows which route it is on. Asserting the class name
   // `text-text-muted` here would have proved nothing — the markup carries it
   // whatever the stylesheet does or does not declare, which is the vacuous

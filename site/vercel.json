@@ -6,8 +6,12 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/a",
+      "destination": "/a.html"
+    },
+    {
       "source": "/b",
-      "destination": "/b.html"
+      "destination": "/index.html"
     },
     {
       "source": "/(.*)",
@@ -72,7 +76,7 @@
       ]
     },
     {
-      "source": "/b.html",
+      "source": "/a.html",
       "headers": [
         {
           "key": "Cache-Control",

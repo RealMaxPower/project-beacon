@@ -3,32 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Beacon — try an agent on realistic work before trusting it with real work</title>
+    <title>Project Beacon — outcome assurance for AI agents</title>
     <meta
       name="description"
-      content="An open trial and readiness lab for AI agents. Run one on synthetic work, watch every tool call, and get deterministic evidence back."
+      content="Turn agent output into source-linked evidence, explicit checks, and a verdict you can hand to someone else. Every claim on this page is generated from the repository."
     />
+
     <!--
-      Open Graph, with no image.
+      The second design's entry document.
 
-      Without these, every link to this site — in Slack, a DM, a forum post —
-      renders as a bare URL, which is the least persuasive form a link can
-      take. A `summary` card carries the title and description; a
-      `summary_large_image` one would need a picture, and there is no picture
-      on this site by design.
+      It repeats the title and description as Open Graph tags for the same
+      reason the first one does: a crawler reads the served HTML and will not
+      run the app, so the tags have to be a second copy — and a second copy of
+      a sentence is the shape that drifts. A test holds them to each other.
 
-      These duplicate the title and description above, so a test asserts they
-      match. Two copies of a sentence is exactly the shape that drifts.
+      No `og:image`. There is no picture on either site by design, and a card
+      that promises one renders as a broken card rather than a small one.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://github.com/RealMaxPower/project-beacon" />
-    <meta
-      property="og:title"
-      content="Beacon — try an agent on realistic work before trusting it with real work"
-    />
+    <meta property="og:title" content="Project Beacon — outcome assurance for AI agents" />
     <meta
       property="og:description"
-      content="An open trial and readiness lab for AI agents. Run one on synthetic work, watch every tool call, and get deterministic evidence back."
+      content="Turn agent output into source-linked evidence, explicit checks, and a verdict you can hand to someone else. Every claim on this page is generated from the repository."
     />
     <meta name="twitter:card" content="summary" />
 
@@ -36,6 +33,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src-b/main-b.tsx"></script>
   </body>
 </html>
