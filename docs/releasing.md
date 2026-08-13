@@ -127,6 +127,13 @@ each one currently states the opposite:
   `/releases`, with a comment saying to move it once a tag exists
 - `docs/production-readiness.md` — the Distribution section and the verdict
   table row for installing as a dependency
+- `README.md` — the demo image path. It is relative, which GitHub resolves and
+  PyPI does not: a relative path there resolves against pypi.org and renders as
+  a broken image on the project page. It must become
+  `https://raw.githubusercontent.com/RealMaxPower/project-beacon/main/docs/demo.gif`
+  before the first release. It is relative today because an absolute URL cannot
+  render at all while the repository is private — GitHub proxies README images
+  anonymously, so `raw.githubusercontent.com` refuses them.
 
 Then:
 
