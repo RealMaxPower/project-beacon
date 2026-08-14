@@ -42,7 +42,11 @@ def _without_comments(source: str) -> str:
 #: design means adding it here, not inheriting silence.
 SOURCE_TREES = (SRC, SITE / "src-b")
 
-ENTRY_POINTS = ("index.html", "a.html")
+#: There is one document now. There were two while a replacement design
+#: was reviewed against the one it replaced at a real URL; this stayed a
+#: tuple because a second entry is a thing this project does, and the guard
+#: that walks it should not have to be rewritten to notice.
+ENTRY_POINTS = ("index.html",)
 
 
 def _site_sources() -> list[Path]:
@@ -506,9 +510,14 @@ class QualifyingCaveatTests(unittest.TestCase):
     prose can be rewritten but not dropped.
     """
 
+    # The two entries that used to head this tuple guarded a compatibility
+    # table with four rungs, of which the fourth — a native runtime adapter
+    # collecting configuration, approvals, cost and richer traces — was
+    # aspiration. They were removed with the design that carried the table.
+    # The site now lists the five adapters that exist and nothing above them,
+    # so there is no overreach left to qualify; had the table survived without
+    # its caveat, this is where that would have been caught.
     CAVEATS = (
-        ("screens/marketing/HowItWorks.tsx", "level 4", "which rungs of the table are real"),
-        ("screens/marketing/HowItWorks.tsx", "does not currently collect", "what levels 3-4 do not gather"),
         ("components/verdict/VerdictBanner.tsx", "unsigned", "that the digest is not a signature"),
         # `project-beacon verify` now exists, so "no command checks one yet" stopped
         # being true and was replaced. What did not change is the limitation
@@ -701,15 +710,40 @@ class VisualVocabularyTests(unittest.TestCase):
 
         Derived rather than written down, and derived **per tree**. The first
         version of this took the maximum across the whole site, which quietly
-        made it weaker than the constant it replaced: the moment a second
-        design fetched Archivo at 700, the first design could ask for a
-        synthesised bold from a face that stops at 500 and this guard would
+        made it weaker than the constant it replaced: while two designs shipped
+        at once, one could fetch Archivo at 700 and let the other ask for a
+        synthesised bold from a face that stops at 500, and this guard would
         have said nothing. A ceiling is a fact about the faces a given page
         loads, so it is computed from the stylesheet that page uses.
+
+        A tree that declares no faces of its own inherits the entry's, which is
+        what `src/` does now: it holds the shared playground and components, is
+        imported by `src-b/`, and renders under whichever stylesheet the
+        document loaded. A ceiling of zero there would fail every weight in it.
 
         `font-weight: 400 500` is a variable range, so the second number is the
         ceiling; a single value is its own ceiling.
         """
+        heaviest = 0
+        for path in sorted(tree.rglob("fonts*.css")):
+            for declaration in re.findall(
+                r"font-weight:\s*([0-9\s]+);", path.read_text(encoding="utf-8")
+            ):
+                heaviest = max(heaviest, *(int(n) for n in declaration.split()))
+        if heaviest:
+            return heaviest
+        return max(
+            (
+                self._weights_in(other)
+                for other in SOURCE_TREES
+                if other != tree and other.is_dir()
+            ),
+            default=0,
+        )
+
+    @staticmethod
+    def _weights_in(tree: Path) -> int:
+        """The heaviest `@font-face` weight declared in one tree, or zero."""
         heaviest = 0
         for path in sorted(tree.rglob("fonts*.css")):
             for declaration in re.findall(
@@ -724,10 +758,15 @@ class VisualVocabularyTests(unittest.TestCase):
         for tree in SOURCE_TREES:
             if tree in path.parents:
                 return tree
-        return SRC if path.name == "a.html" else SITE / "src-b"
+        return SITE / "src-b"
 
     def test_the_shipped_fonts_are_discoverable(self) -> None:
-        """A ceiling of zero would make the guard below pass on anything."""
+        """
+        A ceiling of zero would make the guard below pass on anything.
+
+        Read through `_ceiling_for`, so a tree carrying no faces of its own is
+        held to the ones the document actually loads rather than to nothing.
+        """
         for tree in SOURCE_TREES:
             if not tree.is_dir():
                 continue
@@ -970,24 +1009,19 @@ class ContrastTests(unittest.TestCase):
     lives.
     """
 
-    TOKENS = SRC / "tokens.css"
     #: Every token file that publishes ratios, with the blocks to read from it.
     #:
-    #: The second design carries its own palette on its own grounds. A guard
-    #: that reads only the first file would let an entire second set of colours
-    #: ship with unverified numbers beside them — which is worse than no
-    #: numbers, because a measurement that is written down reads as checked.
-    TOKEN_BLOCKS = (
-        (SRC / "tokens.css", r":root", "light"),
-        (SRC / "tokens.css", r'\[data-theme="dark"\]', "dark"),
-        # The second design keeps both its palettes in one block, under
-        # `--ink-*` and `--paper-*`, and the blocks that follow only say which
-        # is the page and which is the alternating band in a given theme. There
-        # is therefore one place to read here rather than two, and every ratio
-        # names the ground it was measured against because two of them are in
-        # scope at once.
-        (SITE / "src-b" / "tokens-b.css", r":root", "b"),
-    )
+    #: A second design used to be listed here alongside this one, on the
+    #: reasoning that a palette nothing reads is a palette shipping unverified
+    #: numbers. That design is the one that survived; the tuple stays a tuple
+    #: so adding another does not mean rewriting the guard.
+    #:
+    #: It keeps both its palettes in one block, under `--ink-*` and
+    #: `--paper-*`, and the blocks that follow only say which is the page and
+    #: which is the alternating band in a given theme. Every published ratio
+    #: names the ground it was measured against, because two are in scope at
+    #: once.
+    TOKEN_BLOCKS = ((SITE / "src-b" / "tokens-b.css", r":root", "b"),)
     #: Ratios are quoted to two decimals, so anything inside half a unit of the
     #: last place is the same measurement rounded, not a different one.
     TOLERANCE = 0.05
@@ -1066,39 +1100,6 @@ class ContrastTests(unittest.TestCase):
                         ),
                     )
 
-    def test_the_inverted_plate_is_the_other_mode_exactly(self) -> None:
-        """
-        `[data-invert]` re-declares the whole palette, which means it is a
-        second copy of it.
-
-        A copy is only safe while something compares it. If a token were added
-        to `:root` and not to the dark plate, the plate would silently inherit
-        the outer page's value for that one token — a single light colour
-        inside a dark band, and none of the published ratios would have moved,
-        so the contrast test above would still pass.
-
-        Each plate must therefore declare the same token names as the other
-        mode, with the same values.
-        """
-        source = self.TOKENS.read_text(encoding="utf-8")
-        blocks = self._blocks()
-        plates = {}
-        for selector, name in (
-            (r"\[data-invert\]", "plate-on-light"),
-            (r'\[data-theme="dark"\] \[data-invert\]', "plate-on-dark"),
-        ):
-            match = re.search(rf"^{selector} \{{(.*?)^\}}", source, re.S | re.M)
-            self.assertIsNotNone(match, f"the {name} block moved; repoint this guard")
-            plates[name] = self._declarations(match.group(1))
-
-        for plate, mirrors in (("plate-on-light", "dark"), ("plate-on-dark", "light")):
-            with self.subTest(plate=plate):
-                self.assertEqual(
-                    plates[plate],
-                    self._declarations(blocks[mirrors]),
-                    f"{plate} is not exactly the {mirrors} palette",
-                )
-
     def test_body_text_clears_the_readable_threshold(self) -> None:
         """
         The two tokens that carry prose, against WCAG AA for normal text.
@@ -1126,8 +1127,10 @@ class ContrastTests(unittest.TestCase):
                     with self.subTest(mode=mode, ground=ground, token=token):
                         self.assertGreaterEqual(_contrast(colours[token], colours[ground]), 4.5)
                         checked += 1
-        # Renaming a token must not turn this into a loop over nothing.
-        self.assertGreaterEqual(checked, 8, "far fewer prose colours checked than expected")
+        # Renaming a token must not turn this into a loop over nothing. Two
+        # grounds with two prose tokens each is what one design with two
+        # palettes provides; it was eight when two designs shipped at once.
+        self.assertGreaterEqual(checked, 4, "far fewer prose colours checked than expected")
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
@@ -1144,10 +1147,11 @@ class PrivacyPolicyTests(unittest.TestCase):
     """
 
     #: Every page that describes the policy, in each design.
-    LEGAL_PAGES = (
-        SRC / "screens" / "marketing" / "Legal.tsx",
-        SITE / "src-b" / "sections" / "LegalScreen.tsx",
-    )
+    #: One page now. It was two while a replacement design was reviewed
+    #: against the one it replaced, and both had to say the same thing about
+    #: the same policy — which is exactly the duplication this class exists to
+    #: police. It stays a tuple so a second surface cannot be added silently.
+    LEGAL_PAGES = (SITE / "src-b" / "sections" / "LegalScreen.tsx",)
 
     def _policy(self) -> dict[str, str]:
         config = json.loads((SITE / "vercel.json").read_text(encoding="utf-8"))
@@ -1167,7 +1171,12 @@ class PrivacyPolicyTests(unittest.TestCase):
         policy = self._policy()
         quoted = 0
         for page in self.LEGAL_PAGES:
-            text = page.read_text(encoding="utf-8")
+            # Comments are stripped first. The page's own header explains that
+            # `connect-src` was relaxed from 'none' to 'self' and why — which a
+            # scanner reading the raw file counts as the page claiming 'none'.
+            # A guard that punishes writing the reason down is a guard that
+            # gets the reason deleted.
+            text = _without_comments(page.read_text(encoding="utf-8"))
             # As written in JSX, where the apostrophes may be entities.
             text = text.replace("&apos;", "'").replace("&#x27;", "'")
             for name, actual in policy.items():
@@ -1180,8 +1189,12 @@ class PrivacyPolicyTests(unittest.TestCase):
                             f"{page.name} says {match.group(0)!r}, "
                             f"but vercel.json sends {actual!r}",
                         )
+        # Two directives on one page. It was four across two while a
+        # replacement design was under review, and the floor moved down with
+        # the design rather than being left where a loop over nothing would
+        # still clear it.
         self.assertGreaterEqual(
-            quoted, 4, "far fewer directives quoted than expected — has the copy moved?"
+            quoted, 2, "far fewer directives quoted than expected — has the copy moved?"
         )
 
     def test_a_page_that_can_send_anything_discloses_what(self) -> None:

@@ -274,7 +274,7 @@ person.
 
 ## License
 
-Apache License 2.0, copyright the Marshall Cahill and Project Beacon contributors. All included
+Apache License 2.0, copyright Marshall Cahill and Project Beacon contributors. All included
 scenario fixtures are synthetic.
 
 The four woff2 files under `site/public/fonts/` are Space Grotesk and JetBrains

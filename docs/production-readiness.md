@@ -222,7 +222,7 @@ pretend the question has been closed when it has only been answered *for now*.
 ## Licensing, and the file that is deliberately absent
 
 Project Beacon is Apache 2.0. The `LICENSE` file carries the full text, the
-appendix, and a copyright line naming the Marshall Cahill and Project Beacon contributors —
+appendix, and a copyright line naming Marshall Cahill and Project Beacon contributors —
 matching `pyproject.toml`, pinned to it by `tests/test_licensing.py` so the two
 cannot drift into naming different parties.
 

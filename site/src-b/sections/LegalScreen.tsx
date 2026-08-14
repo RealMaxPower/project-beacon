@@ -2,16 +2,18 @@
  * Licensing and privacy, as a route rather than a band.
  *
  * The footer has always linked this. It worked while this design lived at `/b`
- * and the link pointed across to the first design's page; the moment this
- * design took the root, `/#/legal` started resolving against this router, which
- * had no such route, and the link rendered a 404. A legal page reachable only
- * from a broken link is worse than none, because the footer claims otherwise.
+ * and the link pointed across to the page of the design it replaced; the moment
+ * this one took the root, `/#/legal` started resolving against this router,
+ * which had no such route, and the link rendered a 404. A legal page reachable
+ * only through a broken link is worse than none, because the footer says
+ * otherwise.
  *
- * The content is deliberately the same claims as the first design's version and
- * not a second draft of them. Every sentence about what this site collects is a
- * claim about the Content-Security-Policy in `vercel.json`, and two pages
- * describing that policy in two voices is two places for it to become wrong.
- * Where the wording is identical, that is why.
+ * Every sentence here about what the site collects is a claim about the
+ * Content-Security-Policy in `vercel.json`, quoted by directive rather than
+ * described loosely, so a reader can check it from the network tab. Nothing
+ * held the quote to the config until `PrivacyPolicyTests` did — and the first
+ * thing it caught was this page saying `connect-src 'none'` after analytics
+ * had relaxed it to `'self'`.
  */
 
 const REPO = "https://github.com/RealMaxPower/project-beacon";
@@ -39,7 +41,7 @@ export function LegalScreen() {
         <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
           Project Beacon — the harness, the scenarios, this website and its
           source — is licensed under the Apache License 2.0, copyright Marshall
-          Cahill and the Project Beacon contributors. The full text ships in the{" "}
+          Cahill and Project Beacon contributors. The full text ships in the{" "}
           <a className="underline underline-offset-2 hover:text-b-text" href={`${REPO}/blob/main/LICENSE`}>
             LICENSE
           </a>{" "}
@@ -64,7 +66,7 @@ export function LegalScreen() {
         <ul className="b-lede max-w-[66ch] space-y-2 text-[15px]">
           <li>
             <a
-              className="font-b-mono text-[13.5px] underline underline-offset-2 hover:text-b-text"
+              className="font-b-mono text-b-src underline underline-offset-2 hover:text-b-text"
               href="/THIRD-PARTY-NOTICES.txt"
             >
               /THIRD-PARTY-NOTICES.txt
@@ -73,7 +75,7 @@ export function LegalScreen() {
           </li>
           <li>
             <a
-              className="font-b-mono text-[13.5px] underline underline-offset-2 hover:text-b-text"
+              className="font-b-mono text-b-src underline underline-offset-2 hover:text-b-text"
               href="/fonts/OFL.txt"
             >
               /fonts/OFL.txt
@@ -90,8 +92,8 @@ export function LegalScreen() {
         <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
           This site sets no cookies and has no forms. It makes no requests to any
           other host — its Content-Security-Policy declares{" "}
-          <code className="font-b-mono text-[13.5px]">default-src &apos;none&apos;</code> and{" "}
-          <code className="font-b-mono text-[13.5px]">connect-src &apos;self&apos;</code>, so
+          <code className="font-b-mono whitespace-nowrap text-b-src">default-src &apos;none&apos;</code> and{" "}
+          <code className="font-b-mono whitespace-nowrap text-b-src">connect-src &apos;self&apos;</code>, so
           nothing loads from a third party and the page cannot send anything off
           this origin. The typefaces are served from here rather than a font CDN
           precisely so that rendering a heading does not hand your address to
@@ -99,9 +101,9 @@ export function LegalScreen() {
         </p>
         <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
           It counts page views, using Vercel Web Analytics. That count is what{" "}
-          <code className="font-b-mono text-[13.5px]">connect-src &apos;self&apos;</code>{" "}
+          <code className="font-b-mono whitespace-nowrap text-b-src">connect-src &apos;self&apos;</code>{" "}
           permits and it is the only thing this page sends: a request to{" "}
-          <code className="font-b-mono text-[13.5px]">/_vercel/insights/view</code>{" "}
+          <code className="font-b-mono whitespace-nowrap text-b-src">/_vercel/insights/view</code>{" "}
           on this origin, carrying the path you are on. There is no cookie, no
           identifier, and nothing that follows you to another site. It exists so
           that &ldquo;is anyone reading the docs&rdquo; has an answer other than

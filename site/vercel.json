@@ -6,10 +6,6 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/a",
-      "destination": "/a.html"
-    },
-    {
       "source": "/b",
       "destination": "/index.html"
     },
@@ -68,15 +64,6 @@
     },
     {
       "source": "/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/a.html",
       "headers": [
         {
           "key": "Cache-Control",

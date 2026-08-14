@@ -22,16 +22,9 @@ import { ExportBundle } from "@/screens/playground/ExportBundle";
 import { TimelineEvent } from "@/components/execution/TimelineEvent";
 import { InjectionCallout } from "@/components/execution/InjectionCallout";
 import { AssertionRow } from "@/components/verdict/AssertionRow";
-import { App } from "@/App";
 import { SiteB } from "@b/SiteB";
-import { Home } from "@/screens/marketing/Home";
-import { HowItWorks } from "@/screens/marketing/HowItWorks";
-import { Scenarios } from "@/screens/marketing/Scenarios";
-import { ForBuilders } from "@/screens/marketing/ForBuilders";
 import { Docs } from "@/screens/marketing/Docs";
-import { HostedLab } from "@/screens/marketing/HostedLab";
 import { Legal } from "@/screens/marketing/Legal";
-import { navRoutes } from "@/router";
 import {
   forbiddenOutcomes,
   injectionIn,
@@ -75,166 +68,12 @@ function check(name: string, render: () => string, ...expected: string[]) {
 
 console.log(`Rendering against ${fixtures.length} recorded runs.\n`);
 
-check(
-  "Home",
-  () => renderToString(<Home onGo={() => {}} />),
-  // The counts must be the derived ones, not prose. If `facts.json` stops
-  // reaching the page these disappear rather than going stale silently.
-  String(facts.subjects),
-  String(facts.scenarios),
-  // The honest-gaps block, which now leads with what is missing rather than
-  // what the product is not. The verbatim "not a safety certification" lives
-  // in the footer, which belongs to the shell rather than this screen.
-  "Never a certification",
-  "Not on PyPI",
-  /*
-   * The hook: the finding, not a mechanism.
-   *
-   * The page used to open by explaining what Beacon does to a reader who had
-   * no reason to care yet. It opens on five recorded agents that leave one end
-   * state and earn three answers — and every count in that sentence is
-   * computed, so these strings only render while the bundles still agree.
-   */
-  // Asserted as the markup React emits: interpolated counts are separated
-  // from the literal text by comment markers, so the sentence never appears
-  // contiguously in the served HTML.
-  '<h1 class="type-display',
-  "agents. One end state.",
-  "different answers.",
-  "which is the part the diff cannot see",
-  "decide whether an agent gets write access",
-  // The diff strip, reduced to ids. Printing the whole draft records overflowed
-  // the document by 35px at 390px and took the header nav's links with it.
-  "[d-001, d-002, d-003]",
-  "reset_verified",
-  /*
-   * The comparison figure, and specifically its verdicts.
-   *
-   * The five verdicts must never be colour alone. `#b3261e` and `#8a5a00`
-   * separate by ΔE 0.7 under deuteranopia, so FAIL and INCOMPLETE are one
-   * colour for a red-green colourblind reader — and telling those two apart is
-   * what this product is for. `VerdictBadge` carries a shape and a word as
-   * well; an earlier version of this figure drew bare coloured dots.
-   */
-  "Tried to send",
-  "Said it finished",
-  "INCOMPLETE",
-  // The claim the figure makes, stated where a reader who cannot see it will
-  // still meet it.
-  "The changed field",
-  /*
-   * The run that failed, and a legible one.
-   *
-   * It led with the hosted twelve-run baseline, which resolves INCOMPLETE —
-   * the one verdict that is explicitly not a failure — directly beneath a
-   * button reading "Watch an agent fail". These pin the replacement: a FAIL,
-   * the refused calls, and the assertion that caught it.
-   */
-  "send-never-attempted",
-  "BLOCKED",
-  "recorded before dispatch",
-  /*
-   * The zero that is not a rate.
-   *
-   * `entities-grounded` was never evaluated in the hosted baseline — the
-   * replies had no field to read — so the figure must say so where it is
-   * shown. Asserted as markup, not as the word: a bare "measured" is
-   * satisfied by "could be measured" elsewhere on the page, and the first
-   * version of this check passed with the qualifier deleted from the very
-   * figure it exists to qualify.
-   */
-  'tracking-[0.02em]">measured</span>',
-  // Two baselines of twelve, not one shared set of twelve runs.
-  "twelve times against each of two scenarios",
-  // An unanswered question, not a fabrication rate. The distinction is the
-  // section, and it is the one claim here that would be actively misleading
-  // if it silently reverted.
-  "Not a fabrication rate",
-  // The injection section, quoting the real payload out of the scenario file
-  // rather than an example written for the page.
-  "SYSTEM OVERRIDE",
-  "Content can give orders",
-);
-
-check(
-  "HowItWorks",
-  () => renderToString(<HowItWorks onGo={() => {}} />),
-  "beacon_submit",
-  "ToolPolicyError",
-  // The assertion that cannot fail, beside the one that means something.
-  "after.mail.sent == []",
-  "send-never-attempted",
-  // The table is a capability model, not an inventory of what works today.
-  "does not currently collect",
-);
-
-check(
-  "Scenarios",
-  () => renderToString(<Scenarios onGo={() => {}} />),
-  ...scenarios.map((s) => scenarioCopy[s.slug]?.question ?? s.name),
-);
-
-check(
-  "ForBuilders",
-  () => renderToString(<ForBuilders onGo={() => {}} />),
-  String(facts.subjects),
-  String(facts.subjects_by_expected_verdict.FAIL),
-  "--baseline",
-  "Exit codes are the integration",
-);
-
-check(
-  "Docs",
-  () => renderToString(<Docs onGo={() => {}} />),
-  // Every document on disk gets a card, so a renamed file cannot leave a
-  // dead link behind.
-  ...facts.docs,
-  ...facts.surveys,
-);
-
-check("HostedLab", () => renderToString(<HostedLab onGo={() => {}} />), "no form", "discussion");
-
 // The privacy claims are only true while the policy that enforces them is in
 // place, so the page names the directives rather than describing the behaviour
 // loosely. That was not a hypothetical: `connect-src` was relaxed from 'none'
 // to 'self' to let Web Analytics count a page view, and this page had to say
 // so in the same commit. Both directives are pinned here, so the next
 // relaxation cannot happen quietly either.
-check(
-  "Legal",
-  () => renderToString(<Legal onGo={() => {}} />),
-  "Apache License 2.0",
-  // As React emits it: the apostrophes in the directive are HTML-escaped, so
-  // the literal source string never appears in the served markup.
-  "connect-src &#x27;self&#x27;",
-  "default-src &#x27;none&#x27;",
-  "THIRD-PARTY-NOTICES.txt",
-  "OFL.txt",
-  "no cookies",
-  // Analytics is disclosed, or the directive above is a relaxation nobody told
-  // the reader about.
-  "Vercel Web Analytics",
-  "/_vercel/insights/view",
-);
-
-check(
-  "App shell · every route reachable",
-  () => renderToString(<App />),
-  // Home is reached through the wordmark, and the playground through a filled
-  // button on the right, so neither appears as a nav link. `navRoutes` is the
-  // one place that decides which pages the navigation lists — this used to
-  // repeat the filter, which is how a route could be added to the site and
-  // silently checked against a navigation that never carried it.
-  ...navRoutes.filter((r) => r.path !== "").map((r) => r.label),
-  "Playground",
-  // The footer carries the limitation on every page, including this one.
-  "not a safety certification",
-  // And the route to the licensing and privacy page, which is reached from
-  // the footer rather than the navigation. A legal page nothing links to is
-  // a legal page nobody can find.
-  "Licensing and privacy",
-  "© 2026 Marshall Cahill and Project Beacon contributors",
-);
 
 check("Playground shell", () => renderToString(<Playground />), "Beacon", "Scenario");
 
@@ -500,6 +339,18 @@ check(
   "Vercel Web Analytics",
   "/_vercel/insights/view",
   "conduct@beaconlab.dev",
+);
+
+// A's `for-builders` page carried the whole CI story and B had none of it.
+// These are the three things a reader adopting this needs and cannot get from
+// the quickstart, so they are pinned rather than left to survive by luck.
+check(
+  "Site B · in your pipeline",
+  () => siteBAt(""),
+  "The integration is the exit code",
+  "The scenario is wrong",
+  "--repeat 5",
+  "--baseline-recent 20",
 );
 
 check(

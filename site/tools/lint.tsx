@@ -11,14 +11,7 @@
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { App } from "@/App";
 import { SiteB } from "@b/SiteB";
-import { Home } from "@/screens/marketing/Home";
-import { HowItWorks } from "@/screens/marketing/HowItWorks";
-import { Scenarios } from "@/screens/marketing/Scenarios";
-import { ForBuilders } from "@/screens/marketing/ForBuilders";
-import { Docs } from "@/screens/marketing/Docs";
-import { HostedLab } from "@/screens/marketing/HostedLab";
 import { PickScenario } from "@/screens/playground/PickScenario";
 import { PickSubject } from "@/screens/playground/PickSubject";
 import { WorldBefore } from "@/screens/playground/WorldBefore";
@@ -222,14 +215,15 @@ function audit(where: string, html: string) {
 }
 
 /**
- * Render the whole shell at a given hash.
+ * Render the whole document at a given hash.
  *
- * The audit used to render `<App />` once, which meant it only ever saw Home
- * inside the shell, and every other screen only ever *outside* it. Defects that
- * exist solely in the combination were invisible: the playground rendered its
- * own `<main>`, which is fine on its own and a duplicate landmark the moment
- * the shell wraps it in `<main id="main">`. Six of seven pages were never
- * audited in the document they actually ship in.
+ * The audit used to render the shell once, which meant it only ever saw the
+ * landing screen inside it, and every other screen only ever *outside* it.
+ * Defects that exist solely in the combination were invisible: the playground
+ * renders its own `<main>`, which is fine alone and a duplicate landmark the
+ * moment a shell wraps it in another. Six of seven pages were never audited in
+ * the document they actually ship in — which is why every route below is
+ * rendered through this rather than as a bare component.
  *
  * `useRoute` and `useTheme` both read `window` and fall back when it is absent,
  * so a stub is enough to steer the route. Effects do not run under
@@ -260,41 +254,25 @@ function withHash<T>(hash: string, render: () => T): T {
   }
 }
 
-const shellAt = (hash: string) => withHash(hash, () => renderToStaticMarkup(<App />));
-
 /*
- * The second design at a given fragment.
+ * The site at a given fragment.
  *
- * Its router reads `window.location.hash` exactly as the first one's does, so
- * the same stub steers it — and the fragments below are chosen for the one
+ * Its router reads `window.location.hash`, so the stub above steers it — and the fragments below are chosen for the one
  * thing this router does that the other cannot: `#case` has no leading slash
  * and must render the marketing page, not a not-found. That distinction is
  * invisible to a check that only ever renders the default.
  */
 const siteBAt = (hash: string) => withHash(hash, () => renderToStaticMarkup(<SiteB />));
 
-const SHELL_ROUTES = [
-  "",
-  "how-it-works",
-  "scenarios",
-  "for-builders",
-  "playground",
-  "playground/inbox-briefing-draft-only",
-  "playground/no-such-scenario",
-  "docs",
-  "hosted",
-  "not-a-page",
-];
-
 const screens: [string, () => string][] = [
   /*
    * The second design, at every fragment its router distinguishes.
    *
    * The landmark rule below matters more here than anywhere: this design
-   * brings its own header, main and footer, and it now wraps the first
-   * design's playground — which brings its own `<main>` in the shell it was
-   * written for. Two mains is exactly the defect that rule exists to catch,
-   * and it is why the playground route is audited rather than assumed.
+   * brings its own header, main and footer, and it wraps the playground —
+   * which brings its own `<main>` from the shell it was originally written
+   * for. Two mains is exactly the defect that rule exists to catch, and it is
+   * why the playground route is audited rather than assumed.
    */
   ["Site B · marketing", () => siteBAt("")],
   ["Site B · #case anchor", () => siteBAt("#case")],
@@ -305,17 +283,8 @@ const screens: [string, () => string][] = [
   ],
   ["Site B · #/playground/<unknown>", () => siteBAt("#/playground/no-such-scenario")],
   ["Site B · #/docs", () => siteBAt("#/docs")],
+  ["Site B · #/legal", () => siteBAt("#/legal")],
   ["Site B · #/not-a-page", () => siteBAt("#/not-a-page")],
-  ...SHELL_ROUTES.map(
-    (route) =>
-      [`App shell · #/${route}`, () => shellAt(`#/${route}`)] as [string, () => string],
-  ),
-  ["Home", () => renderToStaticMarkup(<Home onGo={() => {}} />)],
-  ["HowItWorks", () => renderToStaticMarkup(<HowItWorks onGo={() => {}} />)],
-  ["Scenarios", () => renderToStaticMarkup(<Scenarios onGo={() => {}} />)],
-  ["ForBuilders", () => renderToStaticMarkup(<ForBuilders onGo={() => {}} />)],
-  ["Docs", () => renderToStaticMarkup(<Docs onGo={() => {}} />)],
-  ["HostedLab", () => renderToStaticMarkup(<HostedLab onGo={() => {}} />)],
   [
     "PickScenario",
     () =>

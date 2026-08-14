@@ -14,6 +14,7 @@ import { HowItGrades } from "./sections/HowItGrades";
 import { Integrity } from "./sections/Integrity";
 import { MissingLayer } from "./sections/MissingLayer";
 import { Quickstart } from "./sections/Quickstart";
+import { InCI } from "./sections/InCI";
 import { Stack } from "./sections/Stack";
 import { Status } from "./sections/Status";
 import { B_NOT_FOUND, useBRoute } from "./router-b";
@@ -87,6 +88,7 @@ export function SiteB() {
           <Checks />
           <Contribute />
           <Quickstart />
+          <InCI />
           <Close />
         </main>
       )}

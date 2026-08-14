@@ -33,26 +33,19 @@ const SHOTS = join(ROOT, ".visual");
 const BASE = process.env.BASE_URL ?? "http://localhost:4173";
 
 const ROUTES = [
-  ["home", ""],
-  ["how-it-works", "#/how-it-works"],
-  ["scenarios", "#/scenarios"],
-  ["for-agent-builders", "#/for-builders"],
-  ["docs", "#/docs"],
-  ["hosted", "#/hosted"],
-  ["playground", "#/playground"],
-  // The second design, by filename rather than by route: `vite preview` serves
-  // dist/ without the host's rewrites, so /b resolves only in production and
-  // The second design is the root now; /a is the first, pending removal.
   ["b", "/"],
-  // The shared playground inside the second design's shell. Same seven-step
-  // flow as `#/playground` above, a different header above it and a different
-  // palette under it — so its geometry is a separate measurement, not an
-  // inference from the first design's.
+  // The playground inside the marketing shell. Its geometry is measured here
+  // rather than inferred from the landing page: same seven-step flow, a
+  // different header above it and a different composited ground under it.
   ["b-playground", "/#/playground"],
+  // Licensing and privacy. Long prose in a measured column is where a width
+  // regression shows up first, and it is not a page anyone would notice was
+  // broken.
+  ["b-legal", "/#/legal"],
   /*
-   * The second design in light, which is not a lighter version of the same
-   * page: the two validated palettes swap roles, so the page becomes paper and
-   * every alternating band becomes ink. Different colours, different composited
+   * The site in light, which is not a lighter version of the same page: the two
+   * validated palettes swap roles, so the page becomes paper and every
+   * alternating band becomes ink. Different colours, different composited
    * grounds, and the same geometry only if nothing here depends on the theme.
    * Auditing one and inferring the other would be inferring the half that
    * changed.
@@ -392,9 +385,29 @@ for (const [name, hash, scheme] of ROUTES) {
     });
     const where = `${name} @ ${width}px`;
 
+    /*
+     * `vite preview` is not the host, and one endpoint only the host provides.
+     *
+     * Web Analytics is injected at Vercel's edge at `/_vercel/insights/*`;
+     * those files are not in `dist/` and never will be, so previewing the
+     * build 404s on them and every page reported a console error. That is a
+     * fact about the preview server, not about the page, and letting it stand
+     * would have made this tool cry wolf on all fourteen routes at four widths.
+     *
+     * Scoped to that prefix on purpose: any *other* 404 is still a defect, and
+     * a broken font or a missing bundle must still fail here.
+     */
+    const fromTheEdge = (text) => text.includes("/_vercel/insights/");
+
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+    page.on("console", (m) => {
+      if (m.type() !== "error") return;
+      const text = m.text();
+      if (!fromTheEdge(text) && !m.location()?.url?.includes("/_vercel/insights/")) {
+        errors.push(text);
+      }
+    });
 
     await page.goto(`${BASE}/${hash}`, { waitUntil: "networkidle" });
     // The timeline streams; let it settle so the measurement is of a real state.

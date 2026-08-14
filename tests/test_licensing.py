@@ -219,7 +219,7 @@ class BundledPackageLicenceTests(unittest.TestCase):
         neither is a page that satisfies neither in practice — the files would
         sit on the origin with nothing linking them.
         """
-        legal = (SITE / "src" / "screens" / "marketing" / "Legal.tsx").read_text(
+        legal = (SITE / "src-b" / "sections" / "LegalScreen.tsx").read_text(
             encoding="utf-8"
         )
         for target in ("/THIRD-PARTY-NOTICES.txt", "/fonts/OFL.txt"):

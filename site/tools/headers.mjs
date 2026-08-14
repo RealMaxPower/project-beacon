@@ -127,28 +127,15 @@ page.on("console", (m) => {
 page.on("pageerror", (e) => violations.push(`pageerror: ${e.message}`));
 
 const ROUTES = [
-  // The root now serves the second design, so these are B's routes. The first
-  // design is still built and reachable at /a while it is under review; when
-  // it goes, its entries here and its rewrite go with it.
   "/",
   "/#/docs",
   "/#/legal",
   "/#/playground",
   "/#/playground/inbox-briefing-draft-only",
   "/#case",
-  // The retired design, still deployed at /a pending a decision. It is a
-  // separate document, so it inherits the policy but proves nothing about it
-  // until it is actually loaded.
-  "/a",
-  "/a#/how-it-works",
-  "/a#/scenarios",
-  "/a#/for-builders",
-  "/a#/docs",
-  "/a#/hosted",
-  "/a#/legal",
-  "/a#/playground",
-  // /b still resolves to the same document as the root, which is worth
-  // checking: a stale link to /b must not 404 once the root moved.
+  // /b resolves to the same document as the root. It is where this design
+  // lived while it was being reviewed against the one it replaced, and the
+  // rewrite is kept so a link shared during that fortnight does not 404.
   "/b",
   "/b#/playground",
 ];
@@ -166,12 +153,12 @@ for (const route of ROUTES) {
 }
 
 /*
- * The second design is the second design.
+ * /b is the site, not merely something.
  *
- * "More than 200 characters painted" is satisfied just as well by the first
- * site, which is precisely what this harness used to serve for /b — so the
- * route check above would have gone green on the very bug that made it
- * meaningless. Assert the document by something only it renders.
+ * "More than 200 characters painted" was satisfied just as well by the design
+ * this one replaced, which is precisely what this harness used to serve for /b
+ * — so the route check above would have gone green on the very bug that made
+ * it meaningless. Assert the document by something only it renders.
  */
 await page.goto(`${base}/b`, { waitUntil: "networkidle" });
 const bMarkers = await page.evaluate(() => ({
