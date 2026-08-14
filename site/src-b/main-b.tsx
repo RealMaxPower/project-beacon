@@ -3,6 +3,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import "./tokens-b.css";
 import { SiteB } from "./SiteB";
+import { loadAllRuns } from "@/data/fixtures";
 
 /**
  * The second design's entry.
@@ -55,8 +56,25 @@ const page = (
   </StrictMode>
 );
 
-if (root.hasChildNodes()) {
-  hydrateRoot(root, page);
+/*
+ * The playground's evidence is fetched before hydration, not during it.
+ *
+ * Only five of the seventeen recorded runs are in the main bundle — the ones
+ * the marketing page renders. The playground needs all of them, and it needs
+ * them synchronously, because hydration compares what the client renders
+ * against what the server already sent. Awaiting here keeps every screen and
+ * every test synchronous at the cost of one await on one route.
+ */
+function start() {
+  if (root!.hasChildNodes()) {
+    hydrateRoot(root!, page);
+  } else {
+    createRoot(root!).render(page);
+  }
+}
+
+if (window.location.pathname.startsWith("/playground")) {
+  loadAllRuns().then(start);
 } else {
-  createRoot(root).render(page);
+  start();
 }

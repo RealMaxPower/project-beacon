@@ -21,7 +21,10 @@ import { TwelveRuns } from "@/screens/playground/TwelveRuns";
 import { BaselineCompare } from "@/screens/playground/BaselineCompare";
 import { ExportBundle } from "@/screens/playground/ExportBundle";
 import { TimelineEvent } from "@/components/execution/TimelineEvent";
-import { evidenceFor, eventsFor, fixtures, offsets, scenarioFor } from "@/data/fixtures";
+import { loadAllRuns, evidenceFor, eventsFor, fixtures, offsets, scenarioFor } from "@/data/fixtures";
+
+// Every run: these render all of them, and only five are eager.
+await loadAllRuns();
 import { selectionFor, rowCount, TAB_IDS } from "@b/sections/case-inspector";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";

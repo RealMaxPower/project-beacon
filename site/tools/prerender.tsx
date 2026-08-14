@@ -20,12 +20,13 @@
  */
 
 import { renderToString } from "react-dom/server";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SiteB } from "@b/SiteB";
 import { PAGES, SITE_ORIGIN, SITE_NAME, FAQ, type Page } from "@b/pages";
-import { scenarios } from "@/data/fixtures";
+import { scenarios, loadAllRuns } from "@/data/fixtures";
 import { scenarioCopy } from "@/data/copy";
 import { toMarkdown } from "./to-markdown";
 
@@ -34,6 +35,9 @@ const DIST = join(ROOT, "dist");
 const REPO = "https://github.com/RealMaxPower/project-beacon";
 
 const shell = readFileSync(join(DIST, "index.html"), "utf8");
+
+// Every run, because this renders every page.
+await loadAllRuns();
 
 function escapeAttr(value: string): string {
   return value
@@ -212,7 +216,6 @@ function head(page: Page): string {
     `<meta name="twitter:title" content="${escapeAttr(page.title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(page.description)}" />`,
     `<link rel="alternate" type="text/markdown" href="${markdownPath(page)}" />`,
-    `<link rel="stylesheet" href="${PRERENDER_CSS}" />`,
     `<script type="application/ld+json">${structuredData(page)}</script>`,
   ].join("\n    ");
 }
@@ -232,7 +235,7 @@ function document(page: Page, markup: string): string {
   html = html.replace(/\n\s*<meta\s+property="og:[\s\S]*?\/>/g, "");
   html = html.replace(/\n\s*<meta\s+name="twitter:[\s\S]*?\/>/g, "");
   html = html.replace("@@HEAD@@", head(page));
-  html = html.replace('<div id="root"></div>', `<div id="root">${liftInlineStyles(markup)}</div>`);
+  html = html.replace('<div id="root"></div>', `<div id="root">${markup}</div>`);
   return html;
 }
 
@@ -333,13 +336,39 @@ function markdownFor(page: Page, markup: string, others: Page[]): string {
   ].join("\n");
 }
 
+/*
+ * Two passes, because the stylesheet depends on every page.
+ *
+ * The lifted styles are not known until the last page has rendered, and the
+ * documents cannot be written until the stylesheet they link is named. So:
+ * render everything, fold the lifted rules into the built CSS, rename it by
+ * the hash of what it now contains, then write the documents against that name.
+ *
+ * The alternative was a second `<link>`, which is what this shipped first. Two
+ * stylesheets both block first paint, and Lighthouse put ~900ms of mobile FCP
+ * on that pair. Merging removes one request outright. It has to be renamed as
+ * well as merged: `/assets/*` is served immutable for a year, so changing what
+ * is behind a name without changing the name would serve a stale sheet to
+ * everyone who had already visited.
+ */
 const written: string[] = [];
-for (const page of ALL) {
-  const markup = render(page);
+const rendered = ALL.map((page) => ({ page, markup: liftInlineStyles(render(page)) }));
 
+(globalThis as { __BEACON_PRERENDER_PATH__?: string }).__BEACON_PRERENDER_PATH__ = "/not-a-page";
+const notFoundMarkup = liftInlineStyles(renderToString(<SiteB />));
+
+const cssPath = readdirSync(join(DIST, "assets")).find((f) => f.endsWith(".css"));
+if (!cssPath) throw new Error("no stylesheet in dist/assets; did the client build run?");
+const merged = `${readFileSync(join(DIST, "assets", cssPath), "utf8")}\n${styleSheet()}\n`;
+const digest = createHash("sha256").update(merged).digest("hex").slice(0, 8);
+const finalCss = `/assets/index-${digest}.css`;
+writeFileSync(join(DIST, `.${finalCss}`), merged);
+rmSync(join(DIST, "assets", cssPath));
+
+for (const { page, markup } of rendered) {
   const target = page.path === "/" ? join(DIST, "index.html") : join(DIST, page.path, "index.html");
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, document(page, markup));
+  writeFileSync(target, document(page, markup).replace(`/assets/${cssPath}`, finalCss));
 
   const twin = join(DIST, markdownPath(page));
   mkdirSync(dirname(twin), { recursive: true });
@@ -355,7 +384,6 @@ for (const page of ALL) {
  * what the old catch-all did, and it invites a crawler to index the same page
  * under every misspelling anyone links.
  */
-(globalThis as { __BEACON_PRERENDER_PATH__?: string }).__BEACON_PRERENDER_PATH__ = "/not-a-page";
 const notFound = shell
   .replace(
     /<title>.*?<\/title>/s,
@@ -363,19 +391,12 @@ const notFound = shell
     // URL is whatever the visitor mistyped, so there is nothing true to
     // declare about it and nothing worth handing a model.
     `<title>Page not found — ${SITE_NAME}</title>\n    ` +
-      '<meta name="robots" content="noindex, follow" />\n    ' +
-      `<link rel="stylesheet" href="${PRERENDER_CSS}" />`,
+      '<meta name="robots" content="noindex, follow" />',
   )
   .replace(/\n\s*<meta\s+property="og:[\s\S]*?\/>/g, "")
-  .replace('<div id="root"></div>', `<div id="root">${liftInlineStyles(renderToString(<SiteB />))}</div>`);
+  .replace(`/assets/${cssPath}`, finalCss)
+  .replace('<div id="root"></div>', `<div id="root">${notFoundMarkup}</div>`);
 writeFileSync(join(DIST, "404.html"), notFound);
-
-writeFileSync(
-  join(DIST, "prerender.css"),
-  `/* Generated by tools/prerender.tsx: the inline styles the markup would\n`
-    + ` * otherwise carry as attributes, which \`style-src 'self'\` forbids.\n */\n`
-    + `${styleSheet()}\n`,
-);
 
 const SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
 const entries = ALL.map(

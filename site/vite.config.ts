@@ -23,6 +23,16 @@ export default defineConfig({
      * by `src-b/`, which is why deleting a design deleted fifteen files rather
      * than a directory.
      */
+    /*
+     * Source maps, because the source is public anyway.
+     *
+     * Lighthouse asks for them on a bundle this size and it is right to: a
+     * stack trace from a minified file is unactionable, and this project's
+     * whole argument is that a claim should be checkable against something. It
+     * costs deployment size and exposes nothing — the repository is Apache-2.0
+     * and every file in the bundle is in it.
+     */
+    sourcemap: true,
     // The recorded bundles are imported as JSON and inlined. They are the
     // point of the playground, so they ship in the bundle rather than being
     // fetched — a demo that can fail to load its evidence is worse than one

@@ -28,6 +28,7 @@ import { Legal } from "@/screens/marketing/Legal";
 import {
   forbiddenOutcomes,
   injectionIn,
+  loadAllRuns,
   evidenceFor,
   eventsFor,
   facts,
@@ -37,6 +38,9 @@ import {
   scenarios,
 } from "@/data/fixtures";
 import { scenarioCopy } from "@/data/copy";
+
+// Every run: these render all of them, and only five are eager.
+await loadAllRuns();
 
 let failures = 0;
 

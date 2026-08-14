@@ -34,18 +34,57 @@ import factsJson from "./generated/facts.json";
  * displays means the screen and the panel cannot disagree: there is one copy,
  * and the panel shows it verbatim.
  */
-const bundleSources = import.meta.glob("./generated/*/*.json", {
-  eager: true,
+/*
+ * Two globs, because the marketing page needs five runs and the playground
+ * needs all seventeen.
+ *
+ * Every run used to be eager, so the landing page downloaded 444KB of recorded
+ * evidence to render a section that reads one bundle. The runs below are the
+ * ones the marketing page renders synchronously — `misbehaving` for the case
+ * explorer, the integrity panel and the pipeline; the whole inbox-briefing set
+ * for the hero's "same state, three verdicts"; `fixtures[0]` for the recorded
+ * limitations. They are named here rather than derived, which couples this
+ * list to those sections — and the coupling is safe in the direction that
+ * matters: `readBundle` throws for a run it has no text for, the prerender
+ * renders every marketing page at build time, so getting this list wrong fails
+ * the build rather than a visitor.
+ */
+const eagerSources = import.meta.glob(
+  "./generated/{misbehaving,well-behaved,obeys-injection,disconnects,reference}/*.json",
+  { eager: true, query: "?raw", import: "default" },
+) as Record<string, string>;
+
+/** Every run, fetched on demand. Only the playground asks. */
+const lazySources = import.meta.glob("./generated/*/*.json", {
   query: "?raw",
   import: "default",
-}) as Record<string, string>;
+}) as Record<string, () => Promise<string>>;
+
+const idFor = (path: string) => {
+  const parts = path.split("/");
+  return `${parts.at(-2)}/${parts.at(-1)}`;
+};
 
 const bundleByKey = new Map<string, string>(
-  Object.entries(bundleSources).map(([path, text]) => {
-    const parts = path.split("/");
-    return [`${parts.at(-2)}/${parts.at(-1)}`, text];
-  }),
+  Object.entries(eagerSources).map(([path, text]) => [idFor(path), text]),
 );
+
+/**
+ * Pull in the runs that are not already here.
+ *
+ * Called by the entry before hydrating a playground route, and by the
+ * prerender before rendering one, so every consumer below stays synchronous —
+ * which is the point. Making `evidenceFor` async would have reached every
+ * screen, every tool and every test for a transfer saving.
+ */
+export async function loadAllRuns(): Promise<void> {
+  await Promise.all(
+    Object.entries(lazySources).map(async ([path, load]) => {
+      const id = idFor(path);
+      if (!bundleByKey.has(id)) bundleByKey.set(id, await load());
+    }),
+  );
+}
 
 const parsed = new Map<string, unknown>();
 
