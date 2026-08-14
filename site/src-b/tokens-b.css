@@ -594,6 +594,94 @@
 }
 
 /*
+ * The playground's own motion, which came over with the components and not
+ * with the stylesheet.
+ *
+ * `src/tokens.css` was the only definition of these three, and it went with
+ * the first design. Nothing broke loudly, because an undefined class is not an
+ * error in CSS: the timeline still revealed one event every 260ms — that timer
+ * is JavaScript in `RunTimeline` and never depended on this file — but each
+ * event arrived instantly instead of easing, and the mark beside "Running."
+ * sat frozen mid-sweep. The names are kept rather than re-prefixed, because
+ * `Mark`, `TimelineEvent` and `RunDot` are shared components that name these
+ * classes directly.
+ */
+
+/* The one running indicator. Rotation is the whole content of a spinner, and
+   it only exists while a run is replaying — the layout audit screenshots the
+   playground at its first step and never sees it turning. */
+@keyframes bcn-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bcn-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/*
+ * Opacity only, where the original also moved 3px.
+ *
+ * `b-stage-in` above states this design's rule and the reason for it: an
+ * animation that changes an element's rect turns the layout audit into a coin
+ * toss, because it screenshots at an arbitrary moment. The timeline reveals
+ * dozens of these in a row, so it is the worst possible place to reintroduce a
+ * moving box. The translate is dropped rather than carried over.
+ */
+@keyframes bcn-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-sweep {
+  animation: bcn-sweep 1.1s linear infinite;
+}
+
+.animate-pulse-slow {
+  animation: bcn-pulse 1.6s ease-in-out infinite;
+}
+
+.animate-enter {
+  animation: bcn-enter 120ms ease-out;
+}
+
+/*
+ * FLAKY is a mix of the two hues rather than a fourth one — the result
+ * vocabulary is exactly PASS, FAIL and INCOMPLETE, and a new colour would
+ * imply a fourth kind of answer. Also lost with `src/tokens.css`, and still
+ * named by `VerdictBadge`, which was rendering that state as a bare border.
+ */
+.hatch-flaky {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-pass-tint) 0 5px,
+    var(--color-fail-tint) 5px 10px
+  );
+}
+
+.hatch-flaky-dot {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-pass) 0 3px,
+    var(--color-fail) 3px 6px
+  );
+}
+
+/*
  * This design does not inherit the first one's reduced-motion block, so it
  * declares its own. The rule is narrower than it reads: it stops CSS
  * animation, transition and smooth scrolling, and cannot reach a JS timer, an

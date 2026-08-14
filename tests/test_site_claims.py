@@ -1146,6 +1146,79 @@ class ContrastTests(unittest.TestCase):
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class AbridgedPanelTests(unittest.TestCase):
+    """
+    A panel that names a file may shorten it. It may not invent a value.
+
+    `tools/lint.tsx` already compares panels against the files they name, by
+    hash, and that is the right check for a panel showing a whole document. It
+    was written against the playground's three panel types, so a marketing
+    section that shows an *abridged* file — ellipses where the boring parts
+    were — is outside it entirely.
+
+    One did. `04 — How it grades` displayed `"schema_version": "1.0"` beside
+    the label `scenario.json`, captioned "declared before the run, not after
+    it". The file says `"0.1"`. The version had been made up to look plausible,
+    on the panel whose whole job is to show that the checks are declared in a
+    real file, under a heading about what stops a result being written to fit
+    whatever came back. An external reviewer found it by comparing the panel
+    against a published evidence bundle.
+
+    A hash cannot check an abridgement, so this checks the values: every
+    literal the panel shows must appear in the file it names, under that key,
+    at some depth. Ellipsed values are skipped, because an abridgement is
+    allowed to be one.
+    """
+
+    #: Each panel, the constant holding it, and the file it claims to show.
+    PANELS = (
+        (
+            SITE / "src-b" / "sections" / "HowItGrades.tsx",
+            "CONTRACT",
+            GENERATED / "scenarios" / "inbox-briefing.json",
+        ),
+    )
+
+    @staticmethod
+    def _values_for(key: str, node: object) -> list[str]:
+        """Every value under `key` anywhere in the document."""
+        found: list[str] = []
+        if isinstance(node, dict):
+            for name, value in node.items():
+                if name == key and not isinstance(value, (dict, list)):
+                    found.append(str(value))
+                found.extend(AbridgedPanelTests._values_for(key, value))
+        elif isinstance(node, list):
+            for item in node:
+                found.extend(AbridgedPanelTests._values_for(key, item))
+        return found
+
+    def test_there_are_panels_to_check(self) -> None:
+        self.assertTrue(self.PANELS)
+
+    def test_every_value_a_panel_shows_is_in_the_file_it_names(self) -> None:
+        for source, constant, named in self.PANELS:
+            text = source.read_text(encoding="utf-8")
+            panel = re.search(rf"const {constant} = `(.*?)`;", text, re.S)
+            self.assertIsNotNone(panel, f"{constant} moved; repoint this guard")
+            document = json.loads(named.read_text(encoding="utf-8"))
+
+            checked = 0
+            for key, value in re.findall(r'"([a-z_]+)":\s*"([^"]*)"', panel.group(1)):
+                if "\u2026" in value:
+                    continue  # an abridgement is allowed to be one
+                checked += 1
+                with self.subTest(panel=source.name, key=key, value=value):
+                    self.assertIn(
+                        value,
+                        self._values_for(key, document),
+                        f"{source.name} shows {key}={value!r}, which is not a "
+                        f"{key} in {named.name}",
+                    )
+            self.assertGreaterEqual(checked, 3, "the panel format changed; nothing was compared")
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
 class PaletteLocationTests(unittest.TestCase):
     """
     Every colour in the design lives in the token file, and nowhere else.

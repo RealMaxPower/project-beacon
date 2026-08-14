@@ -194,9 +194,16 @@ export function Integrity() {
               })}
 
               <div className="flex items-baseline justify-between gap-4 px-5 py-3">
-                <dt className="flex-none text-[12.5px] text-b-faint">SHA-256 over those four</dt>
-                <dd className="min-w-0 text-right font-b-mono text-[12.5px] break-all text-b-src">
-                  {digest ? `${digest.slice(0, 32)}…` : "computing…"}
+                <dt className="flex-none text-[12.5px] text-b-faint">SHA-256 over those bytes</dt>
+                {/*
+                  All sixty-four characters. It was truncated to thirty-two
+                  with an ellipsis, which is fine for a digest nobody is asked
+                  to check and wrong for this one: the sentence below tells a
+                  reader to compare it against their own, and half a hash
+                  cannot be compared against anything.
+                */}
+                <dd className="min-w-0 text-right font-b-mono text-[12px] break-all text-b-src">
+                  {digest ?? "computing…"}
                 </dd>
               </div>
             </dl>
@@ -271,12 +278,31 @@ export function Integrity() {
           </div>
         </div>
 
-        <p className="mt-6 max-w-[70ch] text-[12.5px] leading-relaxed text-b-faint">
-          Computed in your browser with <code className="font-b-mono">crypto.subtle</code>, over
-          the four values shown. Hash the same four lines with{" "}
-          <code className="font-b-mono">shasum -a 256</code> and you will get the same answer —
-          which is the point of printing it rather than describing it.
-        </p>
+        {/*
+          The bytes, not a description of them.
+          
+          This used to say "hash the same four lines", and the four lines a
+          reader could see were the values beside their human labels — Verdict,
+          Subject, State after. What is actually hashed is `key=value` under
+          the machine names, joined by newlines, with no trailing newline. So
+          anyone who followed the sentence literally got a different digest and
+          the only honest conclusion available to them was that this page was
+          wrong. On the section whose argument is that a result you cannot
+          re-derive is a result you cannot argue with.
+          
+          Printing the payload costs eight lines and removes the ambiguity
+          completely: what is below is what goes in, byte for byte.
+        */}
+        <div className="mt-6 overflow-hidden rounded-xl border border-b-line">
+          <p className="border-b border-b-line px-5 py-3 text-[12.5px] leading-relaxed text-b-muted">
+            Computed in your browser with <code className="font-b-mono">crypto.subtle</code>, over
+            exactly these bytes — no trailing newline. Run it yourself and you will get the digest
+            above, which is the point of printing it rather than describing it.
+          </p>
+          <pre className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-b-text">
+{`printf '${payload.replace(/\n/g, "\\n")}' | shasum -a 256`}
+          </pre>
+        </div>
       </div>
     </section>
   );

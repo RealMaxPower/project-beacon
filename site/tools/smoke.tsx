@@ -347,6 +347,30 @@ check(
 // A's `for-builders` page carried the whole CI story and B had none of it.
 // These are the three things a reader adopting this needs and cannot get from
 // the quickstart, so they are pinned rather than left to survive by luck.
+// The digest section tells a reader to reproduce a hash. It said "hash the
+// same four lines" while hashing `key=value` pairs under machine names with no
+// trailing newline, so anyone who tried got a different answer and the only
+// conclusion available to them was that the page was wrong. It prints the
+// exact command now, and these are the parts that make it exact.
+check(
+  "Site B · the digest can be reproduced",
+  () => siteBAt("/"),
+  "printf &#x27;result=FAIL",
+  "shasum -a 256",
+  "no trailing newline",
+);
+
+// A skip link that is not the first focusable thing in the document is not a
+// skip link, and one that stays hidden when focused cannot be seen to work.
+check(
+  "Site B · keyboard bypass",
+  () => siteBAt("/"),
+  "Skip to content",
+  'href="#main"',
+  "focus:not-sr-only",
+  'id="main"',
+);
+
 check(
   "Site B · in your pipeline",
   () => siteBAt("/"),

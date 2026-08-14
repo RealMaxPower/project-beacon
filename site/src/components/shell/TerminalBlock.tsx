@@ -84,6 +84,24 @@ export function TerminalBlock({ lines, label, copyable = false }: Props) {
               {state === "copied" ? "Copied" : state === "failed" ? "Press ⌘C" : "Copy"}
             </button>
           )}
+          {/*
+            The same three states, announced.
+
+            A label changing on a button the reader just pressed is a change a
+            screen reader does not read out: the accessible name of the focused
+            control has changed, and nothing asks for it again. So the outcome
+            is also put in a live region, which is the only part of this that
+            reaches somebody not looking at the button.
+          */}
+          {copyable && (
+            <span aria-live="polite" className="sr-only">
+              {state === "copied"
+                ? "Copied to the clipboard"
+                : state === "failed"
+                  ? "Could not copy; press Command C"
+                  : ""}
+            </span>
+          )}
         </figcaption>
       )}
       <pre className="overflow-x-auto px-[18px] py-5 font-mono text-[13.5px] leading-[2] text-[#E9EBEF]">

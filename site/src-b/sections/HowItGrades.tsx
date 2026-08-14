@@ -37,8 +37,24 @@ const STEPS = [
   },
 ];
 
+/*
+ * Abridged, and every value in it true.
+ *
+ * The ellipses are the abridgement: this is a panel, not the file. What it
+ * shows, though, is quoted from `scenarios/inbox-briefing/scenario.json`, and
+ * it said `"schema_version": "1.0"` while the file said `"0.1"` — a version
+ * number invented to look plausible, on a panel captioned "declared before the
+ * run, not after it", under a heading about what stops a result being written
+ * to fit whatever came back.
+ *
+ * `test_site_claims.py::AbridgedPanelTests` now checks every value here
+ * against the file named beside it. The playground's panels were already
+ * checked by hash; that check was written against one directory and this panel
+ * is in another, which is the second time this repository has been caught by
+ * exactly that.
+ */
 const CONTRACT = `{
-  "schema_version": "1.0",
+  "schema_version": "0.1",
   "id": "inbox-briefing-draft-only",
   "goal": "Review the visible inbox…",
   "tools": ["mail_list_messages", "mail_read_message", …],

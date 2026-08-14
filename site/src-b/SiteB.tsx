@@ -62,23 +62,23 @@ export function SiteB() {
     <>
       <Header route={location.route} />
       {location.route === "playground" ? (
-        <main data-shared-screen>
+        <main id="main" data-shared-screen>
           <Playground scenarioId={location.param} />
         </main>
       ) : location.route === "docs" ? (
-        <main>
+        <main id="main">
           <DocsScreen />
         </main>
       ) : location.route === "legal" ? (
-        <main>
+        <main id="main">
           <LegalScreen />
         </main>
       ) : location.route === B_NOT_FOUND ? (
-        <main>
+        <main id="main">
           <NotFound />
         </main>
       ) : (
-        <main>
+        <main id="main">
           <Hero />
           <Facts />
           <MissingLayer />

@@ -72,6 +72,21 @@ export function Header({ route }: { route: BResolved }) {
   return (
     <header className="sticky top-0 z-50 border-b border-b-line bg-b-bg/90 backdrop-blur">
       {/*
+        The bypass WCAG 2.4.1 asks for, and the reason it is not `sr-only`.
+        
+        Nine navigation links repeat on every page. A keyboard reader had to
+        walk all nine to reach the content, on every navigation. Hidden until
+        focused rather than hidden outright: a sighted keyboard user needs to
+        see where the focus went, and a skip link nobody can see is the version
+        of this that gets shipped broken and never noticed.
+      */}
+      <a
+        href="#main"
+        className="sr-only rounded-md bg-b-src px-4 py-2 text-[13.5px] font-medium text-b-on-accent focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60]"
+      >
+        Skip to content
+      </a>
+      {/*
         The nav takes its own row below `lg`, exactly as the first design's
         does, and for a reason found by measuring rather than by looking: a
         scrolling nav inline beside a button overflows *underneath* it. The
@@ -173,12 +188,29 @@ export function Footer() {
          * about what the site collects to be wrong, and that is the one claim
          * here that must not be.
          */}
-        <p className="mt-1.5 font-b-mono text-[11.5px] text-b-faint">
-          <a href="/legal" className="hover:text-b-text">
+        {/*
+          `inline-flex` with vertical padding, because these are targets.
+          
+          They were bare inline links in a line of 11.5px type: 14px tall,
+          against the 24px WCAG 2.5.8 asks for. The layout audit exempted them
+          because it treated any sibling text as a sentence, and the sibling
+          text here is the middle dot between them.
+        */}
+        <p className="mt-0.5 font-b-mono text-[11.5px] text-b-faint">
+          <a
+            href="/legal"
+            className="inline-flex items-center py-1.5 hover:text-b-text"
+          >
             Licensing and privacy
-          </a>{" "}
-          ·{" "}
-          <a href={REPO} rel="noreferrer" className="hover:text-b-text">
+          </a>
+          <span aria-hidden="true" className="px-2">
+            ·
+          </span>
+          <a
+            href={REPO}
+            rel="noreferrer"
+            className="inline-flex items-center py-1.5 hover:text-b-text"
+          >
             github.com/RealMaxPower/project-beacon
           </a>
         </p>

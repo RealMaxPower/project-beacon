@@ -21,7 +21,8 @@ import { TwelveRuns } from "@/screens/playground/TwelveRuns";
 import { BaselineCompare } from "@/screens/playground/BaselineCompare";
 import { ExportBundle } from "@/screens/playground/ExportBundle";
 import { TimelineEvent } from "@/components/execution/TimelineEvent";
-import { evidenceFor, eventsFor, fixtures, scenarioFor } from "@/data/fixtures";
+import { evidenceFor, eventsFor, fixtures, offsets, scenarioFor } from "@/data/fixtures";
+import { selectionFor, rowCount, TAB_IDS } from "@b/sections/case-inspector";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -337,6 +338,53 @@ for (const fixture of fixtures) {
  * left the same flaw in the two panels beside it, because the check that caught
  * it was written against one directory.
  */
+/**
+ * The case explorer's inspector, at every tab against every row.
+ *
+ * `renderToStaticMarkup` renders initial state, so auditing the section
+ * rendered one tab and one row of six tabs and twenty-seven events. Two
+ * defects lived in the rest, both of the kind checked above: a field read
+ * under a name no message has, so every row of the World tab printed the word
+ * "unknown" where a sender belongs, and a labelled block rendered empty on the
+ * two events `describeEvent` deliberately declines to describe. An external
+ * reviewer found both by clicking through the tabs.
+ *
+ * The selection is a pure function now, so this walks all of it — 40-odd
+ * combinations rather than one — and the checks it applies are the same two
+ * that were already written and could not reach.
+ */
+function auditInspector() {
+  const evidence = evidenceFor(fixtures[0].key);
+  const events = eventsFor(fixtures[0].key);
+  const base = { evidence, events, scenario: scenarioFor(evidence), elapsed: offsets(events) };
+
+  let seen = 0;
+  for (const tab of TAB_IDS) {
+    for (let picked = 0; picked < rowCount(base, tab); picked += 1) {
+      const where = `Inspector · ${tab}[${picked}]`;
+      const selection = selectionFor({ ...base, tab, picked });
+      seen += 1;
+
+      for (const { needle, what } of POISON) {
+        for (const text of [selection.title, selection.meta, ...selection.blocks.map((b) => b.body)]) {
+          if (text.includes(needle)) report(where, what, text.slice(0, 80));
+        }
+      }
+      // A word standing in for a value a reader was promised. `unknown` is not
+      // in POISON because it is a real word; here it can only be the fallback.
+      for (const text of [selection.title, selection.meta]) {
+        if (/\bunknown\b/.test(text)) report(where, "a placeholder is shown as a value", text);
+      }
+      for (const block of selection.blocks) {
+        if (block.body.trim() === "") report(where, "a labelled block is empty", block.label);
+        if (block.label.trim() === "") report(where, "a block has no label", block.body.slice(0, 40));
+      }
+      if (!selection.title.trim()) report(where, "the inspector has no title", tab);
+    }
+  }
+  console.log(`  walking ${seen} inspector states across ${TAB_IDS.length} tabs`);
+}
+
 function auditPanelFidelity() {
   const generated = join(dirname(fileURLToPath(import.meta.url)), "../src/data/generated");
 
@@ -415,6 +463,7 @@ for (const [name, render] of screens) {
   }
 }
 
+auditInspector();
 auditPanelFidelity();
 
 console.log();

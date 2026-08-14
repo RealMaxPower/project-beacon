@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   blockedAttempts,
-  describeEvent,
   evidenceFor,
   eventsFor,
   isBlocked,
@@ -9,6 +8,7 @@ import {
   scenarioFor,
 } from "@/data/fixtures";
 import type { BeaconEvent, Evidence } from "@/data/types";
+import { selectionFor, type Selection, type TabId } from "./case-inspector";
 
 /**
  * The case explorer: two panes, six tabs, a live inspector.
@@ -32,7 +32,6 @@ import type { BeaconEvent, Evidence } from "@/data/types";
 
 const RUN = "misbehaving";
 
-type TabId = "world" | "timeline" | "checks" | "state" | "artifact" | "verdict";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "world", label: "World" },
@@ -43,15 +42,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "verdict", label: "Verdict" },
 ];
 
-interface Selection {
-  title: string;
-  meta: string;
-  /** Labelled blocks, the way the design breaks its inspector up. */
-  blocks: { label: string; body: string; numbered?: boolean }[];
-  /** The footer pair: a name on the left, a value on the right. */
-  footer?: { label: string; value: string };
-  tone?: "src" | "review" | "ok" | "bad";
-}
 
 /**
  * A row, drawn as a bordered card rather than a list line.
@@ -128,125 +118,7 @@ export function Case() {
 
   const mail = (scenario.fixtures?.mail as { messages?: Record<string, string>[] })?.messages ?? [];
 
-  /** What the inspector shows, for the row selected on the current tab. */
-  const selection = ((): Selection => {
-    if (tab === "world") {
-      const message = mail[picked] ?? {};
-      return {
-        title: String(message.id ?? "—"),
-        meta: `${String(message.from ?? "unknown")} · ${scenario.slug}`,
-        blocks: [
-          { label: "As declared", body: String(message.body ?? ""), numbered: true },
-          {
-            label: "Where it came from",
-            body: "Written into the scenario file. Nothing here was fetched, and no real mailbox was read — this is the whole world the subject was given.",
-          },
-        ],
-        footer: { label: "fixture", value: `mail.messages[${picked}]` },
-        tone: "src",
-      };
-    }
-    if (tab === "timeline") {
-      const event = events[picked] ?? events[0];
-      return {
-        title: `${event.kind} · ${event.target}`,
-        meta: `event ${picked + 1} of ${events.length}`,
-        blocks: [
-          { label: "What happened", body: describeEvent(event) ?? "" },
-          { label: "Payload", body: JSON.stringify(event.payload, null, 2), numbered: true },
-        ],
-        footer: { label: "recorded at", value: `+${elapsed[picked] ?? 0}ms, before dispatch` },
-        tone: isBlocked(event) ? "bad" : "src",
-      };
-    }
-    if (tab === "checks") {
-      const assertion = evidence.assertions[picked] ?? evidence.assertions[0];
-      return {
-        title: assertion.id,
-        meta: assertion.passed ? "satisfied" : "failed",
-        blocks: [
-          { label: "What it checks", body: assertion.description },
-          {
-            label: "Expected against actual",
-            body: `expected  ${JSON.stringify(assertion.expected)}\nactual    ${JSON.stringify(assertion.actual)}`,
-            numbered: true,
-          },
-          ...(assertion.message ? [{ label: "Message", body: assertion.message }] : []),
-        ],
-        footer: { label: "graded by", value: "string and state comparison" },
-        tone: assertion.passed ? "ok" : "bad",
-      };
-    }
-    if (tab === "state") {
-      const change = evidence.state_diff.changes[picked] ?? evidence.state_diff.changes[0];
-      const attempts = [...refused.entries()];
-      return {
-        title: change?.path ?? "no change",
-        meta: `${evidence.state_diff.change_count} field changed`,
-        blocks: [
-          ...(change
-            ? [
-                {
-                  label: "Before and after",
-                  body: `before  ${JSON.stringify(change.before)}\nafter   ${JSON.stringify(change.after)}`,
-                  numbered: true,
-                },
-              ]
-            : []),
-          ...(attempts.length
-            ? [
-                {
-                  label: "Attempted, and absent from this diff",
-                  body: attempts
-                    .map(([tool, n]) => `${tool} — ${n} attempt${n === 1 ? "" : "s"}, all refused`)
-                    .join("\n"),
-                },
-              ]
-            : []),
-        ],
-        footer: { label: "reset verified", value: String(evidence.reset_verified) },
-        tone: "src",
-      };
-    }
-    if (tab === "artifact") {
-      const [name, value] = Object.entries(evidence.artifacts)[0] ?? ["—", ""];
-      return {
-        title: name,
-        meta: "returned by the subject",
-        blocks: [
-          {
-            label: "As returned",
-            body: typeof value === "string" ? value : JSON.stringify(value, null, 2),
-            numbered: true,
-          },
-        ],
-        footer: {
-          label: "contract asks for",
-          value: scenario.output_contract?.artifact ?? "nothing in particular",
-        },
-        tone: "src",
-      };
-    }
-    const failed = evidence.assertions.filter((a) => a.passed === false);
-    return {
-      title: evidence.result,
-      meta: `${evidence.assertions.length - failed.length} of ${evidence.assertions.length} checks satisfied`,
-      blocks: [
-        {
-          label: "How it was graded",
-          body: "By comparing strings and state. No model sits anywhere in this path, which is why the same run grades the same way every time.",
-        },
-        {
-          label: failed.length ? "What failed" : "Result",
-          body: failed.length
-            ? failed.map((a) => `${a.id} — ${a.description}`).join("\n")
-            : "Every declared check was satisfied.",
-        },
-      ],
-      footer: { label: "sha256", value: `${evidence.digest.slice(0, 16)}…` },
-      tone: evidence.result === "PASS" ? "ok" : evidence.result === "FAIL" ? "bad" : "review",
-    };
-  })();
+  const selection = selectionFor({ tab, picked, evidence, events, scenario, elapsed });
 
   const toneClass =
     selection.tone === "bad"
@@ -469,7 +341,19 @@ export function Case() {
                 </div>
 
                 <div className="max-h-[300px] overflow-y-auto">
-                  {selection.blocks.map((block) => (
+                  {/*
+                    Empty blocks are dropped rather than rendered.
+
+                    `describeEvent` returns null for the events it has nothing
+                    to add about — deliberately — and the timeline turned that
+                    into a "WHAT HAPPENED" heading with an empty paragraph
+                    under it on two of twenty-seven events. A labelled section
+                    with nothing in it reads as a value that failed to load,
+                    which is worse than the absence it was standing in for.
+                  */}
+                  {selection.blocks
+                    .filter((block: Selection["blocks"][number]) => block.body.trim() !== "")
+                    .map((block: Selection["blocks"][number]) => (
                     <div key={block.label} className="border-b border-b-line px-4 py-3.5 last:border-b-0">
                       <p className="b-eyebrow mb-2 text-b-src">{block.label}</p>
                       {block.numbered ? (

@@ -307,6 +307,22 @@ const MEASURE = `() => {
       return { found: out, scrollers, cued };
     })(),
 
+    /*
+     * Tap targets, with the inline-in-a-sentence exemption made honest.
+     *
+     * WCAG 2.5.8 exempts a link sitting inside a sentence, because padding a
+     * word in running prose would break the line. This read that as "has any
+     * sibling text at all", and the site's footer separates two links with a
+     * middle dot — so both were exempted by one punctuation mark and shipped at
+     * 14px and 31px. An external reviewer measured them; this had passed them
+     * at every width.
+     *
+     * Sibling text now has to contain a letter or a digit to count as a
+     * sentence. And the floor is two-tier rather than one: 44px is this design
+     * system's rule for a control, and 24px is the AA minimum that applies to
+     * everything else — reporting a footer link as a 44px failure was the kind
+     * of noise that gets a check switched off.
+     */
     smallTargets: [...document.querySelectorAll("button, a[href], [role=button]")]
       .filter((el) => {
         if (el.closest(".sr-only")) return false;
@@ -316,11 +332,19 @@ const MEASURE = `() => {
           .filter((n) => n.nodeType === 3)
           .map((n) => n.textContent.trim())
           .join("");
-        return siblingText.length === 0;
+        return !/[a-z0-9]/i.test(siblingText);
       })
-      .map((el) => ({ el, r: el.getBoundingClientRect() }))
-      .filter(({ r }) => r.height > 0 && r.height < 44)
-      .map(({ el, r }) => ({ text: (el.textContent || el.getAttribute("aria-label") || "?").trim().slice(0, 40), h: Math.round(r.height) })),
+      .map((el) => ({
+        el,
+        r: el.getBoundingClientRect(),
+        floor: el.tagName === "A" && !el.getAttribute("role") ? 24 : 44,
+      }))
+      .filter(({ r, floor }) => r.height > 0 && r.height < floor)
+      .map(({ el, r, floor }) => ({
+        text: (el.textContent || el.getAttribute("aria-label") || "?").trim().slice(0, 40),
+        h: Math.round(r.height),
+        floor,
+      })),
 
     /*
      * Header bands whose two ends are padded differently.
@@ -488,7 +512,10 @@ for (const [name, hash, scheme] of ROUTES) {
     }
 
     for (const target of smallTargets) {
-      report(where, `hit target ${target.h}px, under the 44px the design system requires: "${target.text}"`);
+      report(
+        where,
+        `hit target ${target.h}px, under the ${target.floor}px ${target.floor === 44 ? "the design system requires" : "WCAG 2.5.8 requires"}: "${target.text}"`,
+      );
     }
 
     for (const band of lopsidedBands) {

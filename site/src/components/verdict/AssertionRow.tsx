@@ -128,7 +128,17 @@ export function AssertionRow({ assertion, scenarioId, open, onToggle }: Props) {
               emphasis ? "text-[15px] font-medium" : "text-[14.5px]"
             }`}
           >
-            {sentence}
+            {/*
+              A failed check states a requirement, not an outcome.
+
+              The sentences are written for the case that holds — "It never
+              tried to delete a document." — which under a ✗ reads as a claim
+              that it did not, beside a mark saying it did. A reviewer read it
+              exactly that way and was right to. The requirement framing is
+              added only where the check broke, so the thirty-odd sentences
+              stay written the way they read best everywhere else.
+            */}
+            {passed === false ? `Required: ${sentence}` : sentence}
           </span>
           {/* `--text-faint` measures 4.40–4.93 on the verdict tints and fails
               AA on two of the three. `.on-tint` is the token for text there. */}

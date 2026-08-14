@@ -18,9 +18,9 @@ export function NotFound() {
         <p className="b-eyebrow mb-6 text-b-review">Not found</p>
         <h1 className="b-h2 max-w-[20ch]">That address does not name a page here.</h1>
         <p className="b-lede mt-5 max-w-[54ch]">
-          This site has three: the page you were on, the playground, and the documentation. The
-          address bar is showing none of them, which usually means a mistyped link rather than
-          something that moved.
+          This site has four: the page you were on, the playground, the documentation, and
+          licensing and privacy. The address bar is showing none of them, which usually means a
+          mistyped link rather than something that moved.
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
           <a
