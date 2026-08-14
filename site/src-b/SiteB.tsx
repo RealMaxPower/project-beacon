@@ -15,6 +15,7 @@ import { Integrity } from "./sections/Integrity";
 import { MissingLayer } from "./sections/MissingLayer";
 import { Quickstart } from "./sections/Quickstart";
 import { InCI } from "./sections/InCI";
+import { Questions } from "./sections/Questions";
 import { Stack } from "./sections/Stack";
 import { Status } from "./sections/Status";
 import { B_NOT_FOUND, useBRoute } from "./router-b";
@@ -89,6 +90,7 @@ export function SiteB() {
           <Contribute />
           <Quickstart />
           <InCI />
+          <Questions />
           <Close />
         </main>
       )}

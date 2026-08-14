@@ -24,19 +24,19 @@ export function NotFound() {
         </p>
         <div className="mt-9 flex flex-wrap gap-3">
           <a
-            href="#/"
+            href="/"
             className="hit-target inline-flex items-center rounded-md bg-b-src px-5 text-[14.5px] font-medium text-b-on-accent"
           >
             Back to the start
           </a>
           <a
-            href="#/playground"
+            href="/playground"
             className="hit-target inline-flex items-center rounded-md border border-b-line-strong px-5 text-[14.5px] font-medium text-b-text"
           >
             Open the playground
           </a>
           <a
-            href="#/docs"
+            href="/docs"
             className="hit-target inline-flex items-center rounded-md border border-b-line-strong px-5 text-[14.5px] font-medium text-b-text"
           >
             Read the documentation

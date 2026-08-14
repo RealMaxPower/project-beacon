@@ -19,6 +19,7 @@ site/node_modules/
 site/dist/
 site/.smoke/
 site/.lint/
+site/.prerender/
 site/.visual/
 site/tsconfig.tsbuildinfo
 

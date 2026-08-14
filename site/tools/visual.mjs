@@ -24,13 +24,23 @@
  */
 
 import { chromium } from "playwright";
+import { startStaticServer } from "./serve.mjs";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SHOTS = join(ROOT, ".visual");
-const BASE = process.env.BASE_URL ?? "http://localhost:4173";
+/*
+ * The shared static server rather than `vite preview`.
+ *
+ * `vite preview` answers every path with `index.html`, which was right while
+ * the site was one document and became wrong when each route became its own
+ * prerendered file: this audit rendered the landing page at `/docs`, the
+ * client hydrated the docs screen over it, and React reported a mismatch on
+ * every page at every width. 238 failures, none of them about the site.
+ */
+const { server, base: BASE } = await startStaticServer();
 
 /*
  * Every route names its theme, including the dark ones.
@@ -52,12 +62,12 @@ const ROUTES = [
   // The playground inside the marketing shell. Its geometry is measured here
   // rather than inferred from the landing page: same seven-step flow, a
   // different header above it and a different composited ground under it.
-  ["b-playground", "/#/playground", "dark"],
+  ["b-playground", "/playground", "dark"],
   // Licensing and privacy. Long prose in a measured column is where a width
   // regression shows up first, and it is not a page anyone would notice was
   // broken.
-  ["b-legal", "/#/legal", "dark"],
-  ["b-docs", "/#/docs", "dark"],
+  ["b-legal", "/legal", "dark"],
+  ["b-docs", "/docs", "dark"],
   /*
    * The same pages in light, which is not a lighter version of the same page.
    * The palettes are separately validated and the ladder runs the other way —
@@ -66,9 +76,9 @@ const ROUTES = [
    * which is the thing worth checking rather than assuming.
    */
   ["b-light", "/", "light"],
-  ["b-playground-light", "/#/playground", "light"],
-  ["b-legal-light", "/#/legal", "light"],
-  ["b-docs-light", "/#/docs", "light"],
+  ["b-playground-light", "/playground", "light"],
+  ["b-legal-light", "/legal", "light"],
+  ["b-docs-light", "/docs", "light"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];
@@ -129,6 +139,20 @@ const MEASURE = `() => {
      * Only the clipping ancestors are consulted, and only on the axis they
      * actually clip.
      */
+    /*
+     * A closed <details> keeps its content's layout box.
+     *
+     * Chrome hides it with \`content-visibility\`, which skips painting and
+     * leaves \`getBoundingClientRect\` reporting the same rect for every
+     * collapsed answer — so the first use of <details> on this site produced
+     * 214 collisions between paragraphs a reader cannot see. Nothing was
+     * wrong with the page.
+     *
+     * The summary is exempt: it is the part that stays visible.
+     */
+    const collapsed = el.closest("details:not([open])");
+    if (collapsed && !el.closest("summary")) continue;
+
     let hidden = false;
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       const ps = getComputedStyle(p);
@@ -425,7 +449,7 @@ for (const [name, hash, scheme] of ROUTES) {
       }
     });
 
-    await page.goto(`${BASE}/${hash}`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}${hash}`, { waitUntil: "networkidle" });
     // The timeline streams; let it settle so the measurement is of a real state.
     await page.waitForTimeout(400);
 
@@ -493,6 +517,7 @@ for (const [name, hash, scheme] of ROUTES) {
 }
 
 await browser.close();
+server.close();
 
 console.log();
 if (problems > 0) {

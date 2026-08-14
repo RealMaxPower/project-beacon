@@ -10,7 +10,7 @@
   "description": "Marketing site and evidence playground for Project Beacon.",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run prerender",
     "preview": "vite preview",
     "smoke": "vite build --ssr tools/smoke.tsx --outDir .smoke --logLevel warn && node .smoke/smoke.js",
     "fixtures": "python3 tools/build_fixtures.py",
@@ -19,8 +19,9 @@
     "notices:check": "python3 tools/build_notices.py --check",
     "lint:render": "vite build --ssr tools/lint.tsx --outDir .lint --logLevel warn && node .lint/lint.js",
     "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check && npm run notices:check",
-    "visual": "vite preview --port 4173 & sleep 2 && node tools/visual.mjs; kill %1",
-    "headers": "npm run build && node tools/headers.mjs"
+    "visual": "npm run build && node tools/visual.mjs",
+    "headers": "npm run build && node tools/headers.mjs",
+    "prerender": "vite build --ssr tools/prerender.tsx --outDir .prerender --logLevel warn && node .prerender/prerender.js"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

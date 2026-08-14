@@ -224,6 +224,52 @@
   color-scheme: light;
 }
 
+/*
+ * The same roles, before any script has run.
+ *
+ * `useTheme` stamps `data-theme` in an effect, which is after first paint —
+ * fine while the document arrived empty, because there was nothing to paint.
+ * Prerendering changed that: a complete page now paints immediately, so a
+ * light-preferring visitor got a full dark page and then a flash to paper.
+ *
+ * So the media query carries the same assignment for the case where nobody has
+ * chosen yet, and `:not([data-theme="dark"])` keeps an explicit dark choice
+ * winning over the system preference. Three states, and the toggle still beats
+ * the OS in both directions.
+ *
+ * This is a second copy of the mapping above and the only duplication in this
+ * file. It duplicates `var()` references rather than colours, so no value can
+ * drift — and `ThemeRoleTests` compares the two blocks token by token, because
+ * a copy is safe exactly as long as something is checking it.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+  --b-bg: var(--paper-bg);
+  --b-raised: var(--paper-raised);
+  --b-deep: var(--paper-deep);
+  --b-line: var(--paper-line);
+  --b-line-strong: var(--paper-line-strong);
+  --b-text: var(--paper-text);
+  --b-muted: var(--paper-muted);
+  --b-faint: var(--paper-faint);
+  --b-src: var(--paper-src);
+  --b-review: var(--paper-review);
+  --b-ok: var(--paper-ok);
+  --b-bad: var(--paper-bad);
+  --b-on-accent: var(--paper-on-accent);
+  --b-grid: 0.04;
+  color-scheme: light;
+  }
+
+  :root:not([data-theme="dark"]) [data-ground="alt"] {
+  --b-bg: var(--paper-band);
+  --b-raised: var(--paper-band-raised);
+  --b-deep: var(--paper-bg);
+  --b-line: var(--paper-band-line);
+  --b-line-strong: var(--paper-band-line-strong);
+  }
+}
+
 :root[data-theme="light"] [data-ground="alt"] {
   --b-bg: var(--paper-band);
   --b-raised: var(--paper-band-raised);

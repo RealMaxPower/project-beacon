@@ -4,16 +4,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "trailingSlash": false,
-  "rewrites": [
-    {
-      "source": "/b",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -63,13 +53,20 @@
       ]
     },
     {
-      "source": "/",
+      "source": "/((?!assets/|fonts/).*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=0, must-revalidate"
         }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/b",
+      "destination": "/",
+      "permanent": true
     }
   ]
 }

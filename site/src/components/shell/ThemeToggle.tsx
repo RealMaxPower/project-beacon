@@ -32,15 +32,34 @@ function systemTheme(): Theme {
  * While no choice has been made, the OS is followed live — a visitor whose
  * machine switches at sunset sees the page switch with it.
  */
-export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(() =>
-    typeof window === "undefined" ? "dark" : (stored() ?? systemTheme()),
-  );
-  const [chosen, setChosen] = useState<boolean>(() =>
-    typeof window === "undefined" ? false : stored() !== null,
-  );
+export function useTheme(): [Theme | null, () => void] {
+  /*
+   * `null` until the browser has been asked, on the server *and* on the first
+   * client render.
+   *
+   * This used to resolve during render — `stored() ?? systemTheme()` — which
+   * was correct for exactly as long as nothing was prerendered. Once every
+   * page ships with its markup already in it, the server has to guess, guesses
+   * dark, and a light visitor's first client render disagrees: React reports
+   * a hydration mismatch and throws the whole prerendered tree away, which is
+   * the one outcome prerendering exists to avoid.
+   *
+   * So nobody decides during render. `data-theme` is not stamped until the
+   * answer is known, and until then the stylesheet's `prefers-color-scheme`
+   * block is what paints — which it does before first paint rather than after,
+   * so the page arrives in the right theme instead of correcting into it.
+   */
+  const [theme, setTheme] = useState<Theme | null>(null);
+  const [chosen, setChosen] = useState(false);
 
   useEffect(() => {
+    const value = stored();
+    setTheme(value ?? systemTheme());
+    setChosen(value !== null);
+  }, []);
+
+  useEffect(() => {
+    if (theme === null) return;
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
@@ -65,12 +84,21 @@ export function useTheme(): [Theme, () => void] {
   ];
 }
 
-export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
+export function ThemeToggle({
+  theme,
+  onToggle,
+}: {
+  theme: Theme | null;
+  onToggle: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-pressed={theme === "dark"}
+      // Omitted rather than guessed while the answer is unknown: a toggle that
+      // reports a state it has not read is worse than one that reports none,
+      // and this is the markup hydration compares.
+      aria-pressed={theme === null ? undefined : theme === "dark"}
       aria-label="Switch between light and dark"
       title="Switch between light and dark"
       className="hit-target inline-flex w-9 items-center justify-center rounded-row border border-line-strong text-text-muted hover:text-text"

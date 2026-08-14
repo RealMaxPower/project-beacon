@@ -290,16 +290,19 @@ check(
  * those with something the code actually does.
  */
 /**
- * The second design at a given fragment.
+ * The site at a given URL.
  *
- * Its router reads `window.location.hash`; effects do not run under
- * `renderToString`, so stubbing the initial read is enough to steer it.
+ * Its router reads `window.location.pathname` — routes are paths now, not
+ * fragments — and the fragment still matters for in-page anchors, so both are
+ * stubbed. Effects do not run under `renderToString`, so the initial read is
+ * all that has to be steered.
  */
-function siteBAt(hash: string): string {
+function siteBAt(url: string): string {
+  const [pathname, hash] = url.split("#");
   const previous = (globalThis as Record<string, unknown>).window;
   const store = new Map<string, string>();
   (globalThis as Record<string, unknown>).window = {
-    location: { hash },
+    location: { pathname: pathname || "/", hash: hash ? `#${hash}` : "" },
     matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
     addEventListener() {},
     removeEventListener() {},
@@ -328,8 +331,8 @@ function siteBAt(hash: string): string {
 // root and `/#/legal` stopped resolving across to the other one. A legal page
 // reachable only through a broken link is worse than no link at all.
 check(
-  "Site B · #/legal",
-  () => siteBAt("#/legal"),
+  "Site B · /legal",
+  () => siteBAt("/legal"),
   "Apache License 2.0",
   "connect-src &#x27;self&#x27;",
   "default-src &#x27;none&#x27;",
@@ -346,7 +349,7 @@ check(
 // the quickstart, so they are pinned rather than left to survive by luck.
 check(
   "Site B · in your pipeline",
-  () => siteBAt(""),
+  () => siteBAt("/"),
   "The integration is the exit code",
   "The scenario is wrong",
   "--repeat 5",
@@ -371,7 +374,7 @@ check(
   // privacy terms. This design links the other's page rather than restating
   // it: the terms describe the origin, and one copy cannot disagree with
   // itself. A visitor landing on /b had no way to reach them at all.
-  "/#/legal",
+  "/legal",
   "© 2026 Marshall Cahill and Project Beacon contributors",
 );
 
@@ -379,14 +382,14 @@ check(
  * The second design's router, at the three fragments that behave differently.
  *
  * The middle one is the whole reason this router is not the first design's. In
- * this document `#case` is an in-page anchor and `#/playground` is a route, and
+ * this document `#case` is an in-page anchor and `/playground` is a route, and
  * a router that could not tell them apart would render a not-found page every
  * time a visitor clicked "The case" in the header. That failure is silent — it
  * throws nothing and logs nothing — so it is asserted rather than trusted.
  */
 check(
-  "Site B · #/playground carries the shared playground inside B's shell",
-  () => siteBAt("#/playground"),
+  "Site B · /playground carries the shared playground inside B's shell",
+  () => siteBAt("/playground"),
   // The playground's own first step...
   "What should the agent try?",
   // ...under this design's header, not the first design's.
@@ -405,19 +408,19 @@ check(
 
 check(
   "Site B · #case is an anchor, so the marketing page renders",
-  () => siteBAt("#case"),
+  () => siteBAt("/#case"),
   "Agent work you can actually defend.",
 );
 
 check(
-  "Site B · #/not-a-page is a route that misses",
-  () => siteBAt("#/not-a-page"),
+  "Site B · /not-a-page is a route that misses",
+  () => siteBAt("/not-a-page"),
   "That address does not name a page here.",
 );
 
 check(
-  "Site B · #/playground/<id> opens already pointed at it",
-  () => siteBAt("#/playground/inbox-briefing-draft-only"),
+  "Site B · /playground/<id> opens already pointed at it",
+  () => siteBAt("/playground/inbox-briefing-draft-only"),
   // Step two, not step one — the link resolved.
   "Which agent should try it?",
 );

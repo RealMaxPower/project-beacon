@@ -286,7 +286,7 @@ export function Case() {
         */}
         <p className="mt-6">
           <a
-            href={`#/playground/${encodeURIComponent(evidence.scenario.id)}`}
+            href={`/playground/${encodeURIComponent(evidence.scenario.id)}`}
             className="hit-target inline-flex items-center gap-2 rounded-md border border-b-line-strong px-4 text-[14px] text-b-text"
           >
             Run this scenario yourself

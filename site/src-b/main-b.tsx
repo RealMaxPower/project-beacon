@@ -1,5 +1,5 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import "./tokens-b.css";
 import { SiteB } from "./SiteB";
@@ -35,9 +35,28 @@ if (!root) throw new Error("No #root in index.html.");
  * anything. The beacon posts to `/_vercel/insights/view` on this origin, which
  * is why `'self'` is enough and no third-party host appears in the policy.
  */
-createRoot(root).render(
+/*
+ * Hydrate what the prerender step already wrote, rather than replacing it.
+ *
+ * Every route is built to a real document with its content in it, so by the
+ * time this runs the page has painted and been readable for some time. Calling
+ * `createRoot().render()` here would throw that away and rebuild the same tree,
+ * which is slower, flashes, and loses the reader's scroll position on a page
+ * they may already have scrolled.
+ *
+ * The fallback is not defensive decoration. `npm run dev` serves this document
+ * unprerendered, so the root really is empty there, and `hydrateRoot` on an
+ * empty container is an error rather than a no-op.
+ */
+const page = (
   <StrictMode>
     <SiteB />
     <Analytics />
-  </StrictMode>,
+  </StrictMode>
 );
+
+if (root.hasChildNodes()) {
+  hydrateRoot(root, page);
+} else {
+  createRoot(root).render(page);
+}

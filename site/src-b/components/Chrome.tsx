@@ -16,20 +16,21 @@ const REPO = "https://github.com/RealMaxPower/project-beacon";
 /*
  * Section anchors and one route, in one list.
  *
- * The anchors keep working from the playground without any handling: clicking
- * "The case" there sets the hash to `#case`, which has no leading slash, so
- * `router-b.ts` resolves HOME, the marketing page renders, and the browser
- * scrolls to the section. The route is the only entry that needs the slash,
- * and it is the only one that changes what is rendered.
+ * Anchors are written `/#case` rather than `#case` so they work from every
+ * screen. A bare fragment on `/docs` sets the fragment of `/docs`, which has
+ * no such section and no way to reach one; with the path in front, the browser
+ * loads the marketing page and scrolls to the section, which is what the label
+ * promises. It costs a document load from the other screens and nothing at all
+ * from the page they point into.
  */
 const NAV = [
-  ["The case", "#case"],
-  ["How it grades", "#how"],
-  ["Your stack", "#stack"],
-  ["What exists", "#status"],
-  ["Quickstart", "#quickstart"],
-  ["Playground", "#/playground"],
-  ["Docs", "#/docs"],
+  ["The case", "/#case"],
+  ["How it grades", "/#how"],
+  ["Your stack", "/#stack"],
+  ["What exists", "/#status"],
+  ["Quickstart", "/#quickstart"],
+  ["Playground", "/playground"],
+  ["Docs", "/docs"],
 ] as const;
 
 function Mark() {
@@ -66,7 +67,7 @@ export function Header({ route }: { route: BResolved }) {
    * is in the viewport.
    */
   const current = (href: string) =>
-    href.startsWith("#/") && href.slice(2) === route ? "page" : undefined;
+    !href.includes("#") && href.slice(1) === route ? "page" : undefined;
 
   return (
     <header className="sticky top-0 z-50 border-b border-b-line bg-b-bg/90 backdrop-blur">
@@ -81,7 +82,7 @@ export function Header({ route }: { route: BResolved }) {
       <div className="b-measure py-3">
         <div className="flex items-center gap-4">
           <a
-            href="#top"
+            href="/"
             className="hit-target flex flex-none items-center gap-2.5 pr-2 text-b-text"
           >
             <Mark />
@@ -173,7 +174,7 @@ export function Footer() {
          * here that must not be.
          */}
         <p className="mt-1.5 font-b-mono text-[11.5px] text-b-faint">
-          <a href="/#/legal" className="hover:text-b-text">
+          <a href="/legal" className="hover:text-b-text">
             Licensing and privacy
           </a>{" "}
           ·{" "}

@@ -229,13 +229,13 @@ function audit(where: string, html: string) {
  * so a stub is enough to steer the route. Effects do not run under
  * `renderToStaticMarkup`; only the initial state matters.
  */
-function withHash<T>(hash: string, render: () => T): T {
+function withUrl<T>(url: string, render: () => T): T {
   const media = { matches: false, addEventListener() {}, removeEventListener() {} };
   const store = new Map<string, string>();
   const previous = (globalThis as Record<string, unknown>).window;
 
   (globalThis as Record<string, unknown>).window = {
-    location: { hash },
+    location: { pathname: url.split("#")[0] || "/", hash: url.includes("#") ? `#${url.split("#")[1]}` : "" },
     matchMedia: () => media,
     addEventListener() {},
     removeEventListener() {},
@@ -262,7 +262,7 @@ function withHash<T>(hash: string, render: () => T): T {
  * and must render the marketing page, not a not-found. That distinction is
  * invisible to a check that only ever renders the default.
  */
-const siteBAt = (hash: string) => withHash(hash, () => renderToStaticMarkup(<SiteB />));
+const siteBAt = (url: string) => withUrl(url, () => renderToStaticMarkup(<SiteB />));
 
 const screens: [string, () => string][] = [
   /*
@@ -274,17 +274,17 @@ const screens: [string, () => string][] = [
    * for. Two mains is exactly the defect that rule exists to catch, and it is
    * why the playground route is audited rather than assumed.
    */
-  ["Site B · marketing", () => siteBAt("")],
-  ["Site B · #case anchor", () => siteBAt("#case")],
-  ["Site B · #/playground", () => siteBAt("#/playground")],
+  ["Site B · marketing", () => siteBAt("/")],
+  ["Site B · #case anchor", () => siteBAt("/#case")],
+  ["Site B · /playground", () => siteBAt("/playground")],
   [
-    "Site B · #/playground/<id>",
-    () => siteBAt("#/playground/inbox-briefing-draft-only"),
+    "Site B · /playground/<id>",
+    () => siteBAt("/playground/inbox-briefing-draft-only"),
   ],
-  ["Site B · #/playground/<unknown>", () => siteBAt("#/playground/no-such-scenario")],
-  ["Site B · #/docs", () => siteBAt("#/docs")],
-  ["Site B · #/legal", () => siteBAt("#/legal")],
-  ["Site B · #/not-a-page", () => siteBAt("#/not-a-page")],
+  ["Site B · /playground/<unknown>", () => siteBAt("/playground/no-such-scenario")],
+  ["Site B · /docs", () => siteBAt("/docs")],
+  ["Site B · /legal", () => siteBAt("/legal")],
+  ["Site B · /not-a-page", () => siteBAt("/not-a-page")],
   [
     "PickScenario",
     () =>

@@ -1,61 +1,83 @@
 import { useEffect, useState } from "react";
+import { scenarios } from "@/data/fixtures";
 
 /**
- * This design's router, and why it is not the first design's.
+ * The router, and why routes are paths rather than fragments.
  *
- * Site A is seven pages and every hash is a route, so `src/router.ts` can treat
- * the whole fragment as one. This design is one long marketing page whose
- * sections are reached by `#case`, `#how`, `#stack` — real in-page anchors that
- * the browser scrolls to and that must keep working. Pointing A's router at
- * this document would resolve every one of those to NOT_FOUND and render an
- * error page when a visitor clicked "The case" in the header.
+ * This design is one long marketing page whose sections are reached by
+ * `#case`, `#how`, `#stack` — real in-page anchors the browser scrolls to —
+ * plus a handful of screens that replace the page entirely. Both kinds of
+ * destination live in the same header, and telling them apart is the whole job
+ * of this file. Reading a section anchor as a route does not throw: it renders
+ * a different page than the one the visitor is looking at the URL of.
  *
- * So the rule here is the leading slash, and it is the whole design:
+ * The split used to be the leading slash inside the fragment — `#case` an
+ * anchor, `#/docs` a route. It worked, and it cost the site its index. A
+ * fragment is never sent to a server, so `#/docs` is not a URL: it is the same
+ * URL as `/` with a note for the client. Search engines index the URL, so three
+ * of the four screens here did not exist to one, and the pages were left
+ * competing for a single entry with whatever the landing page happened to say.
  *
+ * So the rule is now:
+ *
+ *   /              the marketing page
+ *   /docs          a route — a real URL, prerendered, indexable on its own
+ *   /playground    also a route
  *   #case          an anchor — the browser handles it, this router says HOME
- *   #/playground   a route — React swaps the view
- *   #/docs         also a route
- *   #/             HOME, explicitly
  *
- * That split is not a convention borrowed from anywhere; it is forced by the
- * document having both kinds of destination, and it is worth stating because
- * the failure it prevents is silent. An anchor misread as a route does not
- * throw — it renders a different page than the one the visitor is looking at
- * the URL of.
+ * Anchors keep working from any screen: `/#case` is a path of `/` and a
+ * fragment of `case`, so the marketing page renders and the effect below
+ * scrolls to the section once it exists.
  *
- * An unrecognised route resolves to NOT_FOUND rather than falling back to the
- * marketing page, for the reason A's router gives at length: rendering home
- * under `#/playgound` tells a visitor they are somewhere they are not, and
- * hides the typo that got them there.
+ * An unrecognised path resolves to NOT_FOUND rather than falling back to the
+ * marketing page. Rendering home under `/playgound` tells a visitor they are
+ * somewhere they are not, hides the typo that got them there, and — now that
+ * these are real URLs — invites a crawler to index the same page under every
+ * misspelling anyone ever links.
  */
 
 export const B_ROUTES = ["", "playground", "docs", "legal"] as const;
 
 export type BRoute = (typeof B_ROUTES)[number];
 
-/** A `#/…` fragment that names no route. Rendered as such. */
+/** A path that names no route. Rendered as such, and served as a 404. */
 export const B_NOT_FOUND = " not-found" as const;
 
 export type BResolved = BRoute | typeof B_NOT_FOUND;
 
 export interface BLocation {
   route: BResolved;
-  /** The second segment, for `#/playground/<scenario id>`. */
+  /** The second segment, for `/playground/<scenario id>`. */
   param: string | null;
 }
 
 /** Only the playground takes a second segment. */
 const PARAMETERISED: ReadonlySet<BRoute> = new Set<BRoute>(["playground"]);
 
-export function readLocation(hash: string): BLocation {
-  /*
-   * No leading slash means an in-page anchor, which is this document's own
-   * business and not a route at all. `#top`, `#case`, and the bare `#` a
-   * browser leaves behind all land here.
-   */
-  if (!hash.startsWith("#/")) return { route: "", param: null };
+/**
+ * The scenario ids `/playground/<id>` accepts, and nothing else.
+ *
+ * A route used to be valid whatever its parameter, which was harmless while
+ * these were fragments: the playground opened on its picker and no server had
+ * an opinion. As real URLs it is not harmless in either direction. Every
+ * misspelling becomes a distinct address answering 200 with the same page,
+ * which is what a crawler indexes; and the server, having no document for it,
+ * answers with the not-found page while the client renders the playground over
+ * the top — a hydration mismatch that throws away the whole prerendered tree.
+ *
+ * So the parameter is part of what makes the route real, and the two ends
+ * agree about which URLs exist.
+ */
+const SCENARIO_IDS: ReadonlySet<string> = new Set(scenarios.map((s) => s.id));
 
-  const path = hash.slice(2).replace(/\/+$/, "");
+/** The path a route is served at. The inverse of `readLocation`. */
+export function pathFor(route: BRoute, param?: string | null): string {
+  const tail = param ? `/${encodeURIComponent(param)}` : "";
+  return route ? `/${route}${tail}` : "/";
+}
+
+export function readLocation(pathname: string): BLocation {
+  const path = pathname.replace(/^\/+/, "").replace(/\/+$/, "");
   if (path === "") return { route: "", param: null };
 
   const [head, ...rest] = path.split("/");
@@ -64,32 +86,40 @@ export function readLocation(hash: string): BLocation {
 
   const param = rest.length === 1 ? decodeURIComponent(rest[0]) : null;
   if (param !== null && !PARAMETERISED.has(match)) return { route: B_NOT_FOUND, param: null };
+  if (param !== null && !SCENARIO_IDS.has(param)) return { route: B_NOT_FOUND, param: null };
 
   return { route: match, param };
 }
 
-export type BGo = (next: BRoute, param?: string) => void;
-
-export function useBRoute(): [BLocation, BGo] {
-  const [location, setLocation] = useState<BLocation>(() =>
-    typeof window === "undefined" ? { route: "", param: null } : readLocation(window.location.hash),
+/**
+ * Where this document is, and nothing else.
+ *
+ * There is no `go`, no `pushState` and no `popstate` listener, because nothing
+ * in this design navigates from script: every destination is an `<a href>`, so
+ * every navigation is a document load and every document is prerendered. The
+ * client-side router that used to live here existed to make a fragment change
+ * swap a screen, and with real URLs the browser does that itself, better —
+ * back and forward included, at no cost in code.
+ *
+ * A crawler follows those anchors and gets a complete page each time, which is
+ * the same property, arrived at from the other side.
+ */
+export function useBRoute(): [BLocation] {
+  const [location] = useState<BLocation>(() =>
+    typeof window === "undefined"
+      ? readLocation(prerenderPath())
+      : readLocation(window.location.pathname),
   );
-
-  useEffect(() => {
-    const onChange = () => setLocation(readLocation(window.location.hash));
-    window.addEventListener("hashchange", onChange);
-    return () => window.removeEventListener("hashchange", onChange);
-  }, []);
 
   /*
    * Scroll to the anchor once the page that contains it exists.
    *
-   * The browser scrolls on a hash change by looking for the element *at that
-   * moment*, and coming from the playground there is no such element: the
-   * marketing page has not rendered yet. So clicking "The case" from the
-   * playground put `#case` in the address bar, rendered the right page, and
-   * left the reader at the top of it — a link that reports success and does
-   * nothing, which is the shape a visitor reads as broken.
+   * The browser scrolls on load by looking for the element *at that moment*,
+   * and arriving from another screen there is no such element: the marketing
+   * page has not rendered yet. So following `/#case` from the playground put
+   * the fragment in the address bar, rendered the right page, and left the
+   * reader at the top of it — a link that reports success and does nothing,
+   * which is the shape a visitor reads as broken.
    *
    * This effect runs after the commit that renders the section, so the element
    * is there to find. It is deliberately not conditional on where the reader
@@ -103,17 +133,41 @@ export function useBRoute(): [BLocation, BGo] {
   useEffect(() => {
     if (location.route !== "") return;
     const hash = window.location.hash;
-    if (!hash || hash.startsWith("#/")) return;
+    if (!hash) return;
     document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
   }, [location]);
 
-  return [
-    location,
-    (next: BRoute, param?: string) => {
-      const tail = param ? `/${encodeURIComponent(param)}` : "";
-      window.location.hash = next ? `/${next}${tail}` : "/";
-      // Landing mid-page after following a nav link reads as a broken link.
-      window.scrollTo({ top: 0 });
-    },
-  ];
+  /*
+   * Carry a link written against the old fragment routes over to its path.
+   *
+   * `#/docs` is not sent to a server, so nothing on the host can redirect it —
+   * it arrives as a request for `/` with a note only the client can read. A
+   * visitor following a link shared while the routes were fragments would land
+   * on the marketing page, which is the wrong screen and looks like the link
+   * rotted. `replace` rather than `assign` so the dead URL does not sit in the
+   * history and send them straight back on the first press of Back.
+   */
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#/")) return;
+    const moved = readLocation(hash.slice(1));
+    if (moved.route === B_NOT_FOUND) return;
+    window.location.replace(pathFor(moved.route, moved.param));
+  }, []);
+
+  return [location];
+}
+
+/**
+ * The path being prerendered, read from a global the prerender step sets.
+ *
+ * There is no `window.location` in the SSR pass, and every route has to render
+ * its own screen or the whole exercise produces four copies of the landing
+ * page. `globalThis` rather than an argument because `SiteB` is rendered by
+ * three different tools — the prerender step, the smoke check and the render
+ * audit — and threading a prop through all of them would let one of them
+ * forget, silently, in the direction of "looks fine".
+ */
+export function prerenderPath(): string {
+  return (globalThis as { __BEACON_PRERENDER_PATH__?: string }).__BEACON_PRERENDER_PATH__ ?? "/";
 }
