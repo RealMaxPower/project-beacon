@@ -1165,6 +1165,73 @@ class ContrastTests(unittest.TestCase):
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class PaletteConsistencyTests(unittest.TestCase):
+    """
+    No block may take its text from one palette and its surfaces from the other.
+
+    An external audit reported the playground's step numerals at 2.81:1 —
+    `rgb(137,146,153)` on `rgb(244,241,234)` — twice, across two builds. That
+    pair is the *ink* grey on the *paper* background, and measuring the
+    deployment in every path it can be reached by (media query, toggle, and
+    before hydration with JavaScript off) it does not occur: light resolves
+    4.98 and dark 5.98. The reading mixes two renders.
+
+    It is still worth foreclosing, because the mix is a state this stylesheet
+    could express. The band blocks deliberately set surfaces only — that is
+    what stopped prose changing colour halfway down a page — so a text token
+    added to one of them, or a palette named wrongly in a whole-palette block,
+    would produce exactly the pair reported, and every ratio published beside
+    those tokens would go quietly untrue.
+
+    So: a block that names `ink` may not also name `paper`.
+    """
+
+    TOKENS = SITE / "src-b" / "tokens-b.css"
+
+    def _blocks(self) -> list[tuple[str, str]]:
+        """Every rule that assigns `--b-*`, with its selector."""
+        source = self.TOKENS.read_text(encoding="utf-8")
+        source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+        found = []
+        for match in re.finditer(r"([^{}]+)\{([^{}]*?--b-[^{}]*?)\}", source, re.S):
+            selector = " ".join(match.group(1).split())
+            if selector.startswith("@"):
+                continue
+            found.append((selector, match.group(2)))
+        return found
+
+    def test_there_are_blocks_to_check(self) -> None:
+        self.assertGreaterEqual(len(self._blocks()), 4)
+
+    def test_no_block_mixes_the_two_palettes(self) -> None:
+        for selector, body in self._blocks():
+            palettes = {
+                name for name in ("ink", "paper") if re.search(rf"var\(--{name}-", body)
+            }
+            with self.subTest(selector=selector[:60]):
+                self.assertLessEqual(
+                    len(palettes),
+                    1,
+                    f"{selector} takes from {' and '.join(sorted(palettes))}; a rule that "
+                    f"mixes them puts one palette's text on the other's ground, which is "
+                    f"the shape of every contrast failure this file can produce",
+                )
+
+    def test_a_block_that_sets_prose_sets_its_ground_too(self) -> None:
+        """
+        The other half of the same rule. A block may set surfaces alone — the
+        alternating bands do, on purpose — but one that sets `--b-text` and
+        leaves `--b-bg` to whatever was in scope is asserting a contrast it
+        does not control.
+        """
+        for selector, body in self._blocks():
+            if "--b-text:" not in body:
+                continue
+            with self.subTest(selector=selector[:60]):
+                self.assertIn("--b-bg:", body, "sets prose without setting the ground under it")
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
 class AbridgedPanelTests(unittest.TestCase):
     """
     A panel that names a file may shorten it. It may not invent a value.

@@ -91,6 +91,18 @@ const ROUTES = [
    */
   ["b-toggled-light", "/playground", "dark", "light"],
   ["b-toggled-dark", "/playground", "light", "dark"],
+  /*
+   * Before hydration, which is a state real readers sit in and nothing was
+   * measuring.
+   *
+   * Every page is prerendered, so a reader with JavaScript off or still
+   * loading sees a complete page painted by the stylesheet alone — no
+   * `data-theme`, only the `prefers-color-scheme` block. That is a different
+   * cascade from either row above, and the contrast and layout checks apply to
+   * it exactly as they do to the others.
+   */
+  ["b-nojs-light", "/playground", "light", null, false],
+  ["b-nojs-dark", "/playground", "dark", null, false],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];
@@ -590,11 +602,13 @@ const browser = await chromium.launch(
   process.env.BEACON_BROWSER === "bundled" ? {} : { channel: "chrome" },
 );
 
-for (const [name, hash, scheme, toggleTo] of ROUTES) {
+for (const [name, hash, scheme, toggleTo, js = true] of ROUTES) {
   for (const width of WIDTHS) {
     const page = await browser.newPage({
       viewport: { width, height: 900 },
       ...(scheme ? { colorScheme: scheme } : {}),
+      // A row can ask for the page as it paints before any script runs.
+      javaScriptEnabled: js,
     });
     const where = `${name} @ ${width}px`;
 
@@ -654,7 +668,7 @@ for (const [name, hash, scheme, toggleTo] of ROUTES) {
      * about contrast rather than an artefact of when the screenshot fired.
      */
     await page.evaluate(() => {
-      for (const animation of document.getAnimations()) {
+      for (const animation of document.getAnimations?.() ?? []) {
         const timing = animation.effect && animation.effect.getTiming();
         if (timing && timing.iterations !== Infinity) animation.finish();
       }
