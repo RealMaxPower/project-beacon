@@ -78,7 +78,18 @@ class SignOffPolicyTests(unittest.TestCase):
         there is no git history to read — an unpacked sdist has none, and a
         test that cannot see the evidence must not report a verdict on it.
         """
-        log = _git("log", "--format=%H%x1f%s%x1f%b%x1e")
+        # `%(trailers:...)` rather than `%b` and a regex over it. The two
+        # disagree, and the disagreement is the whole point: a `Signed-off-by:`
+        # line with prose after it still matches a line-anchored regex, and git
+        # — like GitHub's DCO app — does not see it as a trailer at all, because
+        # a trailer block ends at the first paragraph that is not one. This
+        # check used to pass a commit that a real DCO gate would reject, which
+        # is worse than not checking: it certifies the wrong thing. Found by
+        # amending a message and appending a paragraph below the sign-off.
+        log = _git(
+            "log",
+            "--format=%H%x1f%s%x1f%(trailers:key=Signed-off-by,valueonly)%x1e",
+        )
         if not log:
             self.skipTest("no git history available")
 
@@ -104,8 +115,8 @@ class SignOffPolicyTests(unittest.TestCase):
         )
         unsigned = [
             f"{sha[:9]} {subject}"
-            for sha, subject, body in commits[: boundary + 1]
-            if not re.search(r"^Signed-off-by: .+ <.+>$", body, re.M)
+            for sha, subject, trailer in commits[: boundary + 1]
+            if not re.fullmatch(r".+ <.+@.+>", trailer.strip())
         ]
         self.assertEqual(
             unsigned,
