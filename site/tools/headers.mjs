@@ -67,8 +67,38 @@ function documentFor(pathname) {
   return { file: join(DIST, "index.html"), served: "/" };
 }
 
+/**
+ * Vercel injects the Web Analytics endpoints at the edge; they are not in
+ * `dist/`.
+ *
+ * Without this the static server answered them with the SPA fallback, so the
+ * browser refused an HTML document offered as a script and the page was
+ * reported as failing — a defect in the harness rather than in the policy.
+ * Answering with the right content type and an empty body reproduces
+ * production's *shape*, which is what this tool is checking: if `script-src`
+ * ever stopped allowing `'self'`, or `connect-src` went back to `'none'`, the
+ * refusal would still be a CSP refusal and would still be caught here.
+ */
+function vercelEdgeStub(pathname) {
+  if (pathname === "/_vercel/insights/script.js") {
+    return { type: "text/javascript", body: "" };
+  }
+  if (pathname.startsWith("/_vercel/insights/")) {
+    return { type: "application/json", body: "{}" };
+  }
+  return null;
+}
+
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, "http://x").pathname;
+
+  const stub = vercelEdgeStub(pathname);
+  if (stub) {
+    res.writeHead(200, { "Content-Type": stub.type, ...headersFor(pathname) });
+    res.end(stub.body);
+    return;
+  }
+
   // Filesystem first, then the rewrites — the order Vercel uses.
   const candidate = join(DIST, pathname);
   const onDisk = existsSync(candidate) && extname(candidate);

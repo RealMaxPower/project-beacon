@@ -1130,5 +1130,90 @@ class ContrastTests(unittest.TestCase):
         self.assertGreaterEqual(checked, 8, "far fewer prose colours checked than expected")
 
 
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class PrivacyPolicyTests(unittest.TestCase):
+    """
+    The legal pages quote CSP directives by name. Nothing checked they were the
+    directives the site actually sends.
+
+    That gap had already produced a false statement once: turning on Web
+    Analytics required relaxing `connect-src` from `'none'` to `'self'`, and
+    both pages still said `'none'` and "runs no analytics" until the copy was
+    changed by hand in the same commit. Quoting a directive is the strongest
+    form the claim can take — it is checkable — but only if something checks it.
+    """
+
+    #: Every page that describes the policy, in each design.
+    LEGAL_PAGES = (
+        SRC / "screens" / "marketing" / "Legal.tsx",
+        SITE / "src-b" / "sections" / "LegalScreen.tsx",
+    )
+
+    def _policy(self) -> dict[str, str]:
+        config = json.loads((SITE / "vercel.json").read_text(encoding="utf-8"))
+        for rule in config.get("headers", []):
+            for header in rule.get("headers", []):
+                if header["key"].lower() == "content-security-policy":
+                    return {
+                        directive.split(" ", 1)[0]: directive
+                        for directive in (
+                            part.strip() for part in header["value"].split(";")
+                        )
+                        if directive
+                    }
+        self.fail("no Content-Security-Policy in site/vercel.json")
+
+    def test_every_directive_a_page_quotes_is_one_the_site_sends(self) -> None:
+        policy = self._policy()
+        quoted = 0
+        for page in self.LEGAL_PAGES:
+            text = page.read_text(encoding="utf-8")
+            # As written in JSX, where the apostrophes may be entities.
+            text = text.replace("&apos;", "'").replace("&#x27;", "'")
+            for name, actual in policy.items():
+                for match in re.finditer(rf"\b{re.escape(name)} '[a-z]+'", text):
+                    quoted += 1
+                    with self.subTest(page=page.name, directive=name):
+                        self.assertEqual(
+                            match.group(0),
+                            actual,
+                            f"{page.name} says {match.group(0)!r}, "
+                            f"but vercel.json sends {actual!r}",
+                        )
+        self.assertGreaterEqual(
+            quoted, 4, "far fewer directives quoted than expected — has the copy moved?"
+        )
+
+    def test_a_page_that_can_send_anything_discloses_what(self) -> None:
+        """
+        `connect-src 'none'` is self-evidently private and needs no disclosure.
+        Anything looser does, and the two must not drift apart: this is what
+        turns a policy change into a documentation change automatically.
+        """
+        connect = self._policy().get("connect-src", "")
+        for page in self.LEGAL_PAGES:
+            text = page.read_text(encoding="utf-8")
+            # `assertIn` against a whole source file prints the whole source
+            # file. The verdict is what matters here, not the haystack.
+            with self.subTest(page=page.name):
+                if connect == "connect-src 'none'":
+                    self.assertTrue(
+                        "no analytics" in text,
+                        f"{page.name} does not say the site runs no analytics, "
+                        f"which {connect} makes true and worth saying",
+                    )
+                    continue
+                self.assertFalse(
+                    "runs no analytics" in text,
+                    f"{page.name} claims no analytics, but {connect} permits sending",
+                )
+                for disclosure in ("Vercel Web Analytics", "/_vercel/insights/view"):
+                    self.assertTrue(
+                        disclosure in text,
+                        f"{connect} permits sending and {page.name} "
+                        f"does not disclose {disclosure!r}",
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

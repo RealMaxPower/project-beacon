@@ -88,20 +88,30 @@ export function LegalScreen() {
           Privacy
         </h2>
         <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
-          This site sets no cookies, runs no analytics, and has no forms. It makes
-          no requests to any other host — its Content-Security-Policy declares{" "}
-          <code className="font-b-mono text-[13.5px]">connect-src &apos;none&apos;</code>, so the
-          page cannot send anything anywhere, and{" "}
-          <code className="font-b-mono text-[13.5px]">default-src &apos;none&apos;</code> means
-          nothing loads from a third party either. The typefaces are served from
-          this origin rather than a font CDN precisely so that rendering a heading
-          does not hand your address to someone else.
+          This site sets no cookies and has no forms. It makes no requests to any
+          other host — its Content-Security-Policy declares{" "}
+          <code className="font-b-mono text-[13.5px]">default-src &apos;none&apos;</code> and{" "}
+          <code className="font-b-mono text-[13.5px]">connect-src &apos;self&apos;</code>, so
+          nothing loads from a third party and the page cannot send anything off
+          this origin. The typefaces are served from here rather than a font CDN
+          precisely so that rendering a heading does not hand your address to
+          someone else.
+        </p>
+        <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
+          It counts page views, using Vercel Web Analytics. That count is what{" "}
+          <code className="font-b-mono text-[13.5px]">connect-src &apos;self&apos;</code>{" "}
+          permits and it is the only thing this page sends: a request to{" "}
+          <code className="font-b-mono text-[13.5px]">/_vercel/insights/view</code>{" "}
+          on this origin, carrying the path you are on. There is no cookie, no
+          identifier, and nothing that follows you to another site. It exists so
+          that &ldquo;is anyone reading the docs&rdquo; has an answer other than
+          a guess.
         </p>
         <p className="b-lede mb-3 max-w-[66ch] text-[15px]">
           The case explorer and the playground run entirely in your browser. They
           replay evidence recorded ahead of time and shipped with the page;
-          nothing you do there is transmitted, because there is nowhere for it to
-          go.
+          nothing you do there — no scenario you pick, no run you open — is
+          transmitted.
         </p>
         <p className="b-lede max-w-[66ch] text-[15px]">
           What remains is what any web server sees. This site is hosted on Vercel,

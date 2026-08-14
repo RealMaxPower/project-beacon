@@ -196,18 +196,25 @@ check("HostedLab", () => renderToString(<HostedLab onGo={() => {}} />), "no form
 
 // The privacy claims are only true while the policy that enforces them is in
 // place, so the page names the directives rather than describing the behaviour
-// loosely. If `connect-src 'none'` is ever relaxed, this page is the thing
-// that becomes false.
+// loosely. That was not a hypothetical: `connect-src` was relaxed from 'none'
+// to 'self' to let Web Analytics count a page view, and this page had to say
+// so in the same commit. Both directives are pinned here, so the next
+// relaxation cannot happen quietly either.
 check(
   "Legal",
   () => renderToString(<Legal onGo={() => {}} />),
   "Apache License 2.0",
   // As React emits it: the apostrophes in the directive are HTML-escaped, so
   // the literal source string never appears in the served markup.
-  "connect-src &#x27;none&#x27;",
+  "connect-src &#x27;self&#x27;",
+  "default-src &#x27;none&#x27;",
   "THIRD-PARTY-NOTICES.txt",
   "OFL.txt",
   "no cookies",
+  // Analytics is disclosed, or the directive above is a relaxation nobody told
+  // the reader about.
+  "Vercel Web Analytics",
+  "/_vercel/insights/view",
 );
 
 check(
@@ -485,10 +492,13 @@ check(
   "Site B · #/legal",
   () => siteBAt("#/legal"),
   "Apache License 2.0",
-  "connect-src &#x27;none&#x27;",
+  "connect-src &#x27;self&#x27;",
+  "default-src &#x27;none&#x27;",
   "THIRD-PARTY-NOTICES.txt",
   "OFL.txt",
   "no cookies",
+  "Vercel Web Analytics",
+  "/_vercel/insights/view",
   "conduct@beaconlab.dev",
 );
 
