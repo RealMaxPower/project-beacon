@@ -116,6 +116,30 @@ console.log(
 if (sized.length === 0) failures += 1;
 
 /*
+ * A lifted declaration a stylesheet could still overwrite.
+ *
+ * The check above probes a `width`, which nothing else on this site sets, so
+ * it passed while a different lifted property was being clobbered: the
+ * pipeline's per-stage `animation-delay` moved into `/prerender.css`, and
+ * `.b-stage` set `animation:` as a shorthand — same specificity, later in
+ * source order, and a shorthand resets every longhand it omits. Six stages
+ * revealed at once. The animation ran, the fade was right, and the sequence it
+ * exists to show was gone, with nothing wrong in the DOM to find.
+ *
+ * So this probes a property that a shorthand *can* reset, which is the case
+ * the other probe cannot see.
+ */
+await page.goto(`${base}/`, { waitUntil: "networkidle" });
+const staged = await page.evaluate(() =>
+  [...document.querySelectorAll(".b-stage")].map((el) => getComputedStyle(el).animationDelay),
+);
+const staggered = new Set(staged).size > 1;
+if (!staggered) failures += 1;
+console.log(
+  `  ${staggered ? "ok  " : "FAIL"} lifted animation-delay survives the stylesheet: ${new Set(staged).size} distinct of ${staged.length}`,
+);
+
+/*
  * The alias block, checked where it can actually be wrong.
  *
  * The shared playground is styled with the first design's utility names, and

@@ -589,8 +589,30 @@
   }
 }
 
+/*
+ * Longhands, because the shorthand resets the delay that makes this a stagger.
+ *
+ * `Pipeline` gives each stage `style={{ animationDelay }}` — 140ms, then 130ms
+ * apart — and prerendering lifts those into `/prerender.css` as
+ * `[data-bs="N"]{animation-delay:140ms}`, since `style-src 'self'` forbids the
+ * attribute. That rule and this one have identical specificity, and
+ * `/prerender.css` is linked first, so this one wins on source order — and
+ * `animation:` as a shorthand sets every longhand it omits back to its initial
+ * value, including `animation-delay: 0s`.
+ *
+ * The result was six stages revealing simultaneously: the animation ran, the
+ * fade was correct, and the sequence it exists to show was gone. Nothing in
+ * the DOM or the keyframes looked wrong, because nothing was.
+ *
+ * `headers.mjs` already probes that lifted declarations survive the policy,
+ * but it probes a `width` — a property no shorthand here resets — so it went
+ * on passing while this was clobbered.
+ */
 .b-stage {
-  animation: b-stage-in 420ms ease-out both;
+  animation-name: b-stage-in;
+  animation-duration: 420ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
 }
 
 /*
