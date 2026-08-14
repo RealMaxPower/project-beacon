@@ -158,7 +158,12 @@ export function AssertionRow({ assertion, scenarioId, open, onToggle }: Props) {
 
       {open && (
         <div id={panelId} className="border-t border-line bg-sunken px-5 py-4">
-          <pre className="mb-3 overflow-x-auto font-mono text-[11.5px] leading-relaxed">
+          <pre
+            tabIndex={0}
+            role="region"
+            aria-label="Expected against actual, scrollable"
+            className="mb-3 overflow-x-auto font-mono text-[11.5px] leading-relaxed"
+          >
             <span className="text-text-faint">expected  </span>
             {lines(assertion.expected)}
             {"\n"}

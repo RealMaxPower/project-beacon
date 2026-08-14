@@ -323,6 +323,143 @@ const MEASURE = `() => {
      * everything else — reporting a footer link as a 44px failure was the kind
      * of noise that gets a check switched off.
      */
+    /*
+     * Contrast, measured on the composited pixel rather than in the stylesheet.
+     *
+     * A Python test recomputes every ratio published in the token file, and
+     * that check is sound and structurally blind to this: the stepper drew its
+     * 01-06 numerals with 60% alpha, so the colour a reader actually sees was
+     * never in any stylesheet. It composited to 2.36 on light and 2.89 on
+     * dark, against a floor of 4.5, on six nodes in both themes. An external
+     * audit found it with axe.
+     *
+     * So this walks elements that render text, multiplies the opacity chain,
+     * composites over the nearest painted background, and reports the ratio.
+     * Disabled controls are exempt by 1.4.3 itself; sr-only text is not
+     * painted. aria-hidden is deliberately NOT exempt — it hides a thing
+     * from a screen reader and changes nothing about what a low-vision reader
+     * has to read.
+     */
+    /*
+     * A pane that scrolls and cannot be focused is mouse-only.
+     *
+     * The audit already counted scrollers and whether they carry a visual
+     * cue — which is about noticing them, not reaching them. Eight code panes
+     * held evidence that ran past their right edge with no way for a keyboard
+     * to move it: the before/after diff, the expected-against-actual block,
+     * every terminal. An external audit found two of them with axe; the rest
+     * were the same shape.
+     *
+     * A scroller is exempt if something inside it can take focus, because
+     * tabbing to that moves the pane.
+     */
+    unreachableScrollers: [...document.querySelectorAll("body *")]
+      .filter((el) => {
+        const s = getComputedStyle(el);
+        const scrolls =
+          (/(auto|scroll)/.test(s.overflowX) && el.scrollWidth > el.clientWidth + 2) ||
+          (/(auto|scroll)/.test(s.overflowY) && el.scrollHeight > el.clientHeight + 2);
+        if (!scrolls) return false;
+        if (el.tabIndex >= 0) return false;
+        return !el.querySelector("a[href], button, input, select, textarea, [tabindex]");
+      })
+      .map((el) => ({
+        tag: el.tagName.toLowerCase(),
+        text: el.textContent.trim().slice(0, 34),
+      })),
+
+    lowContrast: (() => {
+      /*
+       * The painted pixel, not the colour string.
+       *
+       * Two traps here, both found the hard way. This function is a template
+       * literal that gets stringified for the page, so a backslash in a regex
+       * is consumed building the string — /rgba?\(…\)/ arrived as /rgba?(…)/,
+       * every channel parsed as NaN, and NaN fails every comparison including
+       * the one that decides whether to report. The check ran and measured
+       * nothing.
+       *
+       * Then, parsing by hand, the header background computes as
+       * oklab(0.9585 0.00047 0.00985 / 0.9) — Tailwind's /90 modifier on a
+       * token defined in oklab — and reading those three numbers as r, g, b
+       * gives near-black. The site's own wordmark was reported at 1.17:1.
+       *
+       * So nothing is parsed. The colour is painted into a 1x1 canvas and the
+       * bytes are read back, which is what the browser will do to the pixel
+       * anyway, in whatever colour space the value happens to be written in.
+       */
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const parse = (value) => {
+        if (!value) return null;
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = "#000000";
+        ctx.fillStyle = value;
+        ctx.fillRect(0, 0, 1, 1);
+        const d = ctx.getImageData(0, 0, 1, 1).data;
+        return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 };
+      };
+      const over = (fg, bg, alpha) => ({
+        r: fg.r * alpha + bg.r * (1 - alpha),
+        g: fg.g * alpha + bg.g * (1 - alpha),
+        b: fg.b * alpha + bg.b * (1 - alpha),
+      });
+      const lum = (c) => {
+        const f = (v) => {
+          v /= 255;
+          return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+      };
+      const ratio = (a, b) => {
+        const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+        return (hi + 0.05) / (lo + 0.05);
+      };
+
+      const out = [];
+      for (const el of document.querySelectorAll("body *")) {
+        const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own) continue;
+        if (el.closest(".sr-only")) continue;
+        if (el.closest("[disabled], [aria-disabled=true]")) continue;
+        const s = getComputedStyle(el);
+        if (s.visibility === "hidden" || s.display === "none") continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+
+        let alpha = 1;
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+          alpha *= Number(getComputedStyle(n).opacity);
+        }
+        const fg = parse(s.color);
+        if (!fg) continue;
+
+        let bg = null;
+        for (let n = el; n; n = n.parentElement) {
+          const c = parse(getComputedStyle(n).backgroundColor);
+          if (c && c.a > 0.5) { bg = c; break; }
+        }
+        if (!bg) continue;
+
+        const painted = over(fg, bg, alpha * fg.a);
+        const size = parseFloat(s.fontSize);
+        const bold = Number(s.fontWeight) >= 700;
+        const floor = size >= 24 || (bold && size >= 18.66) ? 3 : 4.5;
+        const measured = ratio(painted, bg);
+        if (measured + 0.005 < floor) {
+          out.push({
+            text: el.textContent.trim().slice(0, 30),
+            ratio: Math.round(measured * 100) / 100,
+            floor,
+            alpha: Math.round(alpha * 100) / 100,
+          });
+        }
+      }
+      return out;
+    })(),
+
     smallTargets: [...document.querySelectorAll("button, a[href], [role=button]")]
       .filter((el) => {
         if (el.closest(".sr-only")) return false;
@@ -477,10 +614,31 @@ for (const [name, hash, scheme] of ROUTES) {
     // The timeline streams; let it settle so the measurement is of a real state.
     await page.waitForTimeout(400);
 
+    /*
+     * Jump every finite animation to its end before measuring.
+     *
+     * The staged reveal fades six bands in over about 1.2s, so a measurement
+     * taken at 400ms catches text at whatever opacity it happened to be
+     * passing through — the contrast check reported the hero's own verdict at
+     * 1.92:1, composited at 0.39 alpha, which is a frame rather than a defect.
+     * Finishing them is better than waiting them out: it is deterministic, it
+     * costs nothing, and the end state is the one a reader actually sits with.
+     *
+     * Infinite animations are left running. Nothing can be "finished" about a
+     * pulse, and an element that spends its life mid-cycle is a real question
+     * about contrast rather than an artefact of when the screenshot fired.
+     */
+    await page.evaluate(() => {
+      for (const animation of document.getAnimations()) {
+        const timing = animation.effect && animation.effect.getTiming();
+        if (timing && timing.iterations !== Infinity) animation.finish();
+      }
+    });
+
     // Invoked, not just evaluated: a string passed to `evaluate` is treated as
     // an expression, and a bare arrow function is an expression whose value is
     // the function itself.
-    const { boxes, collisions, docWidth, viewport, handless, lopsidedBands, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
+    const { boxes, collisions, docWidth, viewport, handless, lopsidedBands, lowContrast, unreachableScrollers, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
 
     for (const message of errors) report(where, `console error: ${message}`);
 
@@ -508,6 +666,17 @@ for (const [name, hash, scheme] of ROUTES) {
       report(
         where,
         `<${scroller.tag}> hides ${scroller.hidden}px of controls with no scroll cue: ${scroller.labels.join(", ")}`,
+      );
+    }
+
+    for (const s of unreachableScrollers) {
+      report(where, `<${s.tag}> scrolls but cannot be focused: "${s.text}"`);
+    }
+
+    for (const c of lowContrast) {
+      report(
+        where,
+        `contrast ${c.ratio}:1 against a floor of ${c.floor}${c.alpha < 1 ? `, composited at ${c.alpha} alpha` : ""}: "${c.text}"`,
       );
     }
 

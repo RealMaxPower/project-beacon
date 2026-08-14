@@ -29,7 +29,35 @@
     />
     <meta name="twitter:card" content="summary" />
 
+    <!--
+      The two faces the first screen paints with, and only those two.
+
+      Every @font-face is `font-display: swap` with no `size-adjust` fallback
+      metrics, so the h1 can in principle paint in a fallback and reflow when
+      Archivo lands. It does not, in five measurements including throttled
+      cold-cache — under real throttling the render-blocking CSS delays first
+      paint past font arrival, so the heading paints in Archivo the first time.
+      Lighthouse's simulated model disagrees and blames the h1 for CLS 0.108;
+      that is an artifact of estimating timings from an unthrottled trace.
+
+      These preloads are insurance rather than a fix for something observed.
+      Nothing currently *guarantees* that ordering, and it costs two hints.
+      Latin only: the ext subsets are for text this site does not have, and
+      preloading a file the page never requests is a wasted round trip on the
+      critical path.
+    -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/archivo-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin />
+
     <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+    <!--
+      The legacy paths. Modern browsers are content with the SVG above; some
+      crawlers, feed readers and iOS home-screen saves still request these
+      exact names, and each one was a 404.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
     <div id="root"></div>

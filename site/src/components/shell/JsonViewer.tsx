@@ -46,6 +46,9 @@ export function JsonViewer({ value, source, label, provenance = "repo", maxHeigh
 
       <pre
         style={{ maxHeight }}
+        tabIndex={0}
+        role="region"
+        aria-label="Document, scrollable"
         className="overflow-auto px-4 py-3 font-mono text-[11.5px] leading-relaxed"
       >
         {text}

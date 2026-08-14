@@ -39,7 +39,12 @@ export function ArtifactPanel({ evidence }: Props) {
       </header>
 
       {body !== undefined ? (
-        <pre className="max-h-96 overflow-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="Artifact contents, scrollable"
+          className="max-h-96 overflow-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap"
+        >
           {typeof body === "string" ? body : JSON.stringify(body, null, 2)}
         </pre>
       ) : (

@@ -299,7 +299,12 @@ export function Integrity() {
             exactly these bytes — no trailing newline. Run it yourself and you will get the digest
             above, which is the point of printing it rather than describing it.
           </p>
-          <pre className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-b-text">
+          <pre
+            tabIndex={0}
+            role="region"
+            aria-label="Command to reproduce the digest, scrollable"
+            className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-b-text"
+          >
 {`printf '${payload.replace(/\n/g, "\\n")}' | shasum -a 256`}
           </pre>
         </div>

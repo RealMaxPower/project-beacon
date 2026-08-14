@@ -62,6 +62,11 @@ const FILES = [
   // anywhere, and this URL is as open to a reader as to a crawler.
   ["/index.md", "text/markdown", "canonical: "],
   ["/docs.md", "text/markdown", "canonical: "],
+  // The legacy icon paths, each of which was a 404. Modern browsers take the
+  // SVG; crawlers, feed readers and iOS home-screen saves ask for these names.
+  ["/favicon.ico", "image/", "PNG"],
+  ["/apple-touch-icon.png", "image/png", "PNG"],
+  ["/site.webmanifest", "application/manifest+json", "Project Beacon"],
 ];
 
 let failures = 0;

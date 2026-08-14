@@ -137,7 +137,12 @@ export function StateDiff({ evidence, events }: Props) {
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.09em] text-text-faint">
                     Before
                   </p>
-                  <pre className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed">
+                  <pre
+                    tabIndex={0}
+                    role="region"
+                    aria-label="Value, scrollable"
+                    className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed"
+                  >
                     {row.before}
                   </pre>
                 </div>
@@ -145,7 +150,12 @@ export function StateDiff({ evidence, events }: Props) {
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.09em] text-text-faint">
                     After
                   </p>
-                  <pre className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed">
+                  <pre
+                    tabIndex={0}
+                    role="region"
+                    aria-label="Value, scrollable"
+                    className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed"
+                  >
                     {row.after}
                   </pre>
                 </div>

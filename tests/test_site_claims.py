@@ -869,11 +869,30 @@ class VisualVocabularyTests(unittest.TestCase):
         Every other claim is hashed or counted against a source in the
         repository; a picture has no source to compare to, so it can go stale
         the day the fixtures are re-recorded with nothing noticing.
+
+        The tab icons are the exception, and the reason they are allowed is the
+        clause above rather than in spite of it: they *do* have a source. They
+        are `mark.svg` rasterised by `tools/build_icons.mjs`, they are browser
+        chrome rather than content, and `/favicon.ico` and
+        `/apple-touch-icon.png` were 404ing for every crawler and iOS
+        home-screen save that still asks for those exact names.
+
+        Not byte-compared against a rebuild, unlike the fixtures and the
+        notices: PNG encoders differ between browser versions, and a check that
+        fails on a Chrome upgrade is one people learn to skip. What is checked
+        is that each is derived rather than drawn — the generator exists, and
+        nothing else raster does.
         """
+        ICONS = {"favicon.ico", "apple-touch-icon.png", "icon-16.png", "icon-32.png"}
+        generator = SITE / "tools" / "build_icons.mjs"
+        self.assertTrue(generator.is_file(), "the icons have no generator")
+        self.assertIn("mark.svg", generator.read_text(encoding="utf-8"))
+
         rasters = [
             p
             for p in (SITE / "public").rglob("*")
             if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif"}
+            and p.name not in ICONS
         ]
         self.assertEqual(rasters, [], "the site ships vector and text only")
 

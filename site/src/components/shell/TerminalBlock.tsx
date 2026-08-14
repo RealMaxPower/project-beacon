@@ -104,7 +104,12 @@ export function TerminalBlock({ lines, label, copyable = false }: Props) {
           )}
         </figcaption>
       )}
-      <pre className="overflow-x-auto px-[18px] py-5 font-mono text-[13.5px] leading-[2] text-[#E9EBEF]">
+      <pre
+        tabIndex={0}
+        role="region"
+        aria-label={label ? `${label}, scrollable` : "Commands, scrollable"}
+        className="overflow-x-auto px-[18px] py-5 font-mono text-[13.5px] leading-[2] text-[#E9EBEF]"
+      >
         {lines.map((line, index) => (
           <span
             key={index}

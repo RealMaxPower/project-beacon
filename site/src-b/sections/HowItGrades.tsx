@@ -102,7 +102,12 @@ export function HowItGrades() {
             declared before the run, not after it
           </span>
         </div>
-        <pre className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-[var(--ink-text)]">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="scenario.json, scrollable"
+          className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-[var(--ink-text)]"
+        >
           {CONTRACT}
         </pre>
       </div>

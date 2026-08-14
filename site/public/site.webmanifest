@@ -1,0 +1,26 @@
+{
+  "name": "Project Beacon",
+  "short_name": "Beacon",
+  "description": "Evidence for what an AI agent actually did.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
+  "icons": [
+    {
+      "src": "/icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

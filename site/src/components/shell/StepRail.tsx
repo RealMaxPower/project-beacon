@@ -71,7 +71,24 @@ export function StepRail({ current, reached, onGo }: Props) {
                     : "text-text-faint hover:bg-sunken"
               }`}
             >
-              <span aria-hidden="true" className="tabular-nums opacity-60">
+              {/*
+                No `opacity-60`, because there is none to spend.
+                
+                The numeral inherits the button's colour, and on an inactive
+                step that is `--b-faint` — the dimmest token in the palette
+                that still clears AA, at 5.98 on dark and 4.98 on light. Sixty
+                percent alpha composites those to 2.89 and 2.36; even 75% lands
+                at 3.86 and 3.07. The active step has headroom and the inactive
+                one has none, so dimming was never available here, only
+                unmeasured.
+                
+                `aria-hidden` does not exempt it: WCAG 1.4.3 is about what a
+                low-vision reader can see, and a screen reader skipping it says
+                nothing about that. The digits stay distinct from the label by
+                being tabular monospace beside a word, which is what they were
+                already doing.
+              */}
+              <span aria-hidden="true" className="tabular-nums">
                 {String(position + 1).padStart(2, "0")}
               </span>
               {step.label}
