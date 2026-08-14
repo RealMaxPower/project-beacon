@@ -194,3 +194,16 @@ jobs:
       - name: Assert the security headers reach the wire
         working-directory: site
         run: npm run headers
+
+      # These read `site/dist/`, which is generated and gitignored, so they
+      # skip everywhere it does not exist — including in the job that runs the
+      # rest of the suite. A check that skips where it matters is the shape
+      # this repository has been bitten by twice, so it runs here, in the one
+      # job that has built the thing it is about.
+      - name: Assert the markdown twins say what the pages say
+        run: |
+          python3 -m unittest -v tests.test_site_markdown 2>&1 | tee /tmp/twins.log
+          if grep -q "skipped" /tmp/twins.log; then
+            echo "::error::a markdown twin check skipped in the job that builds the site"
+            exit 1
+          fi

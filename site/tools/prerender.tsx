@@ -27,6 +27,7 @@ import { SiteB } from "@b/SiteB";
 import { PAGES, SITE_ORIGIN, SITE_NAME, FAQ, type Page } from "@b/pages";
 import { scenarios } from "@/data/fixtures";
 import { scenarioCopy } from "@/data/copy";
+import { toMarkdown } from "./to-markdown";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = join(ROOT, "dist");
@@ -210,6 +211,7 @@ function head(page: Page): string {
     `<meta name="twitter:card" content="summary" />`,
     `<meta name="twitter:title" content="${escapeAttr(page.title)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(page.description)}" />`,
+    `<link rel="alternate" type="text/markdown" href="${markdownPath(page)}" />`,
     `<link rel="stylesheet" href="${PRERENDER_CSS}" />`,
     `<script type="application/ld+json">${structuredData(page)}</script>`,
   ].join("\n    ");
@@ -275,11 +277,74 @@ const scenarioPages: Page[] = scenarios.map((scenario) => {
 
 const ALL: Page[] = [...PAGES, ...scenarioPages];
 
+/**
+ * Where a page's markdown twin lives: the same path with `.md` on it.
+ *
+ * `/` becomes `/index.md` because a directory cannot also be a file. Every
+ * other route already ends in a segment, so `/docs` becomes `/docs.md` — a URL
+ * anyone can guess, and one a person can open as readily as a model. That is
+ * the whole difference between this and serving machines a private edition:
+ * there is no audience test anywhere in it, only a format.
+ */
+function markdownPath(page: Page): string {
+  return page.path === "/" ? "/index.md" : `${page.path}.md`;
+}
+
+/**
+ * The twin: front matter a model can trust, then the page.
+ *
+ * The header is not decoration. A markdown file arriving without its canonical
+ * URL is a fragment with no way back to the thing it describes, and a model
+ * quoting it has nothing to cite.
+ */
+function markdownFor(page: Page, markup: string, others: Page[]): string {
+  /*
+   * From <main> through the footer, not <main> alone.
+   *
+   * The header is navigation and repeats on every page, so it goes. The footer
+   * does not: it carries the sentence that a passing report is not a safety
+   * certification, on every page, which is the one line that has to survive
+   * into anything a model quotes. Taking only <main> dropped it from all
+   * eleven twins — caught by the test that looks for it.
+   */
+  const from = markup.indexOf("<main");
+  const to = markup.lastIndexOf("</footer>");
+  const body = toMarkdown(markup.slice(from, to === -1 ? undefined : to + "</footer>".length));
+  const links = others
+    .filter((other) => other.path !== page.path)
+    .map((other) => `- [${other.title}](${SITE_ORIGIN}${markdownPath(other)})`)
+    .join("\n");
+
+  return [
+    "---",
+    `title: ${page.title}`,
+    `description: ${page.description}`,
+    `canonical: ${SITE_ORIGIN}${page.path}`,
+    `source: ${REPO}`,
+    `licence: Apache-2.0`,
+    "---",
+    "",
+    body.trim(),
+    "",
+    "## Other pages",
+    "",
+    links,
+    "",
+  ].join("\n");
+}
+
 const written: string[] = [];
 for (const page of ALL) {
+  const markup = render(page);
+
   const target = page.path === "/" ? join(DIST, "index.html") : join(DIST, page.path, "index.html");
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, document(page, render(page)));
+  writeFileSync(target, document(page, markup));
+
+  const twin = join(DIST, markdownPath(page));
+  mkdirSync(dirname(twin), { recursive: true });
+  writeFileSync(twin, markdownFor(page, markup, ALL));
+
   written.push(page.path);
 }
 
@@ -294,8 +359,9 @@ for (const page of ALL) {
 const notFound = shell
   .replace(
     /<title>.*?<\/title>/s,
-    // No canonical and no structured data: this document's URL is whatever
-    // the visitor mistyped, so there is nothing true to declare about it.
+    // No canonical, no structured data and no markdown twin: this document's
+    // URL is whatever the visitor mistyped, so there is nothing true to
+    // declare about it and nothing worth handing a model.
     `<title>Page not found — ${SITE_NAME}</title>\n    ` +
       '<meta name="robots" content="noindex, follow" />\n    ' +
       `<link rel="stylesheet" href="${PRERENDER_CSS}" />`,
@@ -325,10 +391,83 @@ writeFileSync(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="${SITEMAP_NS}">\n${entries}\n</urlset>\n`,
 );
 
+/*
+ * `llms.txt`, and an honest note about what it is.
+ *
+ * A proposed convention rather than a standard, and crawler uptake is unproven
+ * — it is here because it costs one file and is inert if nothing reads it. The
+ * value is not the format: it is that the authoritative documents for this
+ * project are in a repository, and a model that finds the marketing site first
+ * should be pointed at them rather than left to infer the project from a
+ * landing page.
+ */
+const llms = [
+  `# ${SITE_NAME}`,
+  "",
+  `> ${PAGES[0].description}`,
+  "",
+  "Beacon is Apache-2.0, Python 3.11+, and standard library only. It contains no",
+  "model and never calls one: grading is string and state comparison against",
+  "assertions declared before the run. Every page on this site is also served as",
+  "markdown at the same path with `.md` appended — the same content, not a",
+  "different edition for machines.",
+  "",
+  "## Pages",
+  "",
+  ...ALL.map((page) => `- [${page.title}](${SITE_ORIGIN}${markdownPath(page)}): ${page.description}`),
+  "",
+  "## Source",
+  "",
+  `- [Repository](${REPO}): the harness, the scenarios, and this site.`,
+  `- [Production readiness ledger](${REPO}/blob/main/docs/production-readiness.md): what Beacon is ready to be trusted with and what it is not, one limitation at a time.`,
+  `- [Protocol contracts](${REPO}/blob/main/docs/protocol-contracts.md): what Beacon sends and expects over MCP, A2A and the JSONL bridge.`,
+  `- [Architecture](${REPO}/blob/main/docs/architecture.md): the run lifecycle and the boundary that keeps the core ignorant of any model provider.`,
+  "",
+  "## Answers",
+  "",
+  ...FAQ.flatMap(({ q, a }) => [`### ${q}`, "", a, ""]),
+].join("\n");
+
+writeFileSync(join(DIST, "llms.txt"), llms);
+
+/*
+ * Everything is allowed, named rather than implied.
+ *
+ * `User-agent: *` already permitted every one of these, so listing them adds
+ * no permission — it records that the permission is a decision. A project
+ * arguing that agent behaviour should be inspectable has a weak position from
+ * which to hide its own pages from the agents, and the whole repository is
+ * Apache-2.0 and public: refusing a crawler would withhold nothing it could
+ * not clone.
+ *
+ * The crawlers are split by what they do, because that is the distinction a
+ * publisher would draw if it wanted to draw one, and a reader should be able
+ * to see that it was considered and declined.
+ */
 writeFileSync(
   join(DIST, "robots.txt"),
-  `# Every page here is prerendered, so nothing needs JavaScript to be read.
+  `# Every page here is prerendered, so nothing needs JavaScript to be read,
+# and every page is also served as markdown: append .md to any path.
+# Index for models: ${SITE_ORIGIN}/llms.txt
+
 User-agent: *
+Allow: /
+
+# Named deliberately. These are the crawlers a publisher would consider
+# refusing — training corpora, retrieval for assistants — and this project
+# does not refuse them. Nothing here is served differently to any of them.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Google-Extended
+User-agent: CCBot
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: meta-externalagent
 Allow: /
 
 Sitemap: ${SITE_ORIGIN}/sitemap.xml

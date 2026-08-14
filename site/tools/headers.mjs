@@ -56,6 +56,12 @@ const ROUTES = [
 const FILES = [
   ["/robots.txt", "text/plain", "Sitemap: "],
   ["/sitemap.xml", "application/xml", "<urlset"],
+  ["/llms.txt", "text/plain", "## Pages"],
+  // The markdown twins. Served to anyone who asks, which is the difference
+  // between a format and an edition for machines: no User-Agent is consulted
+  // anywhere, and this URL is as open to a reader as to a crawler.
+  ["/index.md", "text/markdown", "canonical: "],
+  ["/docs.md", "text/markdown", "canonical: "],
 ];
 
 let failures = 0;
