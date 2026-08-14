@@ -191,6 +191,53 @@ class HostRoutingTests(unittest.TestCase):
         scripts = json.loads((SITE / "package.json").read_text(encoding="utf-8"))["scripts"]
         self.assertIn("prerender", scripts["build"])
 
+    def test_every_resource_the_page_links_has_a_directive_that_allows_it(self) -> None:
+        """
+        `default-src 'none'` means every resource type has to be named.
+
+        The manifest was linked and `manifest-src` was not declared, so it fell
+        back to `'none'`: the file served 200, the browser refused to use it as
+        a manifest, and every page load emitted a violation — on a site whose
+        clean console was one of the things an audit had praised.
+
+        This is checked statically rather than by driving a browser, and that
+        is the point rather than a shortcut. The obvious runtime check —
+        listen for `securitypolicyviolation` and fail on one — was written
+        first and could not catch it: headless Chrome never fetches the
+        manifest, so removing the directive again left it green. A check that
+        cannot fail for the reason it exists is worse than none.
+        """
+        html = (SITE / "dist" / "index.html").read_text(encoding="utf-8")
+        policy = ""
+        for rule in self._config()["headers"]:
+            for header in rule["headers"]:
+                if header["key"].lower() == "content-security-policy":
+                    policy = header["value"]
+        self.assertTrue(policy, "no Content-Security-Policy to check against")
+        self.assertIn("default-src 'none'", policy, "this check assumes a default-deny policy")
+
+        #: What the document links, and the directive that has to name it.
+        REQUIRED = (
+            (r'<link[^>]+rel="manifest"', "manifest-src"),
+            (r'<link[^>]+rel="stylesheet"', "style-src"),
+            (r"<script[^>]+src=", "script-src"),
+            (r'<link[^>]+rel="icon"', "img-src"),
+            (r'<link[^>]+rel="preload"[^>]+as="font"', "font-src"),
+        )
+        checked = 0
+        for pattern, directive in REQUIRED:
+            if not re.search(pattern, html):
+                continue
+            checked += 1
+            with self.subTest(directive=directive):
+                self.assertRegex(
+                    policy,
+                    rf"\b{re.escape(directive)}\s",
+                    f"the document links a resource governed by {directive}, and the "
+                    f"policy does not name it — so it falls back to default-src 'none'",
+                )
+        self.assertGreaterEqual(checked, 3, "the document links less than expected; has it changed?")
+
     def test_the_policy_still_forbids_inline_style(self) -> None:
         """
         Prerendering turned styles React had been writing through the CSSOM

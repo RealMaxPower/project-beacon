@@ -30,25 +30,21 @@
     <meta name="twitter:card" content="summary" />
 
     <!--
-      The two faces the first screen paints with, and only those two.
+      No font preloads, and `font-display: optional` on every face.
 
-      Every @font-face is `font-display: swap` with no `size-adjust` fallback
-      metrics, so the h1 can in principle paint in a fallback and reflow when
-      Archivo lands. It does not, in five measurements including throttled
-      cold-cache — under real throttling the render-blocking CSS delays first
-      paint past font arrival, so the heading paints in Archivo the first time.
-      Lighthouse's simulated model disagrees and blames the h1 for CLS 0.108;
-      that is an artifact of estimating timings from an unthrottled trace.
+      Two `<link rel="preload" as="font">` hints were added here as insurance
+      against a swap reflow. An A/B against this exact build, three runs each
+      under CDP throttling, showed they prevent nothing and cost about 300ms of
+      first paint: CLS identical to four decimal places with and without,
+      FCP 952ms against 612ms on desktop and 900ms against 588ms on mobile.
 
-      These preloads are insurance rather than a fix for something observed.
-      Nothing currently *guarantees* that ordering, and it costs two hints.
-      Latin only: the ext subsets are for text this site does not have, and
-      preloading a file the page never requests is a wasted round trip on the
-      critical path.
+      The reflow was real, though — a single-shot measurement had said CLS was
+      zero and it is around 0.05, with one sample over the 0.1 threshold. What
+      removes it is `optional`, which tells the browser to use the fallback and
+      never swap: CLS 0, and FCP better than either variant above. A face that
+      misses its window is simply not used on that load, which for a typeface
+      is the right trade and for the reflow is the whole of the fix.
     -->
-    <link rel="preload" as="font" type="font/woff2" href="/fonts/archivo-latin.woff2" crossorigin />
-    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin />
-
     <link rel="icon" href="/mark.svg" type="image/svg+xml" />
     <!--
       The legacy paths. Modern browsers are content with the SVG above; some

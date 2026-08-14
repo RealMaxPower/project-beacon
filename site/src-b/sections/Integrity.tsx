@@ -93,7 +93,19 @@ export function Integrity() {
   }, [payload]);
 
   const dirty = Object.values(edited).some(Boolean);
-  const matches = digest !== null && digest === baseline;
+  /*
+   * Three states, not two, because there is a moment before the answer exists.
+   *
+   * `matches` was `digest !== null && digest === baseline`, which reads as
+   * "does not match" for as long as the digest is null — and it is null in the
+   * prerendered HTML, because the hash is computed in an effect. So every
+   * reader who does not run JavaScript, which is the audience `robots.txt`,
+   * the markdown twins and `llms.txt` are all aimed at, was served this
+   * section's centrepiece declaring its own digest invalid.
+   *
+   * Null now means "not computed yet" and is rendered as such.
+   */
+  const matches = digest === null ? null : digest === baseline;
 
   return (
     <section id="integrity" className="b-band">
@@ -217,21 +229,33 @@ export function Integrity() {
               aria-live="polite"
               className="border-t px-5 py-4"
               style={{
-                borderColor: matches ? "var(--b-ok)" : "var(--b-bad)",
-                background: `color-mix(in oklab, var(${matches ? "--b-ok" : "--b-bad"}) 8%, transparent)`,
+                borderColor: matches === null ? "var(--b-line)" : matches ? "var(--b-ok)" : "var(--b-bad)",
+                background:
+                  matches === null
+                    ? "transparent"
+                    : `color-mix(in oklab, var(${matches ? "--b-ok" : "--b-bad"}) 8%, transparent)`,
               }}
             >
               <p
                 className="b-eyebrow flex items-center gap-2"
-                style={{ color: matches ? "var(--b-ok)" : "var(--b-bad)" }}
+                style={{
+                  color:
+                    matches === null ? "var(--b-faint)" : matches ? "var(--b-ok)" : "var(--b-bad)",
+                }}
               >
-                <span aria-hidden="true">{matches ? "✓" : "✗"}</span>
-                {matches ? "Digest matches" : "Digest does not match"}
+                <span aria-hidden="true">{matches === null ? "·" : matches ? "✓" : "✗"}</span>
+                {matches === null
+                  ? "Recomputing the digest"
+                  : matches
+                    ? "Digest matches"
+                    : "Digest does not match"}
               </p>
               <p className="mt-2 text-[13px] leading-relaxed text-b-muted">
-                {dirty
-                  ? "One protected field was changed, so this is no longer the bundle that was written. Every field feeds the same hash, which is why one edit is enough."
-                  : "These are the four values as recorded. Change any one of them and the hash above stops agreeing with the bundle."}
+                {matches === null
+                  ? "The hash is computed in your browser from the four values above, so this panel needs JavaScript to reach a verdict. The values, and the command that reproduces them, do not."
+                  : dirty
+                    ? "One protected field was changed, so this is no longer the bundle that was written. Every field feeds the same hash, which is why one edit is enough."
+                    : "These are the four values as recorded. Change any one of them and the hash above stops agreeing with the bundle."}
               </p>
             </div>
 

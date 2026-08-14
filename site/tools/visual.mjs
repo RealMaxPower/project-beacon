@@ -79,6 +79,18 @@ const ROUTES = [
   ["b-playground-light", "/playground", "light"],
   ["b-legal-light", "/legal", "light"],
   ["b-docs-light", "/docs", "light"],
+  /*
+   * The same two themes, reached by the toggle rather than the OS.
+   *
+   * Every row above sets `prefers-color-scheme` and never touches the button,
+   * so `:root[data-theme]` — a different block in the stylesheet, and the one a
+   * visitor who has ever pressed the toggle is reading — was audited nowhere.
+   * An external review reported a contrast failure that did not reproduce
+   * under the media query, which is when it became clear the other half had
+   * never been looked at. It agrees today; nothing was checking that it would.
+   */
+  ["b-toggled-light", "/playground", "dark", "light"],
+  ["b-toggled-dark", "/playground", "light", "dark"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];
@@ -578,7 +590,7 @@ const browser = await chromium.launch(
   process.env.BEACON_BROWSER === "bundled" ? {} : { channel: "chrome" },
 );
 
-for (const [name, hash, scheme] of ROUTES) {
+for (const [name, hash, scheme, toggleTo] of ROUTES) {
   for (const width of WIDTHS) {
     const page = await browser.newPage({
       viewport: { width, height: 900 },
@@ -611,6 +623,19 @@ for (const [name, hash, scheme] of ROUTES) {
     });
 
     await page.goto(`${BASE}${hash}`, { waitUntil: "networkidle" });
+
+    // Where a row asks for it, press the toggle and let the theme settle, so
+    // the measurement is of `[data-theme]` rather than of the media query.
+    if (toggleTo) {
+      await page
+        .locator('button[aria-label="Switch between light and dark"]')
+        .first()
+        .click()
+        .catch(() => {});
+      await page.waitForTimeout(300);
+      const reached = await page.evaluate(() => document.documentElement.dataset.theme);
+      if (reached !== toggleTo) report(`${name} @ ${width}px`, `the toggle did not reach ${toggleTo}`);
+    }
     // The timeline streams; let it settle so the measurement is of a real state.
     await page.waitForTimeout(400);
 

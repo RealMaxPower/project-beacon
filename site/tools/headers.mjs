@@ -288,6 +288,30 @@ for (const [path, type, marker] of FILES) {
  * than assume: a host answering every URL with the same page and a success
  * status invites a crawler to index it under all of them.
  */
+/*
+ * A CSP that blocks something the page links is a policy that reads correctly
+ * and breaks quietly.
+ *
+ * The manifest was linked and `manifest-src` was not declared, so it fell back
+ * to `default-src 'none'`: the file served 200, the browser refused to use it,
+ * and every page load emitted a violation. The route walk above counts console
+ * errors, and a `securitypolicyviolation` event is not one — so it went green
+ * on a policy that was breaking a feature on every page.
+ */
+const violations2 = [];
+await page.exposeFunction("__cspViolation", (d) => violations2.push(d));
+await page.addInitScript(() => {
+  document.addEventListener("securitypolicyviolation", (e) =>
+    window.__cspViolation(`${e.effectiveDirective} blocked ${e.blockedURI}`),
+  );
+});
+await page.goto(`${base}/`, { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+if (violations2.length) failures += 1;
+console.log(
+  `  ${violations2.length ? "FAIL" : "ok  "} nothing the page links is refused by the policy${violations2.length ? `: ${violations2.join(", ")}` : ""}`,
+);
+
 const unknownPath = await page.request.get(`${base}/no-such-page`);
 const missingOk =
   unknownPath.status() === 404 && (await unknownPath.text()).includes("noindex");
