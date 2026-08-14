@@ -24,15 +24,20 @@ export default defineConfig({
      * than a directory.
      */
     /*
-     * Source maps, because the source is public anyway.
+     * No source maps, and the reason is the host rather than the principle.
      *
      * Lighthouse asks for them on a bundle this size and it is right to: a
-     * stack trace from a minified file is unactionable, and this project's
-     * whole argument is that a claim should be checkable against something. It
-     * costs deployment size and exposes nothing — the repository is Apache-2.0
-     * and every file in the bundle is in it.
+     * stack trace from a minified file is unactionable, and the source is
+     * public anyway. So they were turned on — and Vercel answers **403** for
+     * every `.map` in a production deployment. What shipped was 1.9MB of maps
+     * nobody could fetch and a `sourceMappingURL` in every file pointing at a
+     * refusal, which is worse than the audit it was meant to satisfy: a
+     * devtools that tries and fails is a worse experience than one that never
+     * tries.
+     *
+     * Measured against the live deployment, not assumed. If the host ever
+     * serves them, this is one word.
      */
-    sourcemap: true,
     // The recorded bundles are imported as JSON and inlined. They are the
     // point of the playground, so they ship in the bundle rather than being
     // fetched — a demo that can fail to load its evidence is worse than one
