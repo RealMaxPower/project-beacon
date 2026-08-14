@@ -47,19 +47,19 @@ export function Compare() {
             key={column.head}
             className={`rounded-xl border p-6 ${
               column.invert
-                ? "border-transparent bg-[#0e1116] text-[#f5f7fa]"
+                ? "border-transparent bg-[var(--ink-bg)] text-[var(--ink-text)]"
                 : "border-b-line bg-b-raised"
             }`}
           >
             <p
               className="font-b-display text-[17px] font-semibold tracking-[-0.015em]"
-              style={column.invert ? { color: "#f5f7fa" } : undefined}
+              style={column.invert ? { color: "var(--ink-text)" } : undefined}
             >
               {column.head}
             </p>
             <p
               className="mt-1 font-b-mono text-[11.5px]"
-              style={{ color: column.invert ? "#79828f" : undefined }}
+              style={{ color: column.invert ? "var(--ink-faint)" : undefined }}
             >
               {column.note}
             </p>
@@ -68,9 +68,9 @@ export function Compare() {
                 <li
                   key={point}
                   className="flex gap-2.5 text-[13px] leading-relaxed"
-                  style={{ color: column.invert ? "#d5dbe3" : undefined }}
+                  style={{ color: column.invert ? "var(--ink-text)" : undefined }}
                 >
-                  <span aria-hidden="true" style={{ color: column.invert ? "#4ed8ea" : undefined }}>
+                  <span aria-hidden="true" style={{ color: column.invert ? "var(--ink-src)" : undefined }}>
                     —
                   </span>
                   <span className={column.invert ? "" : "text-b-muted"}>{point}</span>

@@ -48,7 +48,12 @@ limitations".
   system user.
 - There is no network egress firewall.
 - There is no container, VM, seccomp, AppArmor, or sandbox-exec policy.
-- MCP and A2A inspectors connect directly to configured targets.
+- MCP and A2A inspectors connect directly to configured targets. Both refuse a
+  redirect that leaves the origin they were aimed at, and the MCP client also
+  refuses one resolving inside the harness's own network — but that check
+  resolves the name separately from the connection that follows it. A DNS
+  answer that changes between the two defeats it. Treat the refusal as a guard
+  against a careless redirect, not against a hostile resolver.
 - Evidence digests are unsigned SHA-256 integrity checks.
 - CLI authorization values exist in process arguments and may be visible to
   local process inspection; this option is for disposable test credentials

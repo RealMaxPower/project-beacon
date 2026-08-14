@@ -4,13 +4,19 @@
 /*
  * The second design's tokens.
  *
- * Two grounds, alternating by section: ink for the dark bands, paper for the
- * warm light ones. Rather than two sets of token names, there is one set and a
- * `[data-ground="alt"]` scope that re-declares every one of them — the same
- * construction the first design uses for its inverted plate, for the same
- * reason. A partial override keeps the names and breaks the values, so the
- * ratios published below would silently stop being true while still reading as
- * measurements.
+ * Two palettes — ink and paper — of which a theme uses exactly one. Sections
+ * still alternate, but a band is now a rung on the active palette's elevation
+ * ladder rather than a switch to the other palette, so dark mode is dark all
+ * the way down and light mode is light all the way down.
+ *
+ * There is one set of `--b-*` names and a `[data-ground="alt"]` scope that
+ * re-declares the surface half of it. That scope is deliberately partial, which
+ * is the opposite of what this file used to warn about: the prose and accent
+ * tokens must *not* be re-declared, because text changing colour mid-page was
+ * the thing being fixed. The price is that a ratio published against a palette's
+ * page no longer covers every ground that palette has, so the tokens are
+ * measured against the furthest rung as well — see `--ink-faint`, the only one
+ * that failed.
  *
  * Four accents, each carrying exactly one meaning:
  *
@@ -66,16 +72,42 @@
    * between themes because there is only one of it.
    */
 
-  /* Ink. */
+  /*
+   * Ink, as four surfaces rather than two.
+   *
+   * The alternating band used to be the *other* palette, which made dark mode
+   * a page with five full-width cream sections in it and light mode the same
+   * arrangement inverted. Neither was a theme so much as a swap: a reader who
+   * asked for dark got roughly half a dark site, and neither mode had any
+   * tonal depth of its own.
+   *
+   * So a band is now an elevation within the palette it is already in. The
+   * ladder is deep → bg → band → band-raised, each step a separation of about
+   * 1.10-1.16, which is enough to see a section boundary and not enough to
+   * read as a different surface material. A card sits one rung above whatever
+   * ground it lands on, so `--b-raised` means the same thing in both places.
+   */
+  --ink-deep: #0a0c11;
   --ink-bg: #0e1116;
-  --ink-raised: #12161d;
-  --ink-deep: #0b0d12;
+  --ink-raised: #161b24;
+  --ink-band: #1a202b;
+  --ink-band-raised: #232a36;
+
   --ink-line: #232830;
   --ink-line-strong: #333a45;
+  /* Lines lift with the ground they are drawn on, or they disappear into it. */
+  --ink-band-line: #2e3540;
+  --ink-band-line-strong: #3f4653;
 
   --ink-text: #f5f7fa; /* 17.62 ink-bg */
   --ink-muted: #98a1ae; /* 7.24 ink-bg */
-  --ink-faint: #79828f; /* 4.87 ink-bg */
+  /*
+   * Lightened from #79828f, which cleared AA on the page and nothing else.
+   * Prose no longer swaps palette at a band, so every ink token has to clear
+   * 4.5 on the lightest ink ground there is — a card on a band, #232a36 —
+   * rather than only on the darkest. This is the one token that did not.
+   */
+  --ink-faint: #899299; /* 5.98 ink-bg · 4.56 ink-band-raised */
 
   --ink-src: #4ed8ea; /* 11.11 ink-bg */
   --ink-review: #f0ac3a; /* 9.61 ink-bg */
@@ -90,11 +122,23 @@
    * does not on #f4f1ea, and reusing it would publish four ratios that no
    * longer hold.
    */
-  --paper-bg: #f4f1ea;
-  --paper-raised: #fffdf9;
   --paper-deep: #ffffff;
+  --paper-raised: #fffdf9;
+  --paper-bg: #f4f1ea;
+  /*
+   * The light ladder runs the other way: paper's raised surfaces go toward
+   * white, so its band goes *down* into a deeper cream instead. Held at
+   * #ece8dd because the accents are the binding constraint here rather than
+   * the greys — `--paper-src` measures 4.56 on it, and a step further down
+   * puts it under AA.
+   */
+  --paper-band: #ece8dd;
+  --paper-band-raised: #faf8f2;
+
   --paper-line: #d8d3c8;
   --paper-line-strong: #bdb7a9;
+  --paper-band-line: #cec8bb;
+  --paper-band-line-strong: #b3ac9d;
 
   --paper-text: #14171c; /* 15.92 paper-bg */
   --paper-muted: #4e5661; /* 6.58 paper-bg */
@@ -117,17 +161,22 @@
 }
 
 /*
- * Which palette is the page, and which is the band.
+ * Which palette the theme is in, and which rung a band sits on.
  *
- * The design's rhythm is one ground for the page and the other for alternating
- * bands, and that rhythm is what a theme swaps — not the colours. Dark is ink
- * with paper bands; light is paper with ink bands. Both are the same two
- * validated palettes, so a light visitor gets colours that were measured
- * rather than lightened.
+ * These four blocks used to swap palettes: dark was ink with paper bands,
+ * light was paper with ink bands. It read as one design in two arrangements
+ * rather than two themes, and in dark mode it put five full-width cream
+ * sections on a page whose visitor had asked for dark.
  *
- * The attribute is `alt` rather than `paper` because in light mode the
- * alternating band is the dark one. Naming it for its colour was accurate in
- * exactly one theme.
+ * A theme now picks a palette and stays in it. Only the surface tokens move at
+ * a band — background, the card above it, the recess below it, and the two
+ * line weights. The prose and accent tokens are deliberately absent from the
+ * band blocks: text that changed colour halfway down a page was the swap, and
+ * the cost of keeping it constant is that every token has to clear AA on the
+ * furthest rung of its own ladder rather than only on the page.
+ *
+ * The attribute stays `alt` rather than a colour name. It was never the colour
+ * that alternated; it is the rhythm.
  */
 :root {
   --b-bg: var(--ink-bg);
@@ -149,20 +198,12 @@
 }
 
 [data-ground="alt"] {
-  --b-bg: var(--paper-bg);
-  --b-raised: var(--paper-raised);
-  --b-deep: var(--paper-deep);
-  --b-line: var(--paper-line);
-  --b-line-strong: var(--paper-line-strong);
-  --b-text: var(--paper-text);
-  --b-muted: var(--paper-muted);
-  --b-faint: var(--paper-faint);
-  --b-src: var(--paper-src);
-  --b-review: var(--paper-review);
-  --b-ok: var(--paper-ok);
-  --b-bad: var(--paper-bad);
-  --b-on-accent: var(--paper-on-accent);
-  color-scheme: light;
+  --b-bg: var(--ink-band);
+  --b-raised: var(--ink-band-raised);
+  /* A recess on a band lands on the page tone, which is one rung down. */
+  --b-deep: var(--ink-bg);
+  --b-line: var(--ink-band-line);
+  --b-line-strong: var(--ink-band-line-strong);
 }
 
 :root[data-theme="light"] {
@@ -184,20 +225,11 @@
 }
 
 :root[data-theme="light"] [data-ground="alt"] {
-  --b-bg: var(--ink-bg);
-  --b-raised: var(--ink-raised);
-  --b-deep: var(--ink-deep);
-  --b-line: var(--ink-line);
-  --b-line-strong: var(--ink-line-strong);
-  --b-text: var(--ink-text);
-  --b-muted: var(--ink-muted);
-  --b-faint: var(--ink-faint);
-  --b-src: var(--ink-src);
-  --b-review: var(--ink-review);
-  --b-ok: var(--ink-ok);
-  --b-bad: var(--ink-bad);
-  --b-on-accent: var(--ink-on-accent);
-  color-scheme: dark;
+  --b-bg: var(--paper-band);
+  --b-raised: var(--paper-band-raised);
+  --b-deep: var(--paper-bg);
+  --b-line: var(--paper-band-line);
+  --b-line-strong: var(--paper-band-line-strong);
 }
 
 /* A band paints itself; the page is painted by `body` below. */

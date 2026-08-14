@@ -27,21 +27,21 @@ export function Quickstart() {
       heading="Clone it, run one scenario, read the bundle."
       lede="Nothing to install: Beacon is standard library only, and the scenarios that ship are synthetic worlds rather than anything that reaches your network."
     >
-      <div className="overflow-hidden rounded-xl border border-b-line bg-[#0e1116]">
+      <div className="overflow-hidden rounded-xl border border-b-line bg-[var(--ink-bg)]">
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
-          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#ff6e55]" />
-          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#f0ac3a]" />
-          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#5bdd93]" />
-          <span className="ml-2 font-b-mono text-[11px] text-[#79828f]">bash</span>
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--ink-bad)]" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--ink-review)]" />
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[var(--ink-ok)]" />
+          <span className="ml-2 font-b-mono text-[11px] text-[var(--ink-faint)]">bash</span>
         </div>
         <ol className="px-5 py-5">
           {STEPS.map(([command, note]) => (
             <li key={command} className="py-2">
-              <p className="font-b-mono text-[12.5px] break-all text-[#f5f7fa]">
-                <span className="text-[#4ed8ea]">$ </span>
+              <p className="font-b-mono text-[12.5px] break-all text-[var(--ink-text)]">
+                <span className="text-[var(--ink-src)]">$ </span>
                 {command}
               </p>
-              <p className="mt-1 font-b-mono text-[11.5px] text-[#79828f]"># {note}</p>
+              <p className="mt-1 font-b-mono text-[11.5px] text-[var(--ink-faint)]"># {note}</p>
             </li>
           ))}
         </ol>

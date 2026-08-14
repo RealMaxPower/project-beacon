@@ -32,27 +32,43 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SHOTS = join(ROOT, ".visual");
 const BASE = process.env.BASE_URL ?? "http://localhost:4173";
 
+/*
+ * Every route names its theme, including the dark ones.
+ *
+ * They did not, and that was a hole rather than a shorthand. Playwright
+ * defaults a context to `colorScheme: "light"`, the site reads
+ * `prefers-color-scheme` to pick its theme, and the entries below that meant
+ * to be dark simply left the field out — so `b` and `b-light` rendered the
+ * same page twice and the dark theme was audited nowhere, while the comment
+ * beside them claimed both palettes were covered.
+ *
+ * That mattered more than a duplicate screenshot: the two themes are the two
+ * ends of an elevation ladder, a band is a different tone in each, and the
+ * composited grounds a contrast check would care about only exist in one of
+ * them at a time.
+ */
 const ROUTES = [
-  ["b", "/"],
+  ["b", "/", "dark"],
   // The playground inside the marketing shell. Its geometry is measured here
   // rather than inferred from the landing page: same seven-step flow, a
   // different header above it and a different composited ground under it.
-  ["b-playground", "/#/playground"],
+  ["b-playground", "/#/playground", "dark"],
   // Licensing and privacy. Long prose in a measured column is where a width
   // regression shows up first, and it is not a page anyone would notice was
   // broken.
-  ["b-legal", "/#/legal"],
+  ["b-legal", "/#/legal", "dark"],
+  ["b-docs", "/#/docs", "dark"],
   /*
-   * The site in light, which is not a lighter version of the same page: the two
-   * validated palettes swap roles, so the page becomes paper and every
-   * alternating band becomes ink. Different colours, different composited
-   * grounds, and the same geometry only if nothing here depends on the theme.
-   * Auditing one and inferring the other would be inferring the half that
-   * changed.
+   * The same pages in light, which is not a lighter version of the same page.
+   * The palettes are separately validated and the ladder runs the other way —
+   * paper raises toward white and drops its bands into a deeper cream, ink
+   * does the reverse. Same geometry only if nothing here depends on the theme,
+   * which is the thing worth checking rather than assuming.
    */
-  ["b-docs", "/#/docs"],
   ["b-light", "/", "light"],
   ["b-playground-light", "/#/playground", "light"],
+  ["b-legal-light", "/#/legal", "light"],
+  ["b-docs-light", "/#/docs", "light"],
 ];
 
 const WIDTHS = [390, 768, 1280, 1600];

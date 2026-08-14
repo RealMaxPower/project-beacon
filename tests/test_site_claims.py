@@ -1107,15 +1107,28 @@ class ContrastTests(unittest.TestCase):
         `--text-disabled` is exempt and says so in its own comment: it is
         marked non-text use only, and 3.23 would fail this.
         """
-        #: Each ground, with the two tokens that carry prose on it. The second
-        #: design keeps both its palettes in one block, so a single pair of
-        #: names would silently check one ground and skip the other — which is
-        #: the ground a light visitor is reading.
+        #: Each ground, with the tokens that carry prose on it.
+        #:
+        #: Every rung of both ladders is listed, not just the page. Prose used
+        #: to change palette at an alternating band, so checking the page
+        #: checked the only ground its colours ever landed on. It no longer
+        #: does — a band is an elevation within the same palette — which means
+        #: the same greys now sit on four ink surfaces and four paper ones, and
+        #: a guard that reads only `*-bg` would be silent about six of them.
+        #: `--ink-faint` failed on the furthest rung when this was widened.
         GROUNDS = (
             ("bg", "text", "text-muted"),
             ("b-bg", "b-text", "b-muted"),
-            ("ink-bg", "ink-text", "ink-muted"),
-            ("paper-bg", "paper-text", "paper-muted"),
+            ("ink-deep", "ink-text", "ink-muted", "ink-faint"),
+            ("ink-bg", "ink-text", "ink-muted", "ink-faint"),
+            ("ink-raised", "ink-text", "ink-muted", "ink-faint"),
+            ("ink-band", "ink-text", "ink-muted", "ink-faint"),
+            ("ink-band-raised", "ink-text", "ink-muted", "ink-faint"),
+            ("paper-deep", "paper-text", "paper-muted", "paper-faint"),
+            ("paper-bg", "paper-text", "paper-muted", "paper-faint"),
+            ("paper-raised", "paper-text", "paper-muted", "paper-faint"),
+            ("paper-band", "paper-text", "paper-muted", "paper-faint"),
+            ("paper-band-raised", "paper-text", "paper-muted", "paper-faint"),
         )
         checked = 0
         for mode, block in self._blocks().items():
@@ -1127,10 +1140,53 @@ class ContrastTests(unittest.TestCase):
                     with self.subTest(mode=mode, ground=ground, token=token):
                         self.assertGreaterEqual(_contrast(colours[token], colours[ground]), 4.5)
                         checked += 1
-        # Renaming a token must not turn this into a loop over nothing. Two
-        # grounds with two prose tokens each is what one design with two
-        # palettes provides; it was eight when two designs shipped at once.
-        self.assertGreaterEqual(checked, 4, "far fewer prose colours checked than expected")
+        # Renaming a token must not turn this into a loop over nothing. Ten
+        # grounds carry prose across the two ladders, at three tokens each.
+        self.assertGreaterEqual(checked, 24, "far fewer prose colours checked than expected")
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class PaletteLocationTests(unittest.TestCase):
+    """
+    Every colour in the design lives in the token file, and nowhere else.
+
+    `tokens-b.css` opens by saying so — "every hex declared exactly once" — and
+    nothing checked it. Four sections had written the ink palette out again as
+    literals, for a defensible reason: a terminal panel stays ink in both
+    themes, so it cannot use the `--b-*` names that follow the theme. The cost
+    only showed up when `--ink-faint` had to be lightened for a new ground.
+    The token moved. Twenty-six literals did not, and one palette had two
+    values with nothing to say which was current.
+
+    The fix a component wants here is `var(--ink-faint)` — the palette by name,
+    pinned to a specific one rather than to whichever is active. This makes that
+    the only option.
+    """
+
+    #: Comments are stripped first: several of them quote a composited value
+    #: and its measured ratio, which is the sort of note this must not punish.
+    HEX = re.compile(r"#[0-9a-fA-F]{6}\b")
+
+    def test_no_component_declares_a_colour_of_its_own(self) -> None:
+        offenders = []
+        for path in sorted((SITE / "src-b").rglob("*.tsx")):
+            source = _without_comments(path.read_text(encoding="utf-8"))
+            for found in self.HEX.findall(source):
+                offenders.append(f"{path.relative_to(SITE)}: {found}")
+        self.assertEqual(
+            offenders,
+            [],
+            "a colour is declared outside tokens-b.css; use var(--ink-*) or "
+            "var(--paper-*) to pin a palette, or a --b-* name to follow the "
+            "theme:\n" + "\n".join(offenders),
+        )
+
+    def test_the_token_file_is_where_they_are(self) -> None:
+        """A guard that passed because it scanned an empty tree proves nothing."""
+        tokens = (SITE / "src-b" / "tokens-b.css").read_text(encoding="utf-8")
+        self.assertGreaterEqual(
+            len(set(self.HEX.findall(tokens))), 20, "the palette is not where it should be"
+        )
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")

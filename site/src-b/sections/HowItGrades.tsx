@@ -79,14 +79,14 @@ export function HowItGrades() {
         ))}
       </div>
 
-      <div className="mt-10 overflow-hidden rounded-xl border border-b-line bg-[#0e1116]">
+      <div className="mt-10 overflow-hidden rounded-xl border border-b-line bg-[var(--ink-bg)]">
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-3">
-          <span className="font-b-mono text-[11.5px] text-[#4ed8ea]">scenario.json</span>
-          <span className="font-b-mono text-[11.5px] text-[#79828f]">
+          <span className="font-b-mono text-[11.5px] text-[var(--ink-src)]">scenario.json</span>
+          <span className="font-b-mono text-[11.5px] text-[var(--ink-faint)]">
             declared before the run, not after it
           </span>
         </div>
-        <pre className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-[#d5dbe3]">
+        <pre className="overflow-x-auto px-5 py-4 font-b-mono text-[11.5px] leading-relaxed text-[var(--ink-text)]">
           {CONTRACT}
         </pre>
       </div>
