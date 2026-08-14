@@ -23,10 +23,12 @@ import { B_NOT_FOUND, useBRoute } from "./router-b";
 /**
  * The second design.
  *
- * Built from a supplied mock that is not in this repository — the design/
- * directory holds the first design's files only — keeping its visual system
- * and its section rhythm, ink and paper alternating, one argument per band,
- * and replacing its content wholesale.
+ * Built from a supplied mock that is not in this repository, keeping its
+ * visual system and its section rhythm — one argument per band, alternating
+ * grounds — and replacing its content wholesale. The mock's own export files
+ * were removed before publication: they carried a design tool's runtime and a
+ * copied starter component, neither of which came with a licence, and this
+ * repository cannot redistribute what it cannot attribute.
  *
  * That mock branded itself "Outcome Assurance". The wordmark here says Project
  * Beacon instead: outcome assurance is the category this sits in, the way

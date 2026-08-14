@@ -99,21 +99,33 @@ new one fails the suite until someone classifies what may start it.
 
 ## Pages
 
-Six marketing screens and the playground, on a hash router — no dependency, and
-no rewrite rules needed from whatever serves the files.
+One long marketing page, the playground, and two screens, each prerendered to
+its own document. `tools/prerender.tsx` writes them; `src-b/pages.ts` is the
+table it, `sitemap.xml` and the structured data all read, so a page cannot
+exist in one and be missing from the others.
 
 | Route | What it is |
 |---|---|
-| `#/` | Home. The hero is a run that did not succeed. |
-| `#/how-it-works` | The pipeline, and where evidence is collected. |
-| `#/scenarios` | The seven, grouped by what they grade. |
-| `#/for-builders` | `--repeat`, baselines, and failing CI on a regression. |
-| `#/playground` | Replays the recorded runs. |
-| `#/docs` | Cards generated from `docs/` and `conformance/`. |
-| `#/hosted` | The commercial question, asked without a waitlist form. |
+| `/` | The case, how it grades, your stack, what exists, quickstart, CI, questions. |
+| `/playground` | Replays the recorded runs. |
+| `/playground/<scenario>` | One per scenario, opened on it. |
+| `/docs` | Cards generated from `docs/` and `conformance/`. |
+| `/legal` | Licence, third-party notices, and what this site collects. |
+
+These were fragments — `#/docs` — until it became clear what that cost. A
+fragment is never sent to a server, so every screen was the same URL as far as
+anything indexing was concerned, and the pages rendered in the browser, so a
+crawler that runs no JavaScript received an empty `<div>`. Both are fixed by
+the same change, and `tests/test_site_seo.py` is what stops them coming back.
+
+Every page is also served as markdown at the same path with `.md` on it, and
+`/llms.txt` indexes them. Same content, generated in the same pass, checked
+against the HTML by `tests/test_site_markdown.py` — no User-Agent is consulted
+anywhere, which is the difference between an alternate format and a private
+edition for machines.
 
 ## Not built yet
 
 A dedicated mobile treatment. The pages are responsive — fluid type, single
-column under `sm`, tables that scroll inside their own container — but the
-device-frame designs in `design/Beacon Mobile.dc.html` have not been built.
+column under `sm`, tables that scroll inside their own container — but nothing
+has been built specifically for a device frame.

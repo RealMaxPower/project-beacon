@@ -522,8 +522,8 @@ Please do not report these:
   figures on the Repeat screen are what was actually measured.
 - **No permalink on the export screen.** The mock has one; there is nothing
   hosting a run to link to.
-- **No mobile device-frame treatment.** The pages are responsive, but the
-  device-frame designs in `design/Beacon Mobile.dc.html` are not built.
+- **No mobile device-frame treatment.** The pages are responsive, and nothing
+  has been built specifically for a device frame.
 - **`<repo>` in the recorded command.** That is the one edit made to a bundle,
   to keep the recording machine's home directory off a public site.
 - **Links to the repository 404 when signed out.** It was private when this

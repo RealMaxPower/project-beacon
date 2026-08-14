@@ -50,7 +50,7 @@ ENTRY_POINTS = ("index.html",)
 
 
 def _site_sources() -> list[Path]:
-    """Every file the site is built from. Excludes the design mocks."""
+    """Every file the site is built from."""
     found = [
         path
         for tree in SOURCE_TREES
@@ -857,13 +857,13 @@ class VisualVocabularyTests(unittest.TestCase):
 
     def test_the_site_ships_no_raster_images(self) -> None:
         """
-        The rule the five design mocks follow and no test enforced.
+        The rule the design was built to, which no test enforced.
 
-        All five specify zero imagery — no `<img>`, no canvas, no
-        background-image, no photograph or illustration anywhere. That was a
-        decision, not an omission: "No invented proof… There is nothing to fill
-        in later." Until now an AI-generated hero could have been committed and
-        the whole suite would have stayed green.
+        Zero imagery — no `<img>`, no canvas, no background-image, no
+        photograph or illustration anywhere. That was a decision and not an
+        omission: "No invented proof… There is nothing to fill in later."
+        Until this, an AI-generated hero could have been committed and the
+        whole suite would have stayed green.
 
         Beyond taste, a raster is the one artifact here that cannot be pinned.
         Every other claim is hashed or counted against a source in the
