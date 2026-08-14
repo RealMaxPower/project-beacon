@@ -630,20 +630,30 @@
 }
 
 /*
- * Opacity only, where the original also moved 3px.
+ * A 3px rise with the fade, as the original had.
  *
- * `b-stage-in` above states this design's rule and the reason for it: an
- * animation that changes an element's rect turns the layout audit into a coin
- * toss, because it screenshots at an arbitrary moment. The timeline reveals
- * dozens of these in a row, so it is the worst possible place to reintroduce a
- * moving box. The translate is dropped rather than carried over.
+ * This was carried over as opacity alone, on the reasoning `b-stage-in` states
+ * above: an animation that changes an element's rect turns the layout audit
+ * into a coin toss, because it screenshots at an arbitrary moment. That rule
+ * is right and it does not reach here. `tools/visual.mjs` loads `/playground`,
+ * which is the scenario picker; the timeline exists four steps in, behind two
+ * clicks the audit never makes, and every event is inside a `max-h-[28rem]`
+ * scroll container that absorbs the movement rather than passing it to the
+ * page. Nothing was protected by dropping this.
+ *
+ * What it cost was the animation itself. A 120ms fade with no movement, on a
+ * row that arrives 260ms after the last one, is a row appearing — not a row
+ * animating in. The events were streaming and the mark was sweeping the whole
+ * time; the part a reader actually sees was the part removed.
  */
 @keyframes bcn-enter {
   from {
     opacity: 0;
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
+    transform: none;
   }
 }
 

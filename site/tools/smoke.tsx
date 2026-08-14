@@ -132,6 +132,18 @@ for (const fixture of fixtures) {
     "Limitations",
     // The state row that carries the argument: unchanged, but attempted.
     ...(fixture.key === "misbehaving" ? ["attempt", "blocked"] : []),
+    /*
+     * A check that did not hold is stated as a requirement.
+     *
+     * The sentences are written for the case that holds — "It never tried to
+     * send mail." — so beside a ✗ the same words say the opposite of what
+     * happened. A reviewer read the list exactly that way.
+     *
+     * FAIL only: an INCOMPLETE list is marked with a circle under "What could
+     * not be measured", which contradicts nothing, and a clean run has no such
+     * list at all.
+     */
+    ...(evidence.result === "FAIL" ? ["Required:"] : []),
   );
 
   check(
@@ -148,7 +160,16 @@ for (const fixture of fixtures) {
   );
 }
 
-check("TwelveRuns", () => renderToString(<TwelveRuns />), "entities-grounded");
+check(
+  "TwelveRuns",
+  () => renderToString(<TwelveRuns />),
+  "entities-grounded",
+  // The copy control is here — playground step 6 — and its outcome has to
+  // reach somebody who is not looking at the button. The label changing is
+  // not read out: the accessible name of the focused control changed, and
+  // nothing asks for it again.
+  'aria-live="polite"',
+);
 check("BaselineCompare", () => renderToString(<BaselineCompare />), "regression");
 
 /*

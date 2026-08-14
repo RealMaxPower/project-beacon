@@ -82,7 +82,7 @@ export function Header({ route }: { route: BResolved }) {
       */}
       <a
         href="#main"
-        className="sr-only rounded-md bg-b-src px-4 py-2 text-[13.5px] font-medium text-b-on-accent focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60]"
+        className="sr-only rounded-md bg-b-src text-[13.5px] font-medium text-b-on-accent focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:inline-flex focus:h-11 focus:items-center focus:px-4"
       >
         Skip to content
       </a>

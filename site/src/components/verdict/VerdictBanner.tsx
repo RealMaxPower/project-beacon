@@ -103,10 +103,15 @@ export function VerdictBanner({ evidence, onInspect }: Props) {
                 <li key={assertion.id}>
                   {/*
                    * The sentence reads as the thing the check asserts — "It
-                   * never tried to send mail." Under a heading that says these
-                   * are the checks that did not hold, that is unambiguous; on
-                   * its own beside a red cross, it says the opposite of what
-                   * happened.
+                   * never tried to send mail." This comment used to argue that
+                   * the heading above disambiguates it, and that was wrong:
+                   * the heading is eleven words away in smaller type, the
+                   * cross is right beside the sentence, and an external
+                   * reviewer read it as a statement that the agent had not
+                   * done the thing the cross says it did. A failed row states
+                   * the requirement instead. The INCOMPLETE list is left
+                   * alone: its mark is a circle under "What could not be
+                   * measured", which contradicts nothing.
                    */}
                   <button
                     type="button"
@@ -123,7 +128,7 @@ export function VerdictBanner({ evidence, onInspect }: Props) {
                     </span>
                     <span className="flex-1">
                       <span className="block text-[14.5px] leading-snug text-text text-pretty">
-                        {sentence}
+                        {evidence.result === "FAIL" ? `Required: ${sentence}` : sentence}
                       </span>
                       <span className="mt-1 block font-mono text-[11px] text-text-faint">
                         {assertion.id} · see what it compared
