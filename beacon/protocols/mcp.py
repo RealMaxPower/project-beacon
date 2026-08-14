@@ -153,16 +153,45 @@ class MCPStdioClient:
         )
         self._process.stdin.flush()
 
+    #: How long to wait for a server's first line of stderr before giving up
+    #: on it.
+    #:
+    #: This is only ever consulted on the error path, so it costs nothing in
+    #: the normal case, and a server that has said nothing is the common
+    #: reason to wait at all. Short enough that a silent failure still reports
+    #: promptly.
+    STDERR_GRACE_SECONDS = 0.5
+
     def _stderr(self) -> str:
+        """
+        Whatever the server has written to stderr, drained.
+
+        This used to drain with `get_nowait()` alone, which made it a race
+        against the reader thread: a server writes its complaint to stderr and
+        its garbage to stdout, the stdout line arrives first, and the message
+        explaining *why* the server failed is read before it has been queued.
+        Under an otherwise idle machine it usually won by a hair. Under a full
+        test suite it lost — so the diagnostic went missing precisely when the
+        machine was busy, which is when a failure is hardest to reproduce.
+
+        The first line is therefore waited for briefly; the rest are drained
+        without waiting, since they are already behind it.
+        """
         lines: list[str] = []
+        timeout: float | None = self.STDERR_GRACE_SECONDS
         while True:
             try:
-                line = self._stderr_queue.get_nowait()
+                line = (
+                    self._stderr_queue.get(timeout=timeout)
+                    if timeout is not None
+                    else self._stderr_queue.get_nowait()
+                )
             except queue.Empty:
                 break
             if line is None:
                 break
             lines.append(line.rstrip())
+            timeout = None
         return "\n".join(lines)
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> Any:
