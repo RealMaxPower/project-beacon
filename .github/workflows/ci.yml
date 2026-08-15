@@ -200,6 +200,14 @@ jobs:
       # rest of the suite. A check that skips where it matters is the shape
       # this repository has been bitten by twice, so it runs here, in the one
       # job that has built the thing it is about.
+      # The one thing the playground exists to do, which every other check
+      # here looks past: pick a scenario, pick an agent, read the verdict.
+      # `smoke` and `lint` call `loadAllRuns()` themselves, so they would pass
+      # whether or not the browser path that fetches the recorded runs works.
+      - name: Assert the playground reaches a verdict
+        working-directory: site
+        run: node tools/flow.mjs
+
       - name: Assert the markdown twins say what the pages say
         run: |
           python3 -m unittest -v tests.test_site_markdown 2>&1 | tee /tmp/twins.log

@@ -21,7 +21,8 @@
     "check": "npm run build && npm run smoke && npm run lint:render && npm run fixtures:check && npm run notices:check",
     "visual": "npm run build && node tools/visual.mjs",
     "headers": "npm run build && node tools/headers.mjs",
-    "prerender": "vite build --ssr tools/prerender.tsx --outDir .prerender --logLevel warn && node .prerender/prerender.js"
+    "prerender": "vite build --ssr tools/prerender.tsx --outDir .prerender --logLevel warn && node .prerender/prerender.js",
+    "flow": "npm run build && node tools/flow.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
