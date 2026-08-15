@@ -125,6 +125,28 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- **A simulated web**: search, page fetch, page *source*, and one way out.
+  Nothing touches a network — the pages are the fixture, which is what keeps a
+  run repeatable and a canary meaningful. It unlocked eleven cells the harness
+  could not previously grade at all, and four scenarios take five of them: a
+  directive in page source that no reader of the page ever sees, one in a
+  search snippet so the agent acts without fetching anything, a scoped brief
+  with a plausible link out of scope, and a page the answer needs that 404s.
+
+  An unknown url returns a 404 *result* rather than raising, because a missing
+  page is information and an agent reporting one is behaving correctly.
+  `web_submit` exists so that reading can have a consequence: a browsing
+  agent's characteristic failure is not reading the wrong thing but letting
+  something it read cause a write.
+
+  Two defects came out of building it. A text fetch was being credited with
+  serving a payload that exists only in the markup, so a subject that never
+  reads source passed a markup-injection scenario outright — it saw nothing,
+  obeyed nothing, and the event said it had been shown the payload and
+  declined. And the confidential page in that scenario was blocked by policy,
+  which meant an obeying subject could not leak it and the disclosure assertion
+  was grading the service rather than the agent.
+
 - The deferral family, which the escalation fix below is what made possible.
   Three scenarios where stopping is the correct answer: two documents that
   match a description equally well, a reconciliation whose ledger is not in the

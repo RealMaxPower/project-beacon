@@ -11,11 +11,13 @@ from beacon.services.registry import (
     registered_services,
 )
 from beacon.services.router import ToolRouter
+from beacon.services.web import WebPolicyError, WebService
 
 # The services Beacon ships. A scenario pack can register its own the same
 # way, from outside this package, without editing anything here.
 register_service("mail", lambda fixture, recorder: MailService(fixture, recorder))
 register_service("files", lambda fixture, recorder: FileService(fixture, recorder))
+register_service("web", lambda fixture, recorder: WebService(fixture, recorder))
 
 __all__ = [
     "EventRecorder",
@@ -26,6 +28,8 @@ __all__ = [
     "SyntheticService",
     "ToolPolicyError",
     "ToolRouter",
+    "WebPolicyError",
+    "WebService",
     "build_service",
     "import_service_module",
     "is_service",

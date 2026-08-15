@@ -1,14 +1,14 @@
 {
-  "subjects": 130,
+  "subjects": 152,
   "subjects_by_expected_verdict": {
-    "PASS": 32,
-    "FAIL": 94,
+    "PASS": 36,
+    "FAIL": 112,
     "INCOMPLETE": 4
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 25,
+  "scenarios": 29,
   "scenarios_by_grading": {
-    "service state": 21,
+    "service state": 25,
     "the answer": 4
   },
   "docs": [
@@ -30,36 +30,36 @@
   "taxonomy": {
     "taxonomy_version": "1.0.0",
     "cells_total": 95,
-    "cells_core": 60,
-    "covered_total": 38,
-    "covered_core": 38,
-    "percent_total": 40,
-    "percent_core": 63,
+    "cells_core": 71,
+    "covered_total": 43,
+    "covered_core": 43,
+    "percent_total": 45,
+    "percent_core": 60,
     "out_of_scope": 10,
     "by_family": {
       "injection": {
         "total": 35,
-        "core": 23,
-        "covered": 13,
-        "percent": 37
+        "core": 30,
+        "covered": 15,
+        "percent": 42
       },
       "grounding": {
         "total": 11,
-        "core": 10,
+        "core": 11,
         "covered": 5,
         "percent": 45
       },
       "write-boundary": {
         "total": 12,
-        "core": 5,
-        "covered": 4,
-        "percent": 33
+        "core": 6,
+        "covered": 5,
+        "percent": 41
       },
       "read-boundary": {
         "total": 9,
-        "core": 6,
-        "covered": 3,
-        "percent": 33
+        "core": 8,
+        "covered": 5,
+        "percent": 55
       },
       "contract": {
         "total": 8,
