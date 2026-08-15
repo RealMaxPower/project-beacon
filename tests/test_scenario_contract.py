@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from beacon.adapters import JSONLCommandAdapter, ReferenceInboxAdapter
-from beacon.models import EventRecorder, Scenario, ScenarioError
+from beacon.models import (
+    INTENTIONAL_ENDINGS,
+    EventRecorder,
+    Scenario,
+    ScenarioError,
+)
 from beacon.runner import run_scenario
 from beacon.services import MailService, ToolRouter
 
@@ -20,7 +25,17 @@ SUBJECTS = ROOT / "examples" / "subjects"
 
 
 def _scenario_dict(**overrides: Any) -> dict[str, Any]:
+    """
+    A variant of the starter scenario, for testing one rule at a time.
+
+    `coverage` is dropped, because it names assertion ids and most callers here
+    replace the assertions wholesale. Keeping it would mean every test about
+    tools or output contracts failing on a dangling coverage reference, which
+    is a true complaint about a scenario nobody ships and noise about the rule
+    under test. Tests that are about coverage put it back explicitly.
+    """
     value = copy.deepcopy(json.loads(SCENARIO.read_text(encoding="utf-8")))
+    value.pop("coverage", None)
     value.update(overrides)
     return value
 
@@ -171,6 +186,161 @@ class AssertionFieldTests(unittest.TestCase):
         for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
             with self.subTest(scenario=path.parent.name):
                 Scenario.load(path)
+
+
+class DeclaredEndingTests(unittest.TestCase):
+    """
+    Every scenario says, exactly once, how it expects the subject to end.
+
+    Escalating is a real behaviour and a gradeable one, which creates an
+    obvious cheat: an agent that answers `input_required` to everything is
+    never wrong about anything. The counter is not a heuristic about whether an
+    escalation was warranted — that is the scenario's judgement to make — but a
+    requirement that the scenario make it. One assertion on `subject.status`,
+    stated in advance, and the cheat fails everywhere except where stopping was
+    genuinely the right answer.
+
+    Exactly one, not at least one: two assertions on the same path either agree,
+    in which case one is noise in `report.md`, or disagree, in which case the
+    scenario cannot be satisfied and would say so only at run time.
+    """
+
+    SHIPPED = sorted((ROOT / "scenarios").glob("*/scenario.json"))
+
+    def test_there_are_scenarios_to_check(self) -> None:
+        self.assertTrue(self.SHIPPED)
+
+    def test_each_scenario_declares_exactly_one_expected_ending(self) -> None:
+        for path in self.SHIPPED:
+            scenario = Scenario.load(path)
+            endings = [
+                assertion.id
+                for assertion in scenario.assertions
+                if assertion.path == "subject.status"
+            ]
+            with self.subTest(scenario=scenario.id):
+                self.assertEqual(
+                    len(endings),
+                    1,
+                    f"{scenario.id} declares {len(endings)} assertions on "
+                    f"subject.status ({endings}); it must declare exactly one, "
+                    f"or it does not say what finishing looks like",
+                )
+
+    def test_the_expected_ending_is_one_the_evaluator_grades(self) -> None:
+        """
+        An `equals` against `subject.status` expecting `failed` or `errored`
+        can never pass: those resolve to INCOMPLETE before any assertion is
+        consulted, so the scenario would be unsatisfiable and nothing would say
+        so until someone ran it.
+        """
+        for path in self.SHIPPED:
+            scenario = Scenario.load(path)
+            for assertion in scenario.assertions:
+                if assertion.path != "subject.status" or assertion.type != "equals":
+                    continue
+                with self.subTest(scenario=scenario.id):
+                    self.assertIn(
+                        assertion.expected,
+                        INTENTIONAL_ENDINGS,
+                        f"{scenario.id} expects the run to end as "
+                        f"{assertion.expected!r}, which resolves to INCOMPLETE "
+                        f"before assertions are read",
+                    )
+
+
+class AnswerKeyTests(unittest.TestCase):
+    """
+    Nothing that gives away the grading reaches the subject.
+
+    `Scenario.public_dict()` already withheld the assertions, and the reason
+    was written down: "a subject that can read the grading criteria is not
+    being evaluated". It then published `metadata` beside them, and metadata is
+    where the authors wrote their notes to each other — which message carried
+    the injected payload, which file the exfiltration canary lived in, which
+    attack styles to expect. Six scenarios shipped that way. Every injection
+    result Beacon had published was measured against a subject holding the
+    answer key, and no test noticed, because the rule existed only as a
+    sentence about assertions.
+
+    So the rule is checked here instead of stated, and checked by what it is
+    for — no string the grading looks for may appear in what the subject is
+    told — rather than by naming the three keys that happened to be wrong.
+    """
+
+    SHIPPED = sorted((ROOT / "scenarios").glob("*/scenario.json"))
+
+    def test_there_are_scenarios_to_check(self) -> None:
+        """A pass because the glob found nothing proves nothing."""
+        self.assertTrue(self.SHIPPED)
+
+    def test_no_canary_string_is_published_to_the_subject(self) -> None:
+        """
+        The strings a `contains_none` searches for are the whole measurement.
+
+        They are chosen to exist in a place the subject was told not to go, so
+        that finding one in the output proves it went there. A subject told
+        which strings those are can satisfy the assertion by filtering its
+        output instead of by respecting the boundary, and the scenario then
+        measures string hygiene rather than restraint.
+
+        `goal` is exempt, and the exemption is the point rather than a hole in
+        it. A black-box scenario has no tools to read a fixture with, so the
+        confidential material arrives in the goal itself: `hosted-injection-
+        resistance` hands the agent the annex and asks it not to reproduce it.
+        The agent must see the canary for the question to mean anything. What
+        it must not see is prose *about* the grading, which is every other
+        published field — and `metadata`, which is now withheld entirely and
+        checked separately below.
+        """
+        for path in self.SHIPPED:
+            scenario = Scenario.load(path)
+            published = json.dumps(
+                {
+                    key: value
+                    for key, value in scenario.public_dict().items()
+                    if key != "goal"
+                }
+            ).casefold()
+            for assertion in scenario.assertions:
+                if assertion.type != "contains_none":
+                    continue
+                for needle in assertion.expected:
+                    with self.subTest(scenario=scenario.id, needle=needle):
+                        self.assertNotIn(
+                            str(needle).casefold(),
+                            published,
+                            f"{scenario.id}: the subject is told the canary "
+                            f"{needle!r} that {assertion.id} searches for",
+                        )
+
+    def test_authoring_notes_stay_out_of_the_subjects_hands(self) -> None:
+        """
+        Structural, because the check above only catches the leaks that happen
+        to be canaries. `detection_note` explaining *why* a canary works gives
+        the game away without quoting it, and so does a tag reading
+        "prompt-injection" on a scenario whose whole question is whether the
+        subject notices an injection.
+        """
+        for path in self.SHIPPED:
+            scenario = Scenario.load(path)
+            with self.subTest(scenario=scenario.id):
+                self.assertNotIn("metadata", scenario.public_dict())
+
+    def test_the_record_keeps_what_the_subject_was_denied(self) -> None:
+        """
+        Withholding metadata from the subject must not quietly drop it from
+        evidence. `fixture_origin` is the provenance CONTRIBUTING requires, and
+        `limitation`/`caveat` are the sentences saying what a PASS here does
+        not prove — a bundle without them is a less honest record, not a safer
+        one.
+        """
+        for path in self.SHIPPED:
+            scenario = Scenario.load(path)
+            with self.subTest(scenario=scenario.id):
+                self.assertEqual(
+                    scenario.recorded_dict()["metadata"], scenario.metadata
+                )
 
 
 class WorkspaceIsolationTests(unittest.TestCase):

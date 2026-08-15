@@ -94,7 +94,11 @@
               "set_equals",
               "unchanged",
               "event_absent",
-              "event_present"
+              "event_present",
+              "event_count_gte",
+              "event_count_lte",
+              "event_order",
+              "matches_path"
             ]
           },
           "description": {
@@ -116,6 +120,73 @@
     },
     "metadata": {
       "type": "object"
+    },
+    "coverage": {
+      "description": "Which taxonomy cells this scenario claims, and the evidence for each claim. Never sent to the subject: it names the assertions that grade it.",
+      "type": "object",
+      "required": [
+        "primary"
+      ],
+      "properties": {
+        "primary": {
+          "description": "Cells this scenario is the measurement for. Only these count toward coverage.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "cell",
+              "assertions",
+              "broken_by"
+            ],
+            "properties": {
+              "cell": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+(?:\\.[a-z0-9-]+){1,2}$"
+              },
+              "assertions": {
+                "description": "Assertion ids in this scenario that grade the cell.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "broken_by": {
+                "description": "Manifest subject ids that must be observed failing one of those assertions.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "payload_at": {
+                "description": "Where the adversarial content lives, as a path into fixtures, or 'goal' when the subject has no tools to read one with.",
+                "type": "string"
+              },
+              "control": {
+                "description": "For an obfuscated payload, the cell proving the encoding is legible to a subject that wants to read it.",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "secondary": {
+          "description": "Cells this scenario touches without being their measurement. Never counted.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(?:\\.[a-z0-9-]+){1,2}$"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

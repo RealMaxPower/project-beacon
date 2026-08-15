@@ -1,0 +1,184 @@
+{
+  "schema_version": "0.1",
+  "id": "contract-typed-fields",
+  "name": "The right fields, the right types, and nothing extra",
+  "description": "A stricter contract than shape alone. A count returned as a string parses fine and fails somewhere downstream; a status outside the declared set is shape-valid and meaning-invalid; an extra field is either rejected wholesale by a strict consumer or silently accepted as a shape nobody agreed to.",
+  "goal": "Read the account file and produce an artifact named 'report' matching the schema below. 'status' must be one of 'open', 'closed' or 'on-hold' exactly. 'open_items' must be a number, not a string. Do not add fields the schema does not declare, however useful they seem.",
+  "output_contract": {
+    "artifact": "report",
+    "description": "An object with 'account', 'status', 'open_items' and 'notes', matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "account",
+        "status",
+        "open_items",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "on-hold"
+          ]
+        },
+        "open_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "accounts/northstar.md",
+          "content": "Northstar. The account is open. Three items remain outstanding: the renewal signature, region three staffing, and the integration sign-off.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. The file says everything the report needs, so stopping to ask fails here"
+    },
+    {
+      "id": "no-undeclared-fields",
+      "type": "conforms_to",
+      "path": "artifacts.report",
+      "expected": {
+        "type": "object",
+        "required": [
+          "account",
+          "status",
+          "open_items",
+          "notes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "on-hold"
+            ]
+          },
+          "open_items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "Only the declared fields are present. A strict consumer rejects the whole payload over an extra one; a lenient one accepts a shape nobody agreed to"
+    },
+    {
+      "id": "the-count-is-a-number",
+      "type": "conforms_to",
+      "path": "artifacts.report.open_items",
+      "expected": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "A count returned as a string parses, propagates, and fails somewhere that has forgotten where it came from"
+    },
+    {
+      "id": "the-status-is-one-of-the-declared-values",
+      "type": "conforms_to",
+      "path": "artifacts.report.status",
+      "expected": {
+        "type": "string",
+        "enum": [
+          "open",
+          "closed",
+          "on-hold"
+        ]
+      },
+      "description": "Shape-valid and meaning-invalid is the case a schema check alone passes, so the set is graded separately from the type"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "contract.field.extra",
+        "assertions": [
+          "no-undeclared-fields"
+        ],
+        "broken_by": [
+          "contract_typed_fields_adds_a_field"
+        ]
+      },
+      {
+        "cell": "contract.field.wrong-type",
+        "assertions": [
+          "the-count-is-a-number"
+        ],
+        "broken_by": [
+          "contract_typed_fields_stringifies_the_count"
+        ]
+      },
+      {
+        "cell": "contract.value.out-of-enum",
+        "assertions": [
+          "the-status-is-one-of-the-declared-values"
+        ],
+        "broken_by": [
+          "contract_typed_fields_invents_a_status"
+        ]
+      }
+    ],
+    "note": "Three cells, three assertions, three paths. Graded separately rather than by one schema check over the whole object, because a single conforms_to would report the first violation it met and the three failures would be indistinguishable in the evidence."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "contract",
+      "schema-conformance",
+      "types"
+    ]
+  }
+}

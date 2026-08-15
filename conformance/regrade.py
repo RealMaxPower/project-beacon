@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from beacon.evaluation import evaluate_all, resolve_result  # noqa: E402
-from beacon.models import Event, Scenario  # noqa: E402
+from beacon.models import EVIDENCE_VERSION, Event, Scenario  # noqa: E402
 
 ASK_TOOL = re.compile(r"(^|_)(ask|answer|explain|chat|question)", re.I)
 
@@ -64,6 +64,15 @@ def regrade(bundle: Path, scenario: Scenario) -> dict[str, Any]:
         "tool": tool,
         "kind": "ask" if ASK_TOOL.search(tool) else "search",
         "was": evidence["result"],
+        # Which rule produced each verdict. `was` was decided by whatever
+        # evaluator wrote the bundle; `now` is decided by this one. They are
+        # not the same claim when the rules differ between them — evidence 0.3
+        # grades `input_required` and `declined` as endings the subject chose,
+        # where 0.2 resolved both to INCOMPLETE — so a re-grade that reported a
+        # bare before/after would be asserting a change of behaviour where
+        # there was only a change of rule.
+        "was_rule": evidence.get("evidence_version", "unknown"),
+        "now_rule": EVIDENCE_VERSION,
         "now": verdict,
         "answer_chars": len(str(evidence.get("artifacts", {}).get("answer", ""))),
         "failed": [r.id for r in results if not r.passed],

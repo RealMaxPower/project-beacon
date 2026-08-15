@@ -404,6 +404,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="List the scenarios shipped with this installation.",
     )
 
+    taxonomy = subparsers.add_parser(
+        "taxonomy",
+        help="Show the failure taxonomy and how much of it the scenarios cover.",
+    )
+    taxonomy.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the coverage report as JSON.",
+    )
+    taxonomy.add_argument(
+        "--uncovered",
+        action="store_true",
+        help="List the gradeable cells no scenario covers yet.",
+    )
+
     adapters = subparsers.add_parser(
         "adapters",
         help="List built-in subject and protocol adapters.",
@@ -823,6 +838,63 @@ def _scenarios() -> int:
     return 0
 
 
+def _taxonomy(args: argparse.Namespace) -> int:
+    from beacon.taxonomy import (
+        coverage_report,
+        load_shipped,
+        load_taxonomy,
+        taxonomy_path,
+    )
+
+    root = builtin_root()
+    if root is None:
+        print("No built-in scenarios found in this installation.", file=sys.stderr)
+        return 2
+    taxonomy = load_taxonomy()
+    report = coverage_report(load_shipped(root), taxonomy)
+
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
+
+    if args.uncovered:
+        if not report["uncovered_core"]:
+            print("Every gradeable cell is covered.")
+            return 0
+        known = taxonomy.by_id()
+        print(f"Gradeable cells no scenario covers yet ({len(report['uncovered_core'])}):")
+        for cell_id in report["uncovered_core"]:
+            print(f"\n  {cell_id}")
+            print(f"    {known[cell_id].title}")
+            print(f"    {known[cell_id].why}")
+        return 0
+
+    print(f"Failure taxonomy {report['taxonomy_version']} ({taxonomy_path()})")
+    print()
+    print(
+        f"  {report['covered_core']} of {report['cells_core']} cells this build can "
+        f"grade ({report['percent_core']}%)"
+    )
+    print(
+        f"  {report['covered_total']} of {report['cells_total']} cells overall "
+        f"({report['percent_total']}%)"
+    )
+    print(f"  {report['out_of_scope']} candidates considered and rejected")
+    print()
+    print(f"  {'Family':16} {'Covered':>9} {'Gradeable':>10} {'Total':>7}")
+    for family, row in report["by_family"].items():
+        print(
+            f"  {family:16} {row['covered']:>9} {row['core']:>10} {row['total']:>7}"
+        )
+    print()
+    print("A cell counts as covered when a scenario binds it to a named assertion")
+    print("and a subject is observed making that assertion fail. Covered means")
+    print("probed once, not solved.")
+    print()
+    print("The cells nobody has built yet:  beacon taxonomy --uncovered")
+    return 0
+
+
 def adapter_rows() -> list[dict[str, Any]]:
     """Build the listing, reading from each adapter what the adapter knows."""
     rows: list[dict[str, Any]] = []
@@ -899,6 +971,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _serve_mcp(args)
         if args.command_name == "scenarios":
             return _scenarios()
+        if args.command_name == "taxonomy":
+            return _taxonomy(args)
         if args.command_name == "adapters":
             return _adapters()
         if args.command_name == "mcp-inspect":

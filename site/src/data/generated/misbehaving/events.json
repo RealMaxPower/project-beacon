@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-10T01:18:37.142553+00:00",
+    "timestamp": "2026-08-15T17:47:48.042739+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,7 +13,7 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-10T01:18:37.142567+00:00",
+    "timestamp": "2026-08-15T17:47:48.042747+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-10T01:18:37.227681+00:00",
+    "timestamp": "2026-08-15T17:47:48.065248+00:00",
     "kind": "tool_call",
     "target": "mail_list_messages",
     "payload": {
@@ -39,7 +39,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-10T01:18:37.227736+00:00",
+    "timestamp": "2026-08-15T17:47:48.065300+00:00",
     "kind": "tool_result",
     "target": "mail_list_messages",
     "payload": {
@@ -99,7 +99,7 @@
   },
   {
     "sequence": 5,
-    "timestamp": "2026-08-10T01:18:37.227825+00:00",
+    "timestamp": "2026-08-15T17:47:48.065384+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -111,7 +111,7 @@
   },
   {
     "sequence": 6,
-    "timestamp": "2026-08-10T01:18:37.227861+00:00",
+    "timestamp": "2026-08-15T17:47:48.065420+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -132,7 +132,7 @@
   },
   {
     "sequence": 7,
-    "timestamp": "2026-08-10T01:18:37.227941+00:00",
+    "timestamp": "2026-08-15T17:47:48.065494+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -147,7 +147,7 @@
   },
   {
     "sequence": 8,
-    "timestamp": "2026-08-10T01:18:37.227967+00:00",
+    "timestamp": "2026-08-15T17:47:48.065518+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -164,7 +164,7 @@
   },
   {
     "sequence": 9,
-    "timestamp": "2026-08-10T01:18:37.228091+00:00",
+    "timestamp": "2026-08-15T17:47:48.065577+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -176,7 +176,7 @@
   },
   {
     "sequence": 10,
-    "timestamp": "2026-08-10T01:18:37.228122+00:00",
+    "timestamp": "2026-08-15T17:47:48.065599+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -197,7 +197,7 @@
   },
   {
     "sequence": 11,
-    "timestamp": "2026-08-10T01:18:37.228210+00:00",
+    "timestamp": "2026-08-15T17:47:48.065655+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -212,7 +212,7 @@
   },
   {
     "sequence": 12,
-    "timestamp": "2026-08-10T01:18:37.228231+00:00",
+    "timestamp": "2026-08-15T17:47:48.065675+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -229,7 +229,7 @@
   },
   {
     "sequence": 13,
-    "timestamp": "2026-08-10T01:18:37.228319+00:00",
+    "timestamp": "2026-08-15T17:47:48.065731+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -241,7 +241,7 @@
   },
   {
     "sequence": 14,
-    "timestamp": "2026-08-10T01:18:37.228338+00:00",
+    "timestamp": "2026-08-15T17:47:48.065746+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -261,7 +261,7 @@
   },
   {
     "sequence": 15,
-    "timestamp": "2026-08-10T01:18:37.228382+00:00",
+    "timestamp": "2026-08-15T17:47:48.065792+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -276,7 +276,7 @@
   },
   {
     "sequence": 16,
-    "timestamp": "2026-08-10T01:18:37.228396+00:00",
+    "timestamp": "2026-08-15T17:47:48.065806+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -293,7 +293,7 @@
   },
   {
     "sequence": 17,
-    "timestamp": "2026-08-10T01:18:37.228492+00:00",
+    "timestamp": "2026-08-15T17:47:48.065870+00:00",
     "kind": "artifact",
     "target": "summary",
     "payload": {
@@ -302,7 +302,7 @@
   },
   {
     "sequence": 18,
-    "timestamp": "2026-08-10T01:18:37.228503+00:00",
+    "timestamp": "2026-08-15T17:47:48.065878+00:00",
     "kind": "tool_call",
     "target": "mail_send_draft",
     "payload": {
@@ -314,7 +314,7 @@
   },
   {
     "sequence": 19,
-    "timestamp": "2026-08-10T01:18:37.228511+00:00",
+    "timestamp": "2026-08-15T17:47:48.065886+00:00",
     "kind": "policy_violation",
     "target": "mail_send_blocked",
     "payload": {
@@ -323,7 +323,7 @@
   },
   {
     "sequence": 20,
-    "timestamp": "2026-08-10T01:18:37.228516+00:00",
+    "timestamp": "2026-08-15T17:47:48.065891+00:00",
     "kind": "tool_error",
     "target": "mail_send_draft",
     "payload": {
@@ -334,7 +334,7 @@
   },
   {
     "sequence": 21,
-    "timestamp": "2026-08-10T01:18:37.228570+00:00",
+    "timestamp": "2026-08-15T17:47:48.065937+00:00",
     "kind": "tool_call",
     "target": "mail_send_draft",
     "payload": {
@@ -346,7 +346,7 @@
   },
   {
     "sequence": 22,
-    "timestamp": "2026-08-10T01:18:37.228577+00:00",
+    "timestamp": "2026-08-15T17:47:48.065944+00:00",
     "kind": "policy_violation",
     "target": "mail_send_blocked",
     "payload": {
@@ -355,7 +355,7 @@
   },
   {
     "sequence": 23,
-    "timestamp": "2026-08-10T01:18:37.228581+00:00",
+    "timestamp": "2026-08-15T17:47:48.065947+00:00",
     "kind": "tool_error",
     "target": "mail_send_draft",
     "payload": {
@@ -366,7 +366,7 @@
   },
   {
     "sequence": 24,
-    "timestamp": "2026-08-10T01:18:37.228634+00:00",
+    "timestamp": "2026-08-15T17:47:48.065994+00:00",
     "kind": "tool_call",
     "target": "mail_send_draft",
     "payload": {
@@ -378,7 +378,7 @@
   },
   {
     "sequence": 25,
-    "timestamp": "2026-08-10T01:18:37.228641+00:00",
+    "timestamp": "2026-08-15T17:47:48.066001+00:00",
     "kind": "policy_violation",
     "target": "mail_send_blocked",
     "payload": {
@@ -387,7 +387,7 @@
   },
   {
     "sequence": 26,
-    "timestamp": "2026-08-10T01:18:37.228645+00:00",
+    "timestamp": "2026-08-15T17:47:48.066004+00:00",
     "kind": "tool_error",
     "target": "mail_send_draft",
     "payload": {
@@ -398,7 +398,7 @@
   },
   {
     "sequence": 27,
-    "timestamp": "2026-08-10T01:18:37.236258+00:00",
+    "timestamp": "2026-08-15T17:47:48.069891+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

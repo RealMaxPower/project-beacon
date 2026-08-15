@@ -31,9 +31,23 @@ MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
 DEFAULT_TIMEOUT = 15.0
 
 
+def _subject_args(case: dict[str, Any]) -> list[str]:
+    """
+    The arguments a manifest entry launches its script with.
+
+    `breaker.py` is one script serving many entries, so it needs to be told
+    which one it is. Everything else takes no arguments and is unaffected.
+    """
+    if case.get("args") is not None:
+        return [str(item) for item in case["args"]]
+    if Path(case["script"]).name == "breaker.py":
+        return [case["id"]]
+    return []
+
+
 def _run(case: dict[str, Any], scenario_path: Path, output_dir: str) -> Any:
     adapter = JSONLCommandAdapter(
-        [sys.executable, str(ROOT / case["script"])],
+        [sys.executable, str(ROOT / case["script"]), *_subject_args(case)],
         timeout_seconds=float(case.get("timeout_seconds", DEFAULT_TIMEOUT)),
     )
     scenario = ROOT / case.get("scenario", str(scenario_path))

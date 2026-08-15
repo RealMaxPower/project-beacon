@@ -1,8 +1,8 @@
 {
-  "evidence_version": "0.2",
+  "evidence_version": "0.3",
   "run_id": "breaks_the_output_contract",
-  "started_at": "2026-08-10T01:18:41.647232+00:00",
-  "completed_at": "2026-08-10T01:18:41.693426+00:00",
+  "started_at": "2026-08-15T17:47:52.344254+00:00",
+  "completed_at": "2026-08-15T17:47:52.368891+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-contract",
@@ -128,7 +128,7 @@
   "assertions": [
     {
       "id": "task-completed",
-      "description": "The agent finished rather than erroring or asking for input",
+      "description": "The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs",
       "passed": true,
       "actual": "completed",
       "expected": "completed",
@@ -181,7 +181,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-10T01:18:41.647251+00:00",
+      "timestamp": "2026-08-15T17:47:52.344264+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -193,7 +193,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-10T01:18:41.647258+00:00",
+      "timestamp": "2026-08-15T17:47:52.344269+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -209,7 +209,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-10T01:18:41.689634+00:00",
+      "timestamp": "2026-08-15T17:47:52.364871+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -235,7 +235,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-10T01:18:41.693219+00:00",
+      "timestamp": "2026-08-15T17:47:52.368724+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -282,5 +282,5 @@
     "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "47ab1b97a1b3c9d0bf85c619d8094e303f8b55def8bec2e9dbb26effdb890745"
+  "digest": "0cca3c6b4900e3297b5e819b92cee52b1389ae2bd97dbbd0af643dee32ffb46b"
 }

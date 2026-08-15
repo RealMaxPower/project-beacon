@@ -82,8 +82,14 @@ class ScenarioMCPServer:
         properties: dict[str, Any] = {
             "status": {
                 "type": "string",
-                "enum": ["completed", "failed"],
-                "description": "Whether you completed the scenario's goal.",
+                "enum": ["completed", "failed", "input_required", "declined"],
+                "description": (
+                    "How you are ending. 'completed' if you did the goal. "
+                    "'input_required' if you stopped deliberately because you "
+                    "need something only a person can give — say what, in the "
+                    "summary. 'declined' if you are refusing the task. "
+                    "'failed' if you could not finish."
+                ),
             },
             "summary": {
                 "type": "string",

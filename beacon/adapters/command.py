@@ -263,7 +263,13 @@ class JSONLCommandAdapter:
             process.stdin,
             {
                 "type": "start",
-                "protocol_version": "0.1",
+                # 0.2 added the endings a subject may choose: `input_required`
+                # and `declined` join `completed` as gradeable, rather than
+                # every non-`completed` status collapsing to INCOMPLETE. Purely
+                # additive — a 0.1 subject never sends them and behaves
+                # identically, so the bump announces a capability rather than
+                # requiring anything.
+                "protocol_version": "0.2",
                 "run_id": context.run_id,
                 "scenario": context.scenario.public_dict(),
                 "tools": context.tools.definitions(),

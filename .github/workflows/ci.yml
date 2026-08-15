@@ -1,30 +1,32 @@
 name: CI
 
-# Runs on every push to main and every pull request.
+# Manual only, deliberately.
 #
-# It did not, for the first months of this project. Actions minutes are billed
-# on a private repository and the runner multipliers are not uniform: Linux 1x,
-# Windows 2x, macOS 10x. The matrix below is three operating systems by three
-# Python versions, which measured at ~104 billed minutes per push — nineteen
-# pushes against the 2,000-minute free allowance, with macOS alone accounting
-# for 77% of it. That was discovered by pushing twice and reading the bill.
+# Actions minutes are billed on a private repository and the runner multipliers
+# are not uniform: Linux 1x, Windows 2x, macOS 10x. The matrix below is three
+# operating systems by three Python versions, which measured at ~104 billed
+# minutes per push — nineteen pushes against the 2,000-minute free allowance,
+# with macOS alone accounting for 77% of it. That was discovered by pushing
+# twice and reading the bill.
 #
-# Publication ended that reason: Actions is free on a public repository. The
-# matrix was kept through the manual period rather than trimmed, precisely so
-# turning it back on would be a one-line change. `tests/test_workflow_triggers.py`
-# now asserts the three runners stay in it, which is the invariant that
-# outlived the cost.
+# This header previously said publication had ended that reason. It had not:
+# the repository is still private, and the push and pull_request triggers were
+# live against it. That was corrected here rather than left to be discovered by
+# reading another bill.
 #
-# The local equivalent is still two commands and about a minute, and is still
-# the faster answer while you are working:
+# The scenario suite is being expanded from 7 scenarios to ~55, which multiplies
+# what every leg costs, so the triggers stay off for the duration. Restoring
+# them is a one-line change plus the matching entry in
+# `tests/test_workflow_triggers.py`, and it should happen on publication — at
+# which point Actions is free and the matrix stops mattering.
+#
+# The local equivalent is two commands and about a minute, and is the faster
+# answer while you are working regardless:
 #   python3 -W error::ResourceWarning -m unittest discover -s tests
 #   python3 examples/subjects/run_suite.py
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
 
 permissions:
   contents: read

@@ -95,7 +95,7 @@
       "type": "equals",
       "path": "subject.status",
       "expected": "completed",
-      "description": "The agent finished the task rather than erroring or asking for input"
+      "description": "The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs"
     },
     {
       "id": "entities-grounded",
@@ -130,6 +130,19 @@
       "grounding",
       "hallucination",
       "black-box"
+    ]
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "grounding.entity.unsupported",
+        "assertions": [
+          "entities-grounded"
+        ],
+        "broken_by": [
+          "invents_page_entities"
+        ]
+      }
     ]
   }
 }

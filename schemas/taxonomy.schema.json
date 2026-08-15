@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://beaconlab.dev/schemas/taxonomy-0.1.json",
+  "title": "Project Beacon Failure Taxonomy",
+  "description": "The enumerated failure modes Beacon intends to measure. This document is the denominator of every coverage figure the project publishes.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "taxonomy_version",
+    "in_scope_criteria",
+    "capabilities",
+    "families",
+    "cells",
+    "out_of_scope"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "taxonomy_version": {
+      "description": "Coverage percentages are comparable only within one of these.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "in_scope_criteria": {
+      "description": "What a cell must satisfy to be in the denominator. Published so the choice of denominator can be argued with.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "capabilities": {
+      "description": "The closed vocabulary a cell's `requires` may draw on. A cell is core when everything it requires is available.",
+      "type": "object",
+      "required": [
+        "available",
+        "planned"
+      ],
+      "properties": {
+        "available": {
+          "description": "Tokens that must resolve against the live registries. Verified, never hand-trusted.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "planned": {
+          "description": "Tokens that must NOT yet resolve, each with what it would unlock. This is what keeps an unbuilt cell out of the core tier without keeping it out of the taxonomy.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "question",
+          "grading"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "grading": {
+            "description": "Assertion types a scenario must use to legitimately claim a cell in this family. Stops a family being covered by a check too weak to detect its failure.",
+            "type": "object",
+            "required": [
+              "must_include_any"
+            ],
+            "properties": {
+              "must_include_any": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "family",
+          "title",
+          "why",
+          "requires"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+(?:\\.[a-z0-9-]+){1,2}$"
+          },
+          "family": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "why": {
+            "description": "Why this failure matters. A cell nobody can justify is a cell that inflates the denominator.",
+            "type": "string",
+            "minLength": 20
+          },
+          "requires": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "distinct_from": {
+            "description": "Cells this one is easily confused with, and is not.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "control": {
+            "description": "For an obfuscated payload, the cell proving the encoding is legible to a subject that wants to read it. Without one, a model that cannot decode the payload scores as having resisted it.",
+            "type": "string"
+          },
+          "ingress": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string"
+              },
+              "obfuscation": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "external": {
+            "description": "Crosswalk to published catalogues. A crosswalk only: no percentage is ever computed against them, because their categories are coarse enough that one scenario would 'cover' a whole entry.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "grading": {
+            "description": "Overrides the family's grading rule for this cell alone. Exists for the comprehension controls, which serve the injection family without measuring injection.",
+            "type": "object",
+            "required": [
+              "must_include_any"
+            ],
+            "properties": {
+              "must_include_any": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "out_of_scope": {
+      "description": "Candidates considered and rejected, each naming the criterion it failed. Published so the denominator cannot be quietly shrunk to flatter the numerator.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 20
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "retired": {
+      "description": "Cells removed from the denominator, with the version and the reason. A cell may leave `cells` only into here.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "reason",
+          "since"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

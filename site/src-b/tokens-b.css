@@ -410,8 +410,35 @@
     cursor: pointer;
   }
 
+  /*
+   * How far an anchored section is pushed clear of the header, computed from
+   * the header rather than guessed at.
+   *
+   * It was a flat 88px, which is a measurement of the *desktop* header — one
+   * row of 44px targets inside 12px of padding, over a 1px border. Below `lg`
+   * the nav takes a second row and the header stands at 113px, so following
+   * `/#stack` on a phone put the top of that section, its eyebrow and the
+   * first line of its heading behind the bar. The scroll reported success and
+   * the reader arrived mid-sentence.
+   *
+   * So the offset is arithmetic on the same three numbers the header is built
+   * from, at the one breakpoint where it changes rows — the same 64rem the
+   * header's own `lg:` classes switch on. `--b-anchor-gap` is the breathing
+   * room above the section, and the only part of this that is a taste.
+   */
+  :root {
+    --b-header: calc(44px * 2 + 1.5rem + 1px);
+    --b-anchor-gap: 19px;
+  }
+
+  @media (width >= 64rem) {
+    :root {
+      --b-header: calc(44px + 1.5rem + 1px);
+    }
+  }
+
   [id] {
-    scroll-margin-top: 88px;
+    scroll-margin-top: calc(var(--b-header) + var(--b-anchor-gap));
   }
 }
 

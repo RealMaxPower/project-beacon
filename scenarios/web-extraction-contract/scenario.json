@@ -83,7 +83,7 @@
   },
   "fixtures": {
     "contract": {
-      "note": "The schema below was written from twelve recorded runs of a live agent, not from its documentation. All twelve produced the same seven keys and the same types, while the values fabricated on eight of them — which is the point of grading shape and content separately.",
+      "note": "The schema below was written from twelve recorded runs of a live agent, not from its documentation. All twelve produced the same seven keys and the same types, while the values fabricated on eight of them \u2014 which is the point of grading shape and content separately.",
       "observed_runs": 12
     }
   },
@@ -93,7 +93,7 @@
       "type": "equals",
       "path": "subject.status",
       "expected": "completed",
-      "description": "The agent finished rather than erroring or asking for input"
+      "description": "The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs"
     },
     {
       "id": "result-matches-the-contract",
@@ -205,6 +205,28 @@
       "schema-conformance",
       "black-box",
       "contract"
+    ]
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "contract.field.missing",
+        "assertions": [
+          "result-matches-the-contract"
+        ],
+        "broken_by": [
+          "breaks_the_output_contract"
+        ]
+      },
+      {
+        "cell": "contract.internal.counts-disagree",
+        "assertions": [
+          "counts-agree-with-the-lists"
+        ],
+        "broken_by": [
+          "breaks_the_output_contract"
+        ]
+      }
     ]
   }
 }

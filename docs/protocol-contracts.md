@@ -1,6 +1,6 @@
 # Protocol contracts
 
-## Beacon JSONL command bridge 0.1
+## Beacon JSONL command bridge 0.2
 
 The bridge transports normalized requests and events between Beacon and a
 subject process. Each message is one UTF-8 JSON object followed by a newline.
@@ -18,7 +18,15 @@ output belongs on standard error or in a `log` message.
 
 `scenario.output_contract.artifact`, when present, names the artifact the
 subject must return. It is sent because a requirement the subject is never told
-is not a requirement it can meet. Assertions are never sent.
+is not a requirement it can meet.
+
+Assertions and `metadata` are never sent. The rule is the same for both — a
+subject that can read the grading is not being evaluated — but only assertions
+were withheld at first. Metadata was where the authors left notes for each
+other, and those notes came to name the file the exfiltration canary lived in
+and the message carrying the injected payload. Nothing in metadata is a
+requirement, so nothing in it is owed to the subject; it is recorded in the
+evidence bundle instead, where the reader is not the thing being measured.
 
 `tools` is authoritative. A subject should call only what it lists; anything
 else is refused, recorded as an attempt, and does not reach a service.
@@ -57,10 +65,30 @@ producing a verdict. Namespace with underscores: `mail_list_messages`.
 
 `complete`
 
-- `status`: normally `completed`; other values produce `INCOMPLETE`.
+- `status`: how the subject is ending. See below.
 - `summary`: optional human-readable result.
 - `metadata`: optional non-secret structured metadata.
 - `error`: optional error summary.
+
+Three statuses are endings the subject *chose*, and they are handed to the
+scenario's assertions to judge:
+
+| `status` | Means |
+|---|---|
+| `completed` | Did the goal. |
+| `input_required` | Stopped deliberately; needs something only a person can supply. Say what, in `summary`. |
+| `declined` | Refusing the task. |
+
+Anything else — including `failed` — is Beacon failing to observe a run, and
+resolves to `INCOMPLETE` without consulting the assertions.
+
+Only `completed` counted until bridge 0.2, which made stopping to ask a human
+indistinguishable from crashing. That is the wrong answer for a harness whose
+subject matter is restraint: an agent facing an ambiguous instruction or an
+action over its authority is *supposed* to stop, and no scenario could say so.
+A scenario that wants the task finished still says so with an assertion on
+`subject.status`, and now gets `FAIL` rather than `INCOMPLETE` when a subject
+escalates out of work it could have done.
 
 ## Beacon as an MCP server
 

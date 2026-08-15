@@ -18,6 +18,7 @@
  *   - text clipped by a fixed height;
  *   - controls smaller than the 44px hit target the design system requires;
  *   - sticky furniture occupying more than 15% of the viewport;
+ *   - anchors that park a section behind that furniture;
  *   - controls hidden inside a scroll container that gives no cue it scrolls.
  *
  * Screenshots land in `.visual/` so a person can look at what it measured.
@@ -129,6 +130,14 @@ let worstSticky = { where: "", share: 0 };
  */
 let scrollersSeen = 0;
 let scrollersCued = 0;
+/*
+ * Anchors inspected, and the tightest gap between where one parks and the
+ * bottom of the sticky header. A positive number is breathing room; zero means
+ * the section starts exactly at the header's edge, and the check fires below
+ * zero. Printed on success so the margin is a number rather than a hope.
+ */
+let anchorsSeen = 0;
+let tightestAnchor = { where: "", clearance: Infinity };
 const report = (where, what) => {
   console.error(`  ✗ ${where}\n      ${what}`);
   problems += 1;
@@ -247,6 +256,40 @@ const MEASURE = `() => {
         share: Math.round((el.getBoundingClientRect().height / window.innerHeight) * 100),
       }))
       .filter((s) => s.h > 0),
+
+    /*
+     * Anchors that land behind the sticky header.
+     *
+     * \`scroll-margin-top\` decides where the browser parks a section the URL
+     * names, and a value smaller than the header is a link that scrolls to a
+     * place the reader cannot see. It was 88px — the desktop header — while
+     * the header below \`lg\` takes a second row and stands at 113px, so every
+     * anchor followed on a phone hid the section's eyebrow and the first line
+     * of its heading. Nothing else here could see it: the boxes are exactly
+     * where the layout means them to be, and the header is opaque, so no text
+     * overlaps and no contrast fails. Only the *scroll destination* is wrong.
+     *
+     * Measured against the tallest sticky bar rather than a constant, so the
+     * two move together whichever one is changed.
+     */
+    anchors: (() => {
+      const bars = [...document.querySelectorAll("body *")].filter((el) =>
+        ["sticky", "fixed"].includes(getComputedStyle(el).position),
+      );
+      const header = Math.round(Math.max(0, ...bars.map((el) => el.getBoundingClientRect().height)));
+      const measured = [...document.querySelectorAll("main [id]")].map((el) => ({
+        id: el.id,
+        margin: Math.round(parseFloat(getComputedStyle(el).scrollMarginTop) || 0),
+        header,
+      }));
+      return {
+        checked: measured.length,
+        // Printed on success, for the same reason the sticky share is: a run
+        // that silently stopped finding anchors reads exactly like a clean one.
+        clearance: Math.min(Infinity, ...measured.map((a) => a.margin - a.header)),
+        found: measured.filter((a) => a.margin < a.header),
+      };
+    })(),
 
     /*
      * Controls that must be reachable by a fingertip.
@@ -684,7 +727,7 @@ for (const [name, hash, scheme, toggleTo, js = true] of ROUTES) {
     // Invoked, not just evaluated: a string passed to `evaluate` is treated as
     // an expression, and a bare arrow function is an expression whose value is
     // the function itself.
-    const { boxes, collisions, docWidth, viewport, handless, lopsidedBands, lowContrast, unreachableScrollers, smallTargets, sticky, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
+    const { boxes, collisions, docWidth, viewport, handless, lopsidedBands, lowContrast, unreachableScrollers, smallTargets, sticky, anchors, hiddenControls } = await page.evaluate(`(${MEASURE})()`);
 
     for (const message of errors) report(where, `console error: ${message}`);
 
@@ -703,6 +746,17 @@ for (const [name, hash, scheme, toggleTo, js = true] of ROUTES) {
     // 15% is generous for a header. The one that shipped was 26%.
     for (const bar of sticky.filter((s) => s.share > 15)) {
       report(where, `sticky <${bar.tag}> is ${bar.h}px — ${bar.share}% of the viewport`);
+    }
+
+    anchorsSeen += anchors.checked;
+    if (anchors.clearance < tightestAnchor.clearance) {
+      tightestAnchor = { where, clearance: anchors.clearance };
+    }
+    for (const anchor of anchors.found) {
+      report(
+        where,
+        `#${anchor.id} parks ${anchor.header - anchor.margin}px behind a ${anchor.header}px sticky header (scroll-margin-top is ${anchor.margin}px)`,
+      );
     }
 
     scrollersSeen += hiddenControls.scrollers;
@@ -769,4 +823,7 @@ if (problems > 0) {
 console.log(`No layout problems found across ${ROUTES.length} pages × ${WIDTHS.length} widths.`);
 console.log(`Worst sticky furniture: ${worstSticky.share}% of the viewport (${worstSticky.where}), against a 15% limit.`);
 console.log(`Horizontal scrollers: ${scrollersSeen} inspected, ${scrollersCued} carrying a scroll cue.`);
+console.log(
+  `Anchors: ${anchorsSeen} inspected, tightest clears its sticky header by ${tightestAnchor.clearance}px (${tightestAnchor.where}).`,
+);
 console.log(`Screenshots in site/.visual/`);

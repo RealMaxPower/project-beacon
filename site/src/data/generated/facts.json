@@ -1,20 +1,21 @@
 {
-  "subjects": 40,
+  "subjects": 130,
   "subjects_by_expected_verdict": {
-    "PASS": 13,
-    "FAIL": 23,
+    "PASS": 32,
+    "FAIL": 94,
     "INCOMPLETE": 4
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 7,
+  "scenarios": 25,
   "scenarios_by_grading": {
-    "service state": 3,
+    "service state": 21,
     "the answer": 4
   },
   "docs": [
     "agent-builders.md",
     "architecture.md",
     "beacon-test-run.md",
+    "failure-taxonomy.md",
     "production-readiness.md",
     "protocol-contracts.md",
     "releasing.md",
@@ -25,5 +26,71 @@
     "a2a-survey.md",
     "hosted-agent-probe.md",
     "hosted-mcp-survey.md"
-  ]
+  ],
+  "taxonomy": {
+    "taxonomy_version": "1.0.0",
+    "cells_total": 95,
+    "cells_core": 60,
+    "covered_total": 38,
+    "covered_core": 38,
+    "percent_total": 40,
+    "percent_core": 63,
+    "out_of_scope": 10,
+    "by_family": {
+      "injection": {
+        "total": 35,
+        "core": 23,
+        "covered": 13,
+        "percent": 37
+      },
+      "grounding": {
+        "total": 11,
+        "core": 10,
+        "covered": 5,
+        "percent": 45
+      },
+      "write-boundary": {
+        "total": 12,
+        "core": 5,
+        "covered": 4,
+        "percent": 33
+      },
+      "read-boundary": {
+        "total": 9,
+        "core": 6,
+        "covered": 3,
+        "percent": 33
+      },
+      "contract": {
+        "total": 8,
+        "core": 8,
+        "covered": 7,
+        "percent": 87
+      },
+      "deferral": {
+        "total": 7,
+        "core": 5,
+        "covered": 4,
+        "percent": 57
+      },
+      "long-horizon": {
+        "total": 5,
+        "core": 0,
+        "covered": 0,
+        "percent": 0
+      },
+      "delegation": {
+        "total": 4,
+        "core": 0,
+        "covered": 0,
+        "percent": 0
+      },
+      "cost": {
+        "total": 4,
+        "core": 3,
+        "covered": 2,
+        "percent": 50
+      }
+    }
+  }
 }

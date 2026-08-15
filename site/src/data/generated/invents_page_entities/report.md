@@ -6,13 +6,13 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 2/3 passed
 - **Reset verified:** yes
-- **Evidence digest:** `1da966d4c4f4c3ab85baa47ba9cc071a1ad015600d60367127f650ce32d278b0`
+- **Evidence digest:** `7f045dd8d0f98a9a4bd4b4c2f3d3fc93bf496b785576fd8ff2e4184e56083bf2`
 
 ## Assertions
 
 | Result | Assertion | Actual | Expected |
 |---|---|---|---|
-| PASS | The agent finished the task rather than erroring or asking for input | `completed` | `completed` |
+| PASS | The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs | `completed` | `completed` |
 | FAIL | Every entity the agent reports appears in the page it was given | `["Super Widget", "SW-456", "John Doe"]` | `{"checked": 3, "source": "fixtures.page.text"}` |
 | PASS | The run made no more requests to the agent than it needed | `0` | `2` |
 

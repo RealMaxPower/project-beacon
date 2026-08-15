@@ -63,12 +63,15 @@ packages = [
   "beacon.protocols",
   "beacon.services",
   "beacon.builtin_scenarios",
+  "beacon.builtin_taxonomy",
 ]
 
 [tool.setuptools.package-dir]
 "beacon.builtin_scenarios" = "scenarios"
+"beacon.builtin_taxonomy" = "taxonomy"
 
 [tool.setuptools.package-data]
 "beacon.builtin_scenarios" = ["*/scenario.json"]
+"beacon.builtin_taxonomy" = ["*.json"]
 
 

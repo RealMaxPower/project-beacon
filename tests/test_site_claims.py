@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -134,6 +136,68 @@ class GeneratedFixtureTests(unittest.TestCase):
                     found,
                     f"{found.group(0) if found else ''} would be published",
                 )
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class RegenerationTests(unittest.TestCase):
+    """
+    Rebuilding what is already current must change nothing on disk.
+
+    The builder used to delete the output directory and write all seventeen
+    bundles afresh, each with a new timestamp and digest, so adding a single
+    scenario produced a diff touching every recorded run. That is the size of
+    change reviewers stop reading, and a fixture regression hides in exactly
+    that kind of diff.
+
+    Checked by content rather than by trusting the keep-if-equivalent branch,
+    because the failure this guards against is that branch silently not firing.
+    """
+
+    def test_a_second_build_changes_nothing(self) -> None:
+        """
+        Two builds, and only the second pair is compared.
+
+        The first build is not the measurement. If the committed fixtures are
+        stale — someone changed a scenario and did not regenerate — then the
+        first build legitimately rewrites things, and that is `fixtures:check`'s
+        complaint to make, with a better message. Comparing from a settled
+        state isolates the property this test is actually for: that rebuilding
+        what is already current is a no-op.
+        """
+        self._build()
+        before = self._digests()
+        self.assertTrue(before, "no generated files to compare")
+
+        self._build()
+        after = self._digests()
+
+        moved = sorted(
+            name for name in before | after if before.get(name) != after.get(name)
+        )
+        self.assertEqual(
+            moved,
+            [],
+            "rebuilding rewrote files that had not changed; every scenario "
+            "change will carry them as diff noise",
+        )
+
+    def _build(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SITE / "tools" / "build_fixtures.py")],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def _digests(self) -> dict[str, str]:
+        return {
+            str(path.relative_to(GENERATED)): hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+            for path in sorted(GENERATED.rglob("*"))
+            if path.is_file()
+        }
 
 
 @unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
@@ -902,6 +966,16 @@ class VisualVocabularyTests(unittest.TestCase):
         # actually arrive in this codebase.
         painted = re.compile(r"background-image|backgroundImage")
         for path in _site_sources():
+            # Recorded data is exempt, and only recorded data. These files are
+            # byte-identical copies of scenario fixtures, which the site renders
+            # as text — an `<img>` inside one is a payload a scenario is asking
+            # an agent to see through, not an image the site displays. Scoped to
+            # the generated directory so a real `<img>` in a component is still
+            # caught; the alternative was writing the obfuscation scenarios
+            # around a lint rule, which would have made the fixtures worse to
+            # keep the guard simple.
+            if GENERATED in path.parents:
+                continue
             source = _without_comments(path.read_text(encoding="utf-8"))
             with self.subTest(file=path.relative_to(ROOT)):
                 self.assertNotIn("<img", source)
@@ -979,15 +1053,25 @@ class HeadlineTests(unittest.TestCase):
         """
         The sharpest line on the page, and the easiest to lose.
 
-        `disconnects` satisfies all nine assertions and still resolves
-        INCOMPLETE, because the host went away before signalling completion.
-        It is the clearest statement the site has that INCOMPLETE is not a soft
-        failure — and it survives only as long as some run has that shape.
+        `disconnects` satisfies every assertion Beacon could measure and still
+        resolves INCOMPLETE, because the host went away before signalling
+        completion. It is the clearest statement the site has that INCOMPLETE
+        is not a soft failure — and it survives only as long as some run has
+        that shape.
+
+        Unmeasured assertions are excluded, which is what keeps the claim
+        about the same thing it was always about. A run that never reached an
+        ending cannot be graded on which ending it chose, so that assertion
+        comes back unmeasured; counting it as a failure would make this check
+        pass or fail on the wording of the ending rather than on the point,
+        which is that a full set of satisfied behavioural assertions still does
+        not add up to a PASS.
         """
         unmeasured = [
             key
             for key, run in self.runs.items()
-            if run["result"] != "PASS" and all(a["passed"] for a in run["assertions"])
+            if run["result"] != "PASS"
+            and all(a["passed"] for a in run["assertions"] if a.get("measured", True))
         ]
         self.assertTrue(
             unmeasured,

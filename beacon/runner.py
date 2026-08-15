@@ -10,6 +10,7 @@ from beacon.adapters.base import ExecutionContext, SubjectAdapter
 from beacon.evaluation import evaluate_all, resolve_result
 from beacon.evidence import write_evidence
 from beacon.models import (
+    EVIDENCE_VERSION,
     Evidence,
     EventRecorder,
     Scenario,
@@ -69,7 +70,11 @@ def _build_services(
     scenario: Scenario,
     recorder: EventRecorder,
 ) -> tuple[ToolRouter, dict[str, Any], dict[str, Any]]:
-    router = ToolRouter(recorder, allowed=scenario.tools)
+    router = ToolRouter(
+        recorder,
+        allowed=scenario.tools,
+        max_tool_calls=scenario.limits.get("max_tool_calls"),
+    )
     snapshots: dict[str, Any] = {}
     services: dict[str, Any] = {}
     # Whatever the scenario declares, in declaration order. A fixture with no
@@ -249,11 +254,11 @@ def run_scenario(
         )
 
     evidence = Evidence(
-        evidence_version="0.2",
+        evidence_version=EVIDENCE_VERSION,
         run_id=actual_run_id,
         started_at=started_at,
         completed_at=utc_now(),
-        scenario=scenario.public_dict(),
+        scenario=scenario.recorded_dict(),
         subject={
             **adapter.descriptor,
             "execution": subject_result.to_dict(),

@@ -110,7 +110,7 @@ only and `python3 -m beacon` works straight out of the checkout.
 git clone https://github.com/RealMaxPower/project-beacon
 cd project-beacon
 
-python3 -m beacon scenarios            # the seven that ship
+python3 -m beacon scenarios            # the twenty-five that ship
 python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
 python3 -m beacon init my-first-probe  # scaffold your own
 ```
@@ -160,11 +160,56 @@ own `limitations` block, and
 [docs/production-readiness.md](docs/production-readiness.md) is the full ledger
 of what Beacon is and is not ready to be trusted with.
 
+## Coverage of a published taxonomy
+
+Beacon enumerates the failure modes it intends to measure in
+[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 95 cells across
+nine families, each with the reason it is in scope and the capability it needs.
+The file also lists the candidates that were considered and **rejected**, with
+the criterion each one failed, because a denominator nobody can argue with is
+not a measurement.
+
+The scenarios that ship cover 38 of the 60 cells this harness can grade today
+(63%), and 38 of 95 overall (40%). Neither figure is typed into that sentence:
+`tests/test_taxonomy_coverage.py` computes both from the files and fails the
+build if this paragraph disagrees.
+
+| Family | Covered | Gradeable now | Total |
+|---|---|---|---|
+| `injection` — does read text become an instruction | 13 | 23 | 35 |
+| `grounding` — does it assert what no source supports | 5 | 10 | 11 |
+| `write-boundary` — does it change more than it was asked | 4 | 5 | 12 |
+| `read-boundary` — does it reach or leak what it should not | 3 | 6 | 9 |
+| `contract` — does the result keep its promised shape | 7 | 8 | 8 |
+| `deferral` — does it stop and ask when it should | 4 | 5 | 7 |
+| `long-horizon` — does it still obey the brief later | 0 | 0 | 5 |
+| `delegation` — is another agent's output data or truth | 0 | 0 | 4 |
+| `cost` — does it finish inside its budget | 2 | 3 | 4 |
+
+"Gradeable now" is computed, not declared: a cell is gradeable when everything
+it requires exists in this build, so the column grows on its own as services
+land. Four families sit at zero, and they are published here for the same
+reason as the rejection list.
+
+A cell counts as covered only when a scenario binds it to a named assertion, a
+subject in the manifest is **observed making that assertion fail** when run, and
+another subject passes it. `beacon taxonomy --uncovered` lists the gradeable
+cells nobody has built yet.
+
+**What the number does not mean.** Covered means probed once, not solved — one
+payload, one configuration, one synthetic world, and resistance in a cell is not
+resistance in general. The denominator is a curated list chosen by this project
+rather than an exhaustive account of what agents get wrong. Every fixture is
+invented. Figures are comparable only within one `taxonomy_version`, and the
+percentage **falls when the taxonomy grows**, which is the intended behaviour.
+And this is coverage of the harness, not of your agent: it says what Beacon can
+check, never what your agent gets right.
+
 ## Features
 
 | Capability | What it does |
 |---|---|
-| **Seven scenarios** | Three graded on the state of a synthetic service, four on what a hosted agent returned — grounding, fabrication, schema conformance, injection resistance |
+| **Twenty-five scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
 | **Synthetic services** | Mail and documents with scoped tools and policy enforcement, built from a public registry so a scenario pack can add its own |
 | **State-based assertions** | Forbidden-action checks, grounded citation checks that a name-drop does not satisfy, and shape checks a renamed field cannot slip past |
 | **Injection resistance** | Detects tool coercion through recorded attempts, and exfiltration through canaries that exist only in withheld material |
@@ -207,10 +252,12 @@ is written and nobody notices. This sentence said "over 400" for a while after
 the suite passed 600, which is the failure it describes, so
 `tests/test_documented_claims.py` now holds the figure to the real count.
 
-CI runs both on every push and pull request across Linux, macOS and Windows on
-Python 3.11–3.13.
+CI covers Linux, macOS and Windows on Python 3.11–3.13. It is started by hand
+while the repository is private, because Actions minutes are billed there and
+macOS bills at 10x; the push and pull-request triggers return on publication.
+The two commands above are the local equivalent and take about a minute.
 
-The second command runs an adversarial suite: forty subjects that behave in a
+The second command runs an adversarial suite: 130 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).

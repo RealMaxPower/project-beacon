@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
-import sys
-import tempfile
 import unittest
 from pathlib import Path
 
-from beacon.adapters import JSONLCommandAdapter
 from beacon.models import Scenario
-from beacon.runner import run_scenario
+
+import sys as _sys
+from pathlib import Path as _Path
+
+# `unittest discover -s tests` puts this directory on the path; running a
+# module directly as `python3 -m unittest tests.test_x` does not. Both forms
+# get used, so make the sibling import work either way.
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+
+from _subject_runs import failed_assertions, warm
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,12 +23,6 @@ MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
 
 HARNESS_ASSERTIONS = frozenset(
     {
-        # Failing these produces INCOMPLETE rather than FAIL, and the runner's
-        # failure-matrix tests already cover every way a subject can fail to
-        # finish. An adversarial subject cannot make them FAIL by behaving
-        # badly, only by not running.
-        "task-completed",
-        "answered-at-all",
         # Enforced by the usage recorder, which has its own tests. A subject
         # cannot exceed a budget the harness stops it from exceeding.
         "within-call-budget",
@@ -34,20 +34,18 @@ Assertions exempt from needing a subject that breaks them.
 Kept deliberately short and explicit. The temptation with a check like this is
 to widen the exemption until it passes, which converts a real guarantee into a
 list of excuses.
+
+It held three names until `task-completed` and `answered-at-all` stopped
+qualifying. Both were exempt on the grounds that no badly-behaved subject could
+fail them — which was a fact about the evaluator, not about the assertions:
+every ending but `completed` resolved to INCOMPLETE, so a subject that stopped
+to ask a human was scored the same as one that crashed. With escalation graded
+rather than swallowed, a subject that finishes the work and then asks an
+unnecessary question fails both, and the exemption had to go.
 """
 
 
-def _failed_assertions(script: str, scenario_path: Path) -> set[str]:
-    with tempfile.TemporaryDirectory() as directory:
-        outcome = run_scenario(
-            Scenario.load(scenario_path),
-            JSONLCommandAdapter([sys.executable, str(ROOT / script)]),
-            output_dir=directory,
-            run_id="falsify",
-        )
-    return {
-        item["id"] for item in outcome.evidence.assertions if not item["passed"]
-    }
+_failed_assertions = failed_assertions
 
 
 class FalsifiabilityTests(unittest.TestCase):
@@ -70,11 +68,18 @@ class FalsifiabilityTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         default = manifest["scenario"]
+        cases = [
+            (case, ROOT / case.get("scenario", default))
+            for case in manifest["subjects"]
+        ]
+        # This is the first harness to ask, so it pays for the batch. Every
+        # later caller — here and in the other modules — reads it from cache.
+        warm(cases)
         cls.broken: dict[str, set[str]] = {}
-        for case in manifest["subjects"]:
-            path = case.get("scenario", default)
-            cls.broken.setdefault(path, set())
-            cls.broken[path] |= _failed_assertions(case["script"], ROOT / path)
+        for case, path in cases:
+            key = case.get("scenario", default)
+            cls.broken.setdefault(key, set())
+            cls.broken[key] |= _failed_assertions(case, path)
 
     def test_every_behavioural_assertion_has_a_subject_that_breaks_it(self) -> None:
         for path in sorted(self.broken):
@@ -109,6 +114,7 @@ class FalsifiabilityTests(unittest.TestCase):
             "max_protocol_messages",
             "max_subject_calls",
             "max_subject_seconds",
+            "max_tool_calls",
         }
     )
 
@@ -169,16 +175,46 @@ class FalsifiabilityTests(unittest.TestCase):
                     f"has that budget enforced",
                 )
 
+    def test_a_tool_budget_is_declared_only_where_tools_are_routed(self) -> None:
+        """
+        The mirror of the rule above. `max_tool_calls` is counted by the tool
+        router, so it binds only where the subject's calls come back through
+        Beacon. A black-box subject — one Beacon sends a task to and reads an
+        answer from — never routes a tool call here, so the ceiling would be
+        published into evidence and never reached: a control that reads as
+        protection and provides none, which is the exact defect
+        `estimated_cost_usd` and the unfired call budget both were.
+        """
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            scenario = json.loads(path.read_text(encoding="utf-8"))
+            if "max_tool_calls" not in scenario.get("limits", {}):
+                continue
+            kind = scenario.get("metadata", {}).get("subject_kind", "")
+            with self.subTest(scenario=path.parent.name):
+                self.assertNotIn(
+                    "hosted",
+                    kind,
+                    f"{path.parent.name} declares max_tool_calls but its "
+                    f"subject_kind is {kind!r}; a hosted subject calls no tools "
+                    f"through Beacon, so nothing would ever count against it",
+                )
+
     def test_the_exemption_list_is_not_quietly_growing(self) -> None:
         """
         Pins the exemptions by name. Widening this set is how a guarantee
         turns into a formality, so it should take a deliberate edit and show
         up in review.
+
+        It has shrunk once, which is the direction worth noting. `task-completed`
+        and `answered-at-all` were exempt because "an adversarial subject cannot
+        make them FAIL by behaving badly, only by not running" — true only while
+        every ending except `completed` resolved to INCOMPLETE. Once escalation
+        became an ending the evaluator would grade,
+        `examples/subjects/escalates_unnecessarily.py` could make both go red by
+        doing the work and then stopping to ask a question it did not need to
+        ask, and the exemption stopped being earned.
         """
-        self.assertEqual(
-            HARNESS_ASSERTIONS,
-            frozenset({"task-completed", "answered-at-all", "within-call-budget"}),
-        )
+        self.assertEqual(HARNESS_ASSERTIONS, frozenset({"within-call-budget"}))
 
     def test_each_exempt_assertion_really_is_a_harness_property(self) -> None:
         """An exemption is only honest if the assertion exists somewhere."""

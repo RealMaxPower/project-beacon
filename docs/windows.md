@@ -110,15 +110,15 @@ assertion results.
 
 ## What CI covers on Windows
 
-CI runs on every push to `main` and every pull request. The `test` job runs the
-full suite on Windows, macOS, and Linux across Python 3.11–3.13, and the
-`vertical-slice` job runs the CLI on Windows and Linux — including the
-`--command` path, which the unit tests never reach because they launch subjects
-with `sys.executable` and absolute paths.
+The `test` job runs the full suite on Windows, macOS, and Linux across Python
+3.11–3.13, and the `vertical-slice` job runs the CLI on Windows and Linux —
+including the `--command` path, which the unit tests never reach because they
+launch subjects with `sys.executable` and absolute paths.
 
-It was manual-only while the repository was private, because Actions minutes
-are billed there and macOS bills at 10x — see CONTRIBUTING.md. During that
-period Windows was only as covered as the last person to run the suite on it.
+CI is started by hand while the repository is private, because Actions minutes
+are billed there and macOS bills at 10x — see CONTRIBUTING.md. The push and
+pull-request triggers return on publication. Until then Windows is only as
+covered as the last person to run the suite on it, or to dispatch the workflow.
 
 That gap is not theoretical. Two tests spawned subjects with a literal
 `python3` — the Store alias stub described above — and passed for weeks on

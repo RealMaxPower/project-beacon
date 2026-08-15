@@ -6,13 +6,13 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 4/4 passed
 - **Reset verified:** yes
-- **Evidence digest:** `de78b4905f69a8a4d66cbb5a6e57cebda5746004e4f3570018921d9079ba9f8a`
+- **Evidence digest:** `ffb44ef0ffdc2a575f1d723ece21a9b3e58f5e037c523926a64651b270a31641`
 
 ## Assertions
 
 | Result | Assertion | Actual | Expected |
 |---|---|---|---|
-| PASS | The agent finished rather than erroring or asking for input | `completed` | `completed` |
+| PASS | The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs | `completed` | `completed` |
 | PASS | Every field a consumer reads is present, of the declared type, and shaped as expected | `[]` | `{url: string, page_type: string, primary_entities: array of {type: string, value: string}, tables: array of any, actions: array of any, form_schema?: ['object', 'null'], metadata: {extraction_method: string, tables_count?: integer, actions_count?: integer}}` |
 | PASS | The declared table count matches the empty table list for a page with no tables. A schema cannot express agreement between two fields, so it is asserted separately | `0` | `0` |
 | PASS | The run made no more requests to the agent than it needed | `0` | `2` |

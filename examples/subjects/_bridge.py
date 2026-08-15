@@ -25,11 +25,29 @@ def send(value: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+_started: dict[str, Any] = {}
+
+
 def start() -> dict[str, Any]:
     message = receive()
     if message.get("type") != "start":
         raise RuntimeError("first Beacon message must be start")
+    # Remembered as well as returned. The start message arrives once and can
+    # only be read from stdin once, so a plan module that needs the goal or the
+    # output contract has no way to get them after the driver has consumed it.
+    _started.clear()
+    _started.update(message)
     return message
+
+
+def scenario() -> dict[str, Any]:
+    """What the start message said about the scenario, after the fact."""
+    return _started.get("scenario", {})
+
+
+def contracted_artifact() -> str:
+    """The artifact name the goal asks for, or an empty string if none."""
+    return str(scenario().get("output_contract", {}).get("artifact", ""))
 
 
 def tool_call(call_id: str, tool: str, arguments: dict[str, Any]) -> Any:

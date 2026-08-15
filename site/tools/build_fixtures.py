@@ -263,6 +263,20 @@ def _scenario_for(case: dict[str, Any] | None) -> Path:
     return ROOT / ((case or {}).get("scenario") or default)
 
 
+def _subject_args(case: dict[str, Any]) -> list[str]:
+    """
+    The arguments a manifest entry launches its script with.
+
+    `breaker.py` is one script serving many entries, so it needs to be told
+    which one it is. Everything else takes no arguments and is unaffected.
+    """
+    if case.get("args") is not None:
+        return [str(item) for item in case["args"]]
+    if Path(case["script"]).name == "breaker.py":
+        return [case["id"]]
+    return []
+
+
 def _record(spec: dict[str, str], into: Path) -> dict[str, Any]:
     """Run one fixture and write its bundle. Returns the index entry."""
     subjects = _subjects()
@@ -280,7 +294,7 @@ def _record(spec: dict[str, str], into: Path) -> dict[str, Any]:
         should_be = "PASS"
     else:
         adapter = JSONLCommandAdapter(
-            [sys.executable, str(ROOT / case["script"])],
+            [sys.executable, str(ROOT / case["script"]), *_subject_args(case)],
             timeout_seconds=float(case.get("timeout_seconds", DEFAULT_TIMEOUT)),
         )
         behavior = case["behavior"]
@@ -424,7 +438,28 @@ def _facts() -> dict[str, Any]:
         },
         "docs": _tracked_markdown("docs"),
         "surveys": _tracked_markdown("conformance"),
+        # Named `taxonomy`, not `coverage`: "coverage" already means branch
+        # coverage in this project — there is a badge for it — and a second
+        # meaning under the same word is how the site would end up implying the
+        # test suite covers 14% of something.
+        "taxonomy": _taxonomy_facts(),
     }
+
+
+def _taxonomy_facts() -> dict[str, Any]:
+    """
+    How much of the published failure taxonomy the scenarios cover.
+
+    Derived here for the same reason every other number on this page is: the
+    site cannot be allowed to state a figure that the files stopped supporting.
+    `uncovered_core` is dropped — it is a contributor roadmap, served by
+    `beacon taxonomy --uncovered`, and forty-five cell ids in a facts export
+    would be a large committed diff on every scenario that lands.
+    """
+    from beacon.taxonomy import coverage_report, load_shipped, load_taxonomy
+
+    report = coverage_report(load_shipped(ROOT / "scenarios"), load_taxonomy())
+    return {key: value for key, value in report.items() if key != "uncovered_core"}
 
 
 def _tracked_markdown(directory: str) -> list[str]:
@@ -500,6 +535,83 @@ def _build(into: Path) -> list[dict[str, Any]]:
     return entries
 
 
+def _equivalent(fresh: Path, committed: Path) -> bool:
+    """
+    Whether regenerating would change anything that matters.
+
+    Exactly the predicate `--check` applies, deliberately reusing
+    `_strip_volatile` rather than restating it, so "the build is clean" and
+    "the build would rewrite nothing" cannot drift into meaning different
+    things.
+    """
+    if not committed.exists():
+        return False
+    fresh_json = sorted(p.relative_to(fresh) for p in fresh.rglob("*.json"))
+    committed_json = sorted(p.relative_to(committed) for p in committed.rglob("*.json"))
+    if fresh_json != committed_json:
+        return False
+    for rel in fresh_json:
+        try:
+            a = _strip_volatile(json.loads((fresh / rel).read_text(encoding="utf-8")))
+            b = _strip_volatile(
+                json.loads((committed / rel).read_text(encoding="utf-8"))
+            )
+        except json.JSONDecodeError:
+            return False
+        if a != b:
+            return False
+    return True
+
+
+def _promote(staging: Path, out: Path) -> None:
+    """
+    Move the rebuild into place, keeping whatever did not really change.
+
+    The build used to `rmtree` the output and write all seventeen bundles
+    afresh, each with a new timestamp and digest. Adding one scenario therefore
+    produced a diff touching every recorded run, which is the size of change
+    reviewers stop reading — and a fixture regression hides in exactly that
+    kind of diff.
+
+    So each bundle is compared on the fields that are supposed to be stable,
+    and the committed bytes are kept when nothing moved. The volatile fields
+    are not blanked to achieve this: a timestamp that always reads
+    1970-01-01 is a small lie told in every bundle, where keeping the real one
+    from the run that produced it is true.
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    produced = {path.name for path in staging.iterdir()}
+
+    for path in sorted(staging.iterdir()):
+        target = out / path.name
+        if path.is_dir():
+            if _equivalent(path, target):
+                continue
+            if target.exists():
+                shutil.rmtree(target)
+            shutil.move(str(path), str(target))
+            continue
+        if path.suffix == ".json" and target.exists():
+            try:
+                a = _strip_volatile(json.loads(path.read_text(encoding="utf-8")))
+                b = _strip_volatile(json.loads(target.read_text(encoding="utf-8")))
+            except json.JSONDecodeError:
+                a, b = None, object()
+            if a == b:
+                continue
+        shutil.move(str(path), str(target))
+
+    # A bundle whose key was removed must not linger: `--check` would still
+    # find it on disk and compare it against nothing.
+    for path in sorted(out.iterdir()):
+        if path.name in produced:
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
+
 def _check() -> int:
     """Regenerate into a temporary directory and diff what should not move."""
     if not (OUT / "index.json").exists():
@@ -544,9 +656,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         return _check()
 
-    if OUT.exists():
-        shutil.rmtree(OUT)
-    entries = _build(OUT)
+    with tempfile.TemporaryDirectory() as tmp:
+        staging = Path(tmp) / "generated"
+        entries = _build(staging)
+        _promote(staging, OUT)
 
     print(f"{'fixture':<20} {'verdict':<12} shows")
     print("-" * 78)

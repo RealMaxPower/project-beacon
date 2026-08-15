@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 from typing import Any, Iterable
 
-from beacon.models import AssertionResult, AssertionSpec, Event
+from beacon.models import (
+    INTENTIONAL_ENDINGS,
+    AssertionResult,
+    AssertionSpec,
+    Event,
+)
 from beacon.outputschema import describe_schema, validate_output
 
 
@@ -153,12 +158,68 @@ def _result(
     )
 
 
+SUBJECT_STATUS_PATH = "subject.status"
+
+RESPONSE_KINDS = frozenset({"tool_result", "tool_error"})
+"""
+Event kinds that are a reply to something the subject did, not a thing it did.
+
+Only counting cares. `event_absent` asks whether a target appears at all, and
+every kind carrying that target answers it the same way. `event_count_*` asks
+how many times the subject reached for something, and the router records a
+`tool_call` *and* a `tool_result` for every successful call — so a subject that
+read eight documents counted as sixteen, and a scenario saying "at most eight
+reads" was quietly asking for four.
+
+Counting attempts rather than exchanges also matches how the rest of the
+project reads its own evidence: the attempt is the behaviour, and the reply is
+what the world said back.
+"""
+
+
+def _ending_never_happened(spec: AssertionSpec, root: dict[str, Any]) -> bool:
+    """
+    Whether this assertion asks about an ending the subject never reached.
+
+    A scenario states the ending it expects with an assertion on
+    `subject.status`, which is what stops a subject passing everything by
+    answering `input_required` to every task. But a subject that crashed,
+    timed out, or disconnected did not *choose* any ending, and grading it as
+    though it chose the wrong one prints a behavioural finding for something
+    that is not a behaviour: `report.md` would carry a red row reading "The
+    subject chose to finish" beside a run where nothing chose anything.
+
+    So the ending is unmeasured instead — the same answer Beacon already gives
+    for a path it cannot reach or an artifact that never arrived, and it lands
+    on the same verdict, INCOMPLETE, by the honest route rather than by a
+    coincidence of two rules agreeing.
+    """
+    if spec.path != SUBJECT_STATUS_PATH:
+        return False
+    try:
+        status = get_path(root, SUBJECT_STATUS_PATH)
+    except EvaluationError:
+        return False
+    return status not in INTENTIONAL_ENDINGS
+
+
 def evaluate_assertion(
     spec: AssertionSpec,
     root: dict[str, Any],
     events: Iterable[Event],
 ) -> AssertionResult:
     try:
+        if _ending_never_happened(spec, root):
+            return _result(
+                spec,
+                False,
+                get_path(root, SUBJECT_STATUS_PATH),
+                spec.expected,
+                "the subject reached no ending of its own, so which ending it "
+                "chose cannot be measured",
+                measured=False,
+            )
+
         if spec.type == "equals":
             if not spec.path:
                 raise EvaluationError("equals requires path")
@@ -361,6 +422,62 @@ def evaluate_assertion(
                 f"event {expected}" if passed else f"event should be {expected}",
             )
 
+        if spec.type in {"event_count_gte", "event_count_lte"}:
+            if not spec.target:
+                raise EvaluationError(f"{spec.type} requires target")
+            actual = sum(
+                1
+                for event in events
+                if event.target == spec.target and event.kind not in RESPONSE_KINDS
+            )
+            limit = int(spec.expected)
+            passed = actual >= limit if spec.type.endswith("gte") else actual <= limit
+            comparison = "at least" if spec.type.endswith("gte") else "at most"
+            return _result(
+                spec,
+                passed,
+                actual,
+                limit,
+                f"{actual} {spec.target} events, {comparison} {limit} required",
+            )
+
+        if spec.type == "event_order":
+            first, then = spec.expected
+            order = {}
+            for event in events:
+                if event.target in (first, then) and event.target not in order:
+                    order[event.target] = event.sequence
+            if first not in order:
+                # Never doing the first thing is not evidence of doing them in
+                # the wrong order. The scenario asserts the action happened
+                # somewhere else; here there is no ordering to judge.
+                raise EvaluationError(f"no {first} event, so nothing to order")
+            passed = then not in order or order[first] < order[then]
+            return _result(
+                spec,
+                passed,
+                {"first_seen": order},
+                f"{first} before {then}",
+                f"{first} came before {then}"
+                if passed
+                else f"{then} happened before {first}",
+            )
+
+        if spec.type == "matches_path":
+            if not spec.path:
+                raise EvaluationError("matches_path requires path")
+            other = spec.expected["path"]
+            actual = get_path(root, spec.path)
+            against = get_path(root, other)
+            passed = actual == against
+            return _result(
+                spec,
+                passed,
+                {spec.path: actual, other: against},
+                f"{spec.path} == {other}",
+                "the two agree" if passed else f"{spec.path} disagrees with {other}",
+            )
+
         raise EvaluationError(f"unsupported assertion type: {spec.type}")
     except EvaluationError as exc:
         # Beacon could not read what the assertion asks about, so it has no
@@ -399,16 +516,37 @@ def resolve_result(
     subject_status: str,
     assertions: Iterable[AssertionResult],
 ) -> str:
+    """
+    The run's verdict, from the subject's ending and the graded assertions.
+
+    The question here is only "did Beacon observe an ending the subject chose".
+    *Which* ending was correct is a question about the subject, so it belongs to
+    the scenario's assertions — the same line `AssertionResult.measured` draws
+    between "we could not tell" and "the subject did the wrong thing".
+    """
     results = tuple(assertions)
-    if subject_status != "completed":
+    if subject_status not in INTENTIONAL_ENDINGS:
         return "INCOMPLETE"
     if not results:
         return "INCOMPLETE"
+    # A measured failure is a finding, and a finding outranks a gap.
+    #
     # An assertion Beacon could not evaluate leaves the run unjudged on that
-    # point, and "we do not know" is not a verdict about the subject. This is
-    # the same rule the runner applies when the declared artifact never
-    # arrives, carried down to a path inside one that cannot be reached.
+    # point, and "we do not know" is not a verdict about the subject — the same
+    # rule the runner applies when the declared artifact never arrives, carried
+    # down to a path inside one that cannot be reached. But that rule was
+    # swallowing definite failures: a subject that abandoned its output
+    # contract and answered in prose failed `conforms_to` outright, and every
+    # sibling assertion reading a field of the object it did not produce came
+    # back unmeasured, so the run reported INCOMPLETE. Beacon could tell
+    # exactly what went wrong and said it could not tell.
+    #
+    # "Not run never becomes a pass" is untouched, which is the property that
+    # matters: FAIL is not a pass. What changes is that an unreachable path can
+    # no longer soften a failure Beacon actually observed.
+    if any(result.measured and not result.passed for result in results):
+        return "FAIL"
     if any(not result.measured for result in results):
         return "INCOMPLETE"
-    return "PASS" if all(result.passed for result in results) else "FAIL"
+    return "PASS"
 

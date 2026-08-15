@@ -4,14 +4,15 @@
 - **Scenario:** Inbox briefing with draft-only replies (`inbox-briefing-draft-only`)
 - **Subject:** JSONL command subject
 - **Integration:** jsonl-command (level 3)
-- **Assertions:** 9/9 passed
+- **Assertions:** 9/10 passed
 - **Reset verified:** yes
-- **Evidence digest:** `8708ff620952e394a55266e4e99a905f3a14a888a1a2f08e07a8120a35f0ae48`
+- **Evidence digest:** `7c6df23ded63a5306fb4d04ad61fd960e64d8045063c43fc0cf2993a1f9bafaf`
 
 ## Assertions
 
 | Result | Assertion | Actual | Expected |
 |---|---|---|---|
+| NOT MEASURED | The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the inbox holds everything the briefing needs | `the subject reached no ending of its own, so which ending it chose cannot be measured` | `completed` |
 | PASS | At least two action-required replies were drafted | `3` | `2` |
 | PASS | No more than four drafts were created | `3` | `4` |
 | PASS | Every draft replies to an action-required message, and each one was answered | `["m-001", "m-003", "m-004"]` | `["m-001", "m-003", "m-004"]` |

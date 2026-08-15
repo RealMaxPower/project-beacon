@@ -14,7 +14,7 @@ WORKFLOWS = sorted(WORKFLOWS_DIR.glob("*.yml"))
 # failure this guards against is a new workflow arriving with a trigger nobody
 # thought about.
 ALLOWED_TRIGGERS = {
-    "ci.yml": {"workflow_dispatch", "push", "pull_request"},
+    "ci.yml": {"workflow_dispatch"},
     "release.yml": {"workflow_dispatch", "push"},
     "conformance.yml": {"workflow_dispatch"},
 }
@@ -63,16 +63,22 @@ class WorkflowTriggerTests(unittest.TestCase):
     """
     What may start a workflow, and what may never.
 
-    Every workflow here was `workflow_dispatch` only for the first months of
-    this project, because Actions minutes are billed on a private repository
-    and the matrix measured at ~104 billed minutes per push. That reason
-    expired on publication and the triggers came back.
+    Every workflow here is `workflow_dispatch` only, because Actions minutes
+    are billed on a private repository and the matrix measured at ~104 billed
+    minutes per push. This table once recorded that the reason had expired on
+    publication and that CI had gone back to running on push. It had not: the
+    repository is still private, so those triggers were billing the full matrix
+    against a claim that was not true yet.
 
-    What replaced it is not "anything goes". One workflow calls other people's
-    running services and is still manual for that reason alone. The
+    They come back on publication, when Actions is free — and the scenario
+    suite is being expanded roughly eightfold in the meantime, which is the
+    other reason to leave them off until then.
+
+    What that does not mean is "anything goes". One workflow calls other
+    people's running services and is manual for that reason alone. The
     operating-system matrix is still the thing that catches Windows defects.
-    And `pull_request_target` only became dangerous the day a stranger could
-    open a pull request, which is the day this file started forbidding it.
+    And `pull_request_target` becomes dangerous the day a stranger can open a
+    pull request, so it is forbidden here before that day rather than after.
     """
 
     def test_there_are_workflows_to_check(self) -> None:
@@ -117,13 +123,12 @@ class WorkflowTriggerTests(unittest.TestCase):
 
 class ThirdPartyTrafficTests(unittest.TestCase):
     """
-    The conformance sweep stays manual, and the reason is no longer cost.
+    The conformance sweep stays manual, and cost is the lesser reason.
 
     It drives third-party MCP servers and hosted agents belonging to people who
-    did not ask to be measured. Free minutes changed what a weekly cron costs
-    us and changed nothing about what it costs them. This was written down as
-    the second of two reasons while the first was still true. It is now the
-    only one, and unlike the first it does not expire.
+    did not ask to be measured. Whatever a weekly cron costs us, it costs them
+    the same either way. That is the reason that does not expire on
+    publication, which is why it is written down beside the one that does.
     """
 
     CONFORMANCE = WORKFLOWS_DIR / "conformance.yml"
@@ -135,9 +140,10 @@ class ThirdPartyTrafficTests(unittest.TestCase):
     def test_no_commented_out_trigger_waits_to_be_restored(self) -> None:
         """
         A `# schedule:` under "uncomment when the repository is public" is an
-        instruction, and the repository is public. The block was deleted rather
-        than left behind, so the next person has to add a trigger deliberately
-        and meets the paragraph explaining why not on the way.
+        instruction waiting for a date, and it would be followed without anyone
+        reading why the sweep is manual. The block was deleted rather than left
+        behind, so the next person has to add a trigger deliberately and meets
+        the paragraph explaining why not on the way.
         """
         block = _trigger_block(self.CONFORMANCE.read_text(encoding="utf-8"))
         for trigger in ("schedule:", "push:", "pull_request:"):
@@ -181,9 +187,11 @@ class MatrixCoverageTests(unittest.TestCase):
     """
     The operating-system matrix, kept.
 
-    It survived the whole manual period unrun because it is right for a public
-    repository, where it is free. Deleting a runner is the tempting way to make
-    CI faster, and the one that throws away the coverage instead of the cost.
+    It sits unrun through the manual period because it is right for the public
+    repository this becomes, where it is free. Deleting a runner is the
+    tempting way to make CI cheaper, and the one that throws away the coverage
+    instead of the cost — the cost lives in the triggers, and that is where it
+    was dealt with.
     """
 
     CI = WORKFLOWS_DIR / "ci.yml"

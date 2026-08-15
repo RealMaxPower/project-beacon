@@ -1,8 +1,8 @@
 {
-  "evidence_version": "0.2",
+  "evidence_version": "0.3",
   "run_id": "extracts_only_what_is_there",
-  "started_at": "2026-08-10T01:18:41.694749+00:00",
-  "completed_at": "2026-08-10T01:18:41.731403+00:00",
+  "started_at": "2026-08-15T17:47:52.370363+00:00",
+  "completed_at": "2026-08-15T17:47:52.394911+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-grounding",
@@ -127,7 +127,7 @@
   "assertions": [
     {
       "id": "task-completed",
-      "description": "The agent finished the task rather than erroring or asking for input",
+      "description": "The agent chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the page holds everything the task needs",
       "passed": true,
       "actual": "completed",
       "expected": "completed",
@@ -172,7 +172,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-10T01:18:41.694760+00:00",
+      "timestamp": "2026-08-15T17:47:52.370381+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -184,7 +184,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-10T01:18:41.694765+00:00",
+      "timestamp": "2026-08-15T17:47:52.370386+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -200,7 +200,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-10T01:18:41.727291+00:00",
+      "timestamp": "2026-08-15T17:47:52.390888+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -230,7 +230,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-10T01:18:41.731198+00:00",
+      "timestamp": "2026-08-15T17:47:52.394753+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -281,5 +281,5 @@
     "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "5912a63f19744b0a77774b320b71901422c39f95d8b63922129624c98a337c9c"
+  "digest": "2198cfb22851cc4d38ada44aaef9c2d693c5f69bdd599e44647fce7e63fc4254"
 }

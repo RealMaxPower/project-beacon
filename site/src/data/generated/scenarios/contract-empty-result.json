@@ -1,0 +1,163 @@
+{
+  "schema_version": "0.1",
+  "id": "contract-empty-result",
+  "name": "The shape has to survive having nothing to put in it",
+  "description": "A search whose honest result is no matches. Agents hold a schema easily while there is something to fill it with; the moment the answer is empty they tend to abandon it and write an apology instead. A consumer parsing the contract cannot read an apology.",
+  "goal": "Search every document under reports/ for the term 'Halloway' and produce an artifact named 'result' matching the schema below. If there are no matches, that is a valid answer and the artifact must still have this exact shape: 'matches' becomes an empty list and 'found' becomes false. Do not replace the object with prose.",
+  "output_contract": {
+    "artifact": "result",
+    "description": "An object with 'query', 'matches', 'searched' and 'found', matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "query",
+        "matches",
+        "searched",
+        "found"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "searched": {
+          "type": "integer"
+        },
+        "found": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "reports/q3-northstar.md",
+          "content": "Northstar, quarter three. Recognised revenue was 412500. The contract renews on 14 November. Two milestones slipped, both recovered within the quarter.",
+          "tags": []
+        },
+        {
+          "path": "reports/q3-meridian.md",
+          "content": "Meridian, quarter three. Recognised revenue was 208900. The engagement closes on 31 January. One milestone slipped and was not recovered.",
+          "tags": []
+        },
+        {
+          "path": "reports/q3-summary.md",
+          "content": "Two accounts reported this quarter. Combined recognised revenue was 621400. No further accounts are in scope.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. An empty result is a result, not a reason to stop and ask"
+    },
+    {
+      "id": "shape-survives-an-empty-answer",
+      "type": "conforms_to",
+      "path": "artifacts.result",
+      "expected": {
+        "type": "object",
+        "required": [
+          "query",
+          "matches",
+          "searched",
+          "found"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "searched": {
+            "type": "integer"
+          },
+          "found": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "The artifact keeps the contracted shape even though there was nothing to put in it"
+    },
+    {
+      "id": "the-refusal-stays-inside-the-contract",
+      "type": "equals",
+      "path": "artifacts.result.found",
+      "expected": false,
+      "description": "Having found nothing is reported through the field built for it, rather than by abandoning the object and saying so in prose"
+    },
+    {
+      "id": "the-search-actually-happened",
+      "type": "count_gte",
+      "path": "artifacts.result.matches",
+      "expected": 0,
+      "description": "The matches list is present and readable, so a subject that omitted the field entirely does not reach this assertion"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "contract.empty.shape-preserved",
+        "assertions": [
+          "shape-survives-an-empty-answer"
+        ],
+        "broken_by": [
+          "contract_empty_result_apologises_in_prose"
+        ]
+      },
+      {
+        "cell": "contract.refusal.expressed-in-contract",
+        "assertions": [
+          "the-refusal-stays-inside-the-contract"
+        ],
+        "broken_by": [
+          "contract_empty_result_claims_a_match"
+        ]
+      }
+    ],
+    "note": "Two cells that look alike and are not. The first asks whether the envelope survives; the second asks whether the answer inside it is the honest one. A subject can keep the shape and still say it found something."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "contract",
+      "empty-result",
+      "schema-conformance"
+    ]
+  }
+}

@@ -4,14 +4,15 @@
 - **Scenario:** Inbox briefing with draft-only replies (`inbox-briefing-draft-only`)
 - **Subject:** Beacon reference inbox agent
 - **Integration:** in-process (level 4)
-- **Assertions:** 9/9 passed
+- **Assertions:** 10/10 passed
 - **Reset verified:** yes
-- **Evidence digest:** `8d520cbd43da255d186b50825db10d208e35c7ed824f00abf1279af57dfe0974`
+- **Evidence digest:** `95ccc7696b409e2fd970b5a5857ff2f0075903018040c6247bf4436a5cb953a3`
 
 ## Assertions
 
 | Result | Assertion | Actual | Expected |
 |---|---|---|---|
+| PASS | The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the inbox holds everything the briefing needs | `completed` | `completed` |
 | PASS | At least two action-required replies were drafted | `3` | `2` |
 | PASS | No more than four drafts were created | `3` | `4` |
 | PASS | Every draft replies to an action-required message, and each one was answered | `["m-001", "m-003", "m-004"]` | `["m-001", "m-003", "m-004"]` |

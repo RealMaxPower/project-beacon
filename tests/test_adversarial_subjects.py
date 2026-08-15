@@ -1,38 +1,38 @@
 from __future__ import annotations
 
 import json
-import sys
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
 
-from beacon.adapters import JSONLCommandAdapter
-from beacon.models import Scenario
-from beacon.runner import run_scenario
+import sys as _sys
+from pathlib import Path as _Path
+
+# `unittest discover -s tests` puts this directory on the path; running a
+# module directly as `python3 -m unittest tests.test_x` does not. Both forms
+# get used, so make the sibling import work either way.
+_sys.path.insert(0, str(_Path(__file__).resolve().parent))
+
+from _subject_runs import run_subject
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
-DEFAULT_TIMEOUT = 15.0
 
 
 def _manifest() -> dict[str, Any]:
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
 
 
-def _run(case: dict[str, Any], scenario_path: Path, directory: str) -> Any:
-    adapter = JSONLCommandAdapter(
-        [sys.executable, str(ROOT / case["script"])],
-        timeout_seconds=float(case.get("timeout_seconds", DEFAULT_TIMEOUT)),
-    )
+def _run(case: dict[str, Any], scenario_path: Path) -> Any:
+    """
+    This subject's run, shared with every other harness that asks for it.
+
+    The bundles live in one process-wide evidence directory rather than a
+    per-test one, so a bundle is still on disk when a later test looks for it.
+    """
     scenario = ROOT / case.get("scenario", str(scenario_path))
-    return run_scenario(
-        Scenario.load(scenario),
-        adapter,
-        output_dir=directory,
-        run_id=case["id"],
-    )
+    return run_subject(case, scenario)
 
 
 class AdversarialSubjectTests(unittest.TestCase):
@@ -55,29 +55,27 @@ class AdversarialSubjectTests(unittest.TestCase):
         The invariant that outranks every verdict: a run that writes no
         evidence is a bug in Beacon, whatever the subject did.
         """
-        with tempfile.TemporaryDirectory() as directory:
-            for case in self.manifest["subjects"]:
-                with self.subTest(subject=case["id"]):
-                    outcome = _run(case, self.scenario_path, directory)
-                    self.assertTrue(outcome.json_path.exists())
-                    self.assertTrue(outcome.markdown_path.exists())
-                    self.assertIn(
-                        outcome.evidence.result,
-                        {"PASS", "FAIL", "INCOMPLETE"},
-                    )
+        for case in self.manifest["subjects"]:
+            with self.subTest(subject=case["id"]):
+                outcome = _run(case, self.scenario_path)
+                self.assertTrue(outcome.json_path.exists())
+                self.assertTrue(outcome.markdown_path.exists())
+                self.assertIn(
+                    outcome.evidence.result,
+                    {"PASS", "FAIL", "INCOMPLETE"},
+                )
 
     def test_subjects_produce_their_recorded_verdicts(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            for case in self.manifest["subjects"]:
-                with self.subTest(subject=case["id"]):
-                    outcome = _run(case, self.scenario_path, directory)
-                    self.assertEqual(
-                        outcome.evidence.result,
-                        case["currently"],
-                        f"{case['id']} changed behavior. If this is a fix, "
-                        f"update 'currently' in manifest.json and clear "
-                        f"'defect'.",
-                    )
+        for case in self.manifest["subjects"]:
+            with self.subTest(subject=case["id"]):
+                outcome = _run(case, self.scenario_path)
+                self.assertEqual(
+                    outcome.evidence.result,
+                    case["currently"],
+                    f"{case['id']} changed behavior. If this is a fix, "
+                    f"update 'currently' in manifest.json and clear "
+                    f"'defect'.",
+                )
 
     def test_manifest_defects_match_the_recorded_verdicts(self) -> None:
         """A defect note and a wrong verdict must always travel together."""
@@ -100,16 +98,31 @@ class AdversarialSubjectTests(unittest.TestCase):
     def test_a_completed_subject_that_hangs_is_not_a_pass(self) -> None:
         """
         Spot-check the central invariant directly rather than through the
-        manifest: every assertion passes, and the verdict is still INCOMPLETE.
+        manifest: the subject does the work, so every assertion about what it
+        *did* passes, and the verdict is still INCOMPLETE because it never said
+        it was finished.
+
+        `task-completed` is excluded, and the exclusion is the point rather
+        than a loophole. It asserts on `subject.status`, so it is a statement
+        about the ending rather than about the work, and a subject that hangs
+        fails it for the same reason the run is INCOMPLETE. Counting it here
+        would make the check pass for a second reason and stop proving the
+        first — that a full set of satisfied behavioural assertions still does
+        not add up to a PASS.
         """
         case = next(
             item
             for item in self.manifest["subjects"]
             if item["id"] == "never_completes"
         )
-        with tempfile.TemporaryDirectory() as directory:
-            outcome = _run(case, self.scenario_path, directory)
-        self.assertTrue(all(item["passed"] for item in outcome.evidence.assertions))
+        outcome = _run(case, self.scenario_path)
+        behavioural = [
+            item
+            for item in outcome.evidence.assertions
+            if item["id"] != "task-completed"
+        ]
+        self.assertTrue(behavioural, "nothing left to check once the ending is dropped")
+        self.assertTrue(all(item["passed"] for item in behavioural))
         self.assertEqual(outcome.evidence.result, "INCOMPLETE")
 
     def test_manifest_scripts_exist(self) -> None:

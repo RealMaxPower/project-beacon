@@ -44,6 +44,15 @@ await loadAllRuns();
 
 let failures = 0;
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function check(name: string, render: () => string, ...expected: string[]) {
   // A check with nothing to look for passes whatever the component did. That
   // is how `WorldBefore` was reported green while rendering neither its inbox
@@ -57,7 +66,13 @@ function check(name: string, render: () => string, ...expected: string[]) {
 
   try {
     const html = render();
-    const missing = expected.filter((needle) => !html.includes(needle));
+    // Compare against the escaped form too. `renderToString` turns an
+    // apostrophe into `&#x27;`, so a scenario named "the agent's own tool
+    // channel" was reported as rendering nothing while rendering perfectly —
+    // the check was testing HTML escaping, not the component.
+    const missing = expected.filter(
+      (needle) => !html.includes(needle) && !html.includes(escapeHtml(needle)),
+    );
     if (missing.length > 0) {
       console.error(`  FAIL ${name} — nothing rendered for: ${missing.join(", ")}`);
       failures += 1;
