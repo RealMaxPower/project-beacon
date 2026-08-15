@@ -105,7 +105,14 @@ const ROUTES = [
   ["b-nojs-dark", "/playground", "dark", null, false],
 ];
 
-const WIDTHS = [390, 768, 1280, 1600];
+/*
+ * 320 is here because WCAG 1.4.10 names it, and nothing was walking it.
+ *
+ * 390 is the narrowest phone anyone designs for; 320 is the width the success
+ * criterion actually specifies, and the gap between them is where a fixed
+ * min-width or an unwrapped table hides.
+ */
+const WIDTHS = [320, 390, 768, 1280, 1600];
 
 let problems = 0;
 // Worst sticky share seen, printed on success too. 14.9% against a >15 rule is

@@ -17,7 +17,7 @@
  *     node tools/flow.mjs
  */
 
-import { chromium } from "playwright";
+import { chromium, firefox, webkit } from "playwright";
 import { startStaticServer } from "./serve.mjs";
 
 const { server, base } = await startStaticServer();
@@ -116,6 +116,53 @@ for (const { scenario, agent, expect } of CASES) {
     else console.log(`  ok   a lazily-loaded run replayed to ${result}`);
   }
   await page.close();
+}
+
+/*
+ * The other two engines, which nothing here had ever loaded.
+ *
+ * Every check in this repository drives Chromium, so "it works" has meant "it
+ * works in Blink" throughout — and the site leans on `@media
+ * (prefers-color-scheme)`, `content-visibility`, `color-mix(in oklab)` and
+ * `oklab()` tokens, none of which behave identically everywhere. This is
+ * deliberately shallow: does each route paint, without a script error and
+ * without the document running wider than the window. Layout precision is not
+ * asserted across engines, because text metrics legitimately differ and a
+ * collision check would report the difference as a defect.
+ */
+for (const [name, engine] of [["firefox", firefox], ["webkit", webkit]]) {
+  let instance;
+  try {
+    instance = await engine.launch();
+  } catch {
+    console.log(`  ..   ${name} is not installed; skipping (npx playwright install ${name})`);
+    continue;
+  }
+  for (const scheme of ["dark", "light"]) {
+    const context = await instance.newContext({
+      viewport: { width: 1280, height: 900 },
+      colorScheme: scheme,
+    });
+    const page = await context.newPage();
+    const trouble = [];
+    page.on("pageerror", (e) => trouble.push(e.message.slice(0, 70)));
+    page.on("console", (m) => m.type() === "error" && trouble.push(m.text().slice(0, 70)));
+
+    for (const route of ["/", "/docs", "/legal", "/playground"]) {
+      await page.goto(base + route, { waitUntil: "networkidle" });
+      await page.waitForTimeout(400);
+      const seen = await page.evaluate(() => ({
+        chars: (document.querySelector("main")?.innerText ?? "").trim().length,
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+      }));
+      if (seen.chars < 300) report(`${name} ${scheme} ${route}`, `only ${seen.chars} chars painted`);
+      if (seen.overflow > 1) report(`${name} ${scheme} ${route}`, `document ${seen.overflow}px wider than the window`);
+    }
+    if (trouble.length) report(`${name} ${scheme}`, trouble[0]);
+    else console.log(`  ok   ${name} ${scheme}: four routes painted, nothing logged`);
+    await context.close();
+  }
+  await instance.close();
 }
 
 await browser.close();

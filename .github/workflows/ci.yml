@@ -187,9 +187,15 @@ jobs:
       # Chromium is fetched explicitly: the npm install brings the Playwright
       # library, not a browser, and `headers.mjs` drives a real one because
       # `vite preview` serves none of the headers under test.
-      - name: Install Chromium for the header check
+      # Three engines: Chromium drives every check here, and `tools/flow.mjs`
+      # also loads the site in Firefox and WebKit — the site leans on
+      # `prefers-color-scheme`, `content-visibility` and `oklab()` tokens, none
+      # of which behave identically everywhere, and nothing had ever loaded it
+      # outside Blink. The flow tool skips an engine it cannot launch rather
+      # than failing, so a runner without them still runs everything else.
+      - name: Install the browsers
         working-directory: site
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Assert the security headers reach the wire
         working-directory: site
