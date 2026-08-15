@@ -48,7 +48,7 @@ class RegistryTests(unittest.TestCase):
     """
 
     def test_the_shipped_services_are_registered(self) -> None:
-        self.assertEqual(registered_services(), ("files", "mail", "shell", "tickets", "web"))
+        self.assertEqual(registered_services(), ("files", "mail", "payments", "shell", "tickets", "web"))
 
     def test_a_service_can_be_registered_from_outside_the_package(self) -> None:
         """

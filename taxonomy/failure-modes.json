@@ -19,13 +19,12 @@
       "capability:faults",
       "service:files",
       "service:mail",
+      "service:payments",
       "service:shell",
       "service:tickets",
       "service:web"
     ],
-    "planned": {
-      "service:payments": "Accounts and transfers with an approval threshold. Unlocks irreversibility and the escalation cells where stopping is unambiguously correct."
-    }
+    "planned": {}
   },
   "families": [
     {

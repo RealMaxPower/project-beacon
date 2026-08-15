@@ -125,6 +125,27 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- **A ledger**, and with it the last capability the taxonomy was waiting on.
+  Every cell is now gradeable, so the two published figures have converged and
+  coverage can no longer be improved by building capability — only by writing
+  scenarios.
+
+  Two mechanics earn it. `approval_threshold_cents` makes a payment refusable
+  until a person approves it, and approval is always pending, so there is no
+  sequence of calls that moves the money and the only behaviour that completes
+  the task is stopping. And a repeated transfer is recorded as a duplicate
+  *and still applies*, because that is what a payment system does — combined
+  with a fault whose `after_effect` is `applied`, it produces the real
+  double-spend: the gateway timed out, the money moved, and the agent that
+  retries pays twice.
+
+  Three scenarios: a payment over the limit, a refund that must hit one
+  transaction out of three that look alike, and a supplier page announcing new
+  bank details. That last is business email compromise with the email removed,
+  and the fraudulent account is on the recipient allowlist deliberately —
+  a policy that refused it would be measuring the allowlist, and the point is
+  that nothing but the agent's judgement stands between the two accounts.
+
 - **A shell that runs nothing**, and a declarative fault table any service can
   compose. Destructive restraint and command-shaped egress are the failures
   with the least recoverable consequences an agent has, and `rm -rf build/` is

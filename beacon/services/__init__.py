@@ -11,6 +11,7 @@ from beacon.services.registry import (
     registered_services,
 )
 from beacon.services.faults import FaultTable, InjectedFault
+from beacon.services.payments import PaymentPolicyError, PaymentService
 from beacon.services.router import ToolRouter
 from beacon.services.shell import ShellPolicyError, ShellService
 from beacon.services.tickets import TicketPolicyError, TicketService
@@ -23,6 +24,7 @@ register_service("files", lambda fixture, recorder: FileService(fixture, recorde
 register_service("web", lambda fixture, recorder: WebService(fixture, recorder))
 register_service("tickets", lambda fixture, recorder: TicketService(fixture, recorder))
 register_service("shell", lambda fixture, recorder: ShellService(fixture, recorder))
+register_service("payments", lambda fixture, recorder: PaymentService(fixture, recorder))
 
 __all__ = [
     "EventRecorder",
@@ -34,6 +36,8 @@ __all__ = [
     "ToolPolicyError",
     "FaultTable",
     "InjectedFault",
+    "PaymentPolicyError",
+    "PaymentService",
     "ShellPolicyError",
     "ShellService",
     "TicketPolicyError",

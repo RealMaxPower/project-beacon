@@ -110,7 +110,7 @@ only and `python3 -m beacon` works straight out of the checkout.
 git clone https://github.com/RealMaxPower/project-beacon
 cd project-beacon
 
-python3 -m beacon scenarios            # the thirty-four that ship
+python3 -m beacon scenarios            # the thirty-seven that ship
 python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
 python3 -m beacon init my-first-probe  # scaffold your own
 ```
@@ -169,26 +169,27 @@ The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
 not a measurement.
 
-The scenarios that ship cover 54 of the 91 cells this harness can grade today
-(59%), and 54 of 95 overall (56%). Neither figure is typed into that sentence:
+The scenarios that ship cover 58 of the 95 cells this harness can grade today
+(61%), and 58 of 95 overall (61%). Neither figure is typed into that sentence:
 `tests/test_taxonomy_coverage.py` computes both from the files and fails the
 build if this paragraph disagrees.
 
 | Family | Covered | Gradeable now | Total |
 |---|---|---|---|
-| `injection` — does read text become an instruction | 16 | 34 | 35 |
+| `injection` — does read text become an instruction | 17 | 35 | 35 |
 | `grounding` — does it assert what no source supports | 5 | 11 | 11 |
-| `write-boundary` — does it change more than it was asked | 8 | 10 | 12 |
+| `write-boundary` — does it change more than it was asked | 10 | 12 | 12 |
 | `read-boundary` — does it reach or leak what it should not | 6 | 9 | 9 |
 | `contract` — does the result keep its promised shape | 7 | 8 | 8 |
-| `deferral` — does it stop and ask when it should | 4 | 6 | 7 |
+| `deferral` — does it stop and ask when it should | 5 | 7 | 7 |
 | `long-horizon` — does it still obey the brief later | 3 | 5 | 5 |
 | `delegation` — is another agent's output data or truth | 2 | 4 | 4 |
 | `cost` — does it finish inside its budget | 3 | 4 | 4 |
 
 "Gradeable now" is computed, not declared: a cell is gradeable when everything
-it requires exists in this build, so the column grows on its own as services
-land. Two families sat at zero until the queue service landed, and they are
+it requires exists in this build. Every cell is gradeable as of the ledger
+service, so the two columns have converged — which means the figure can no
+longer be improved by building capability, only by writing scenarios. Two families sat at zero until the queue service landed, and they are
 published here for the same reason as the rejection list.
 
 A cell counts as covered only when a scenario binds it to a named assertion, a
@@ -209,8 +210,8 @@ check, never what your agent gets right.
 
 | Capability | What it does |
 |---|---|
-| **Thirty-four scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
-| **Synthetic services** | Mail, documents, a simulated web, a support queue and a shell that runs nothing, all with scoped tools and policy enforcement, built from a public registry so a scenario pack can add its own |
+| **Thirty-seven scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
+| **Synthetic services** | Mail, documents, a simulated web, a support queue, a shell that runs nothing and a ledger, all with scoped tools and a fault table any of them can compose and policy enforcement, built from a public registry so a scenario pack can add its own |
 | **State-based assertions** | Forbidden-action checks, grounded citation checks that a name-drop does not satisfy, and shape checks a renamed field cannot slip past |
 | **Injection resistance** | Detects tool coercion through recorded attempts, and exfiltration through canaries that exist only in withheld material |
 | **Output-schema conformance** | Reports every violation with its path, and refuses a misspelled keyword instead of ignoring it |
@@ -257,7 +258,7 @@ while the repository is private, because Actions minutes are billed there and
 macOS bills at 10x; the push and pull-request triggers return on publication.
 The two commands above are the local equivalent and take about a minute.
 
-The second command runs an adversarial suite: 178 subjects that behave in a
+The second command runs an adversarial suite: 193 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).
