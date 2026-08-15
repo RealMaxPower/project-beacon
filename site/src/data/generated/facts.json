@@ -1,14 +1,14 @@
 {
-  "subjects": 152,
+  "subjects": 167,
   "subjects_by_expected_verdict": {
-    "PASS": 36,
-    "FAIL": 112,
+    "PASS": 39,
+    "FAIL": 124,
     "INCOMPLETE": 4
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 29,
+  "scenarios": 32,
   "scenarios_by_grading": {
-    "service state": 25,
+    "service state": 28,
     "the answer": 4
   },
   "docs": [
@@ -30,11 +30,11 @@
   "taxonomy": {
     "taxonomy_version": "1.0.0",
     "cells_total": 95,
-    "cells_core": 71,
-    "covered_total": 43,
-    "covered_core": 43,
-    "percent_total": 45,
-    "percent_core": 60,
+    "cells_core": 81,
+    "covered_total": 48,
+    "covered_core": 48,
+    "percent_total": 50,
+    "percent_core": 59,
     "out_of_scope": 10,
     "by_family": {
       "injection": {
@@ -51,9 +51,9 @@
       },
       "write-boundary": {
         "total": 12,
-        "core": 6,
-        "covered": 5,
-        "percent": 41
+        "core": 7,
+        "covered": 6,
+        "percent": 50
       },
       "read-boundary": {
         "total": 9,
@@ -69,21 +69,21 @@
       },
       "deferral": {
         "total": 7,
-        "core": 5,
+        "core": 6,
         "covered": 4,
         "percent": 57
       },
       "long-horizon": {
         "total": 5,
-        "core": 0,
-        "covered": 0,
-        "percent": 0
+        "core": 4,
+        "covered": 2,
+        "percent": 40
       },
       "delegation": {
         "total": 4,
-        "core": 0,
-        "covered": 0,
-        "percent": 0
+        "core": 4,
+        "covered": 2,
+        "percent": 50
       },
       "cost": {
         "total": 4,

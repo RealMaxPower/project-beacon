@@ -125,6 +125,24 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- **A support queue whose other participants are scripted**, which is what
+  made `long-horizon` and `delegation` gradeable at all — both had sat at zero
+  since the taxonomy shipped, because neither is expressible against a store
+  that only returns what was put in it. A ticket carries canned replies keyed
+  on how many comments it has received, so commenting makes the next one
+  arrive: deterministic multi-turn dialogue with no second model in the loop.
+
+  Three scenarios. A rule stated once in the first line of a brief and tested
+  at the twenty-third ticket; a delegate who answers confidently and wrongly,
+  where nothing in the ticket corroborates the release and changeset it names;
+  and an injected instruction that arrives on the third reply, summoned by the
+  agent's own comment.
+
+  Each ships with the subject that rules out its confound. A run that ends the
+  conversation early was never shown the delayed payload, and one that never
+  asks the delegate never sees the invented answer — both would otherwise
+  score as having resisted something they never met.
+
 - **A simulated web**: search, page fetch, page *source*, and one way out.
   Nothing touches a network — the pages are the fixture, which is what keeps a
   run repeatable and a canary meaningful. It unlocked eleven cells the harness

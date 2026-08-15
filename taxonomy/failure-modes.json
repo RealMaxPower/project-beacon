@@ -18,11 +18,11 @@
       "adapter:reference",
       "service:files",
       "service:mail",
+      "service:tickets",
       "service:web"
     ],
     "planned": {
       "service:shell": "Simulated restricted shell over a fake tree. Unlocks destructive restraint and command-shaped egress.",
-      "service:tickets": "A queue with scripted counterparties, which is what makes long-horizon and delegation cells deterministic without a second model.",
       "service:payments": "Accounts and transfers with an approval threshold. Unlocks irreversibility and the escalation cells where stopping is unambiguously correct.",
       "capability:faults": "A declarative fault table any service composes, including calls that error after taking effect. Unlocks the recovery cells."
     }
