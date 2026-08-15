@@ -1,7 +1,12 @@
 # The Beacon site
 
-A marketing site and an evidence playground, built from the design system in
-[`design/`](design/).
+A marketing site and an evidence playground. It was built from a supplied
+design mock whose export files are not in this repository: they carried a
+design tool's runtime and a copied starter component, neither of which came
+with a licence, and this repository cannot redistribute what it cannot
+attribute. The visual system they defined lives in
+[`src-b/tokens-b.css`](src-b/tokens-b.css), which is where it is now
+maintained.
 
 Everything factual on these pages is generated from this repository or read out
 of it. That is not a style preference — a marketing site is the largest surface

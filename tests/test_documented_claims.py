@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -229,6 +230,50 @@ class ReferencedPathTests(unittest.TestCase):
         self.assertGreater(len(paths), 5, "the README stopped naming paths")
         missing = [path for path in paths if not (ROOT / path).exists()]
         self.assertEqual(missing, [], f"README names paths that do not exist: {missing}")
+
+    def test_no_markdown_link_points_at_a_file_that_is_gone(self) -> None:
+        """
+        Every markdown link in every tracked file, not just this one.
+
+        The check above reads `README.md` and a list of directory names, which
+        is precise and covers one file of thirty-eight. `site/README.md` opened
+        with "built from the design system in [`design/`](design/)" for a week
+        after that directory was deleted — the first sentence of the site's own
+        documentation, pointing at a 404, found by a reader rather than by
+        anything here.
+
+        Only markdown link syntax with a repository-relative target, and only
+        tracked files. A bare backticked string is as likely to be a protocol
+        method (`tools/list`), a MIME type (`application/json`) or a git branch
+        (`release/v1`) as a path, and generated output under `dist/` links
+        absolute site paths that are correct for a browser and meaningless
+        here. A checker that reports those teaches people to skim past it.
+        """
+        tracked = subprocess.run(
+            ("git", "ls-files", "*.md"),
+            cwd=ROOT, capture_output=True, text=True, timeout=30, check=False,
+        )
+        if tracked.returncode != 0:
+            self.skipTest("no git repository to list tracked files from")
+        files = [ROOT / name for name in tracked.stdout.split()]
+        self.assertGreater(len(files), 10, "far fewer markdown files than expected")
+
+        broken, checked = [], 0
+        for path in files:
+            for label, target in re.findall(
+                r"\[([^\]]*)\]\(([^)\s]+)\)", path.read_text(encoding="utf-8")
+            ):
+                if target.startswith(("http://", "https://", "mailto:", "#")):
+                    continue
+                checked += 1
+                resolved = (path.parent / target.split("#")[0].rstrip("/")).resolve()
+                if not resolved.exists():
+                    broken.append(f"{path.relative_to(ROOT)}: [{label[:40]}]({target})")
+
+        # Thirty-seven today. The floor is only here to catch the regex
+        # ceasing to match, which would make this pass on anything.
+        self.assertGreater(checked, 25, "almost no relative links were found; has the syntax changed?")
+        self.assertEqual(broken, [], "markdown links point at files that do not exist:\n" + "\n".join(broken))
 
     def test_the_builder_guide_names_paths_that_exist(self) -> None:
         """
