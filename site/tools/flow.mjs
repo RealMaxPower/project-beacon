@@ -119,6 +119,54 @@ for (const { scenario, agent, expect } of CASES) {
 }
 
 /*
+ * A verdict somebody can send to somebody else.
+ *
+ * The wizard used to hold its position in React state alone, so Back left the
+ * playground, a refresh lost the run, and a verdict could not be linked — on a
+ * site arguing that evidence should be something you hand over. The fragment
+ * carries it now, which is checked here because the failure mode is silent:
+ * a link that quietly lands on step one still renders a correct page.
+ */
+{
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const trouble = [];
+  page.on("pageerror", (e) => trouble.push(e.message.slice(0, 70)));
+  page.on("console", (m) => m.type() === "error" && trouble.push(m.text().slice(0, 70)));
+
+  await page.goto(
+    `${base}/playground/inbox-briefing-draft-only#agent=misbehaving&step=verdict`,
+    { waitUntil: "networkidle" },
+  );
+  await page.waitForTimeout(900);
+  const landed = await page.evaluate(() => {
+    const text = document.querySelector("main")?.innerText ?? "";
+    return {
+      verdict: (text.match(/\b(PASS|FAIL|INCOMPLETE)\b/) || [])[1] ?? null,
+      step: (text.match(/Step (\d) of 6/) || [])[1] ?? null,
+      empty: text.includes("Nothing has run yet"),
+    };
+  });
+
+  if (landed.step !== "5") report("a shared verdict link", `landed on step ${landed.step}`);
+  else if (landed.verdict !== "FAIL") report("a shared verdict link", `showed ${landed.verdict}`);
+  else if (landed.empty) report("a shared verdict link", "showed the nothing-has-run screen");
+  else console.log("  ok   a shared verdict link opens on its verdict");
+
+  // And the address bar follows the wizard, or none of the above is reachable
+  // by anyone who did not already have the link.
+  await page.goto(`${base}/playground/inbox-briefing-draft-only`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(500);
+  await page.locator("button").filter({ hasText: /Demo agent — misbehaving/ }).first().click();
+  await page.waitForTimeout(600);
+  const written = await page.evaluate(() => window.location.hash);
+  if (!written.includes("agent=misbehaving")) report("the address bar", `reads ${written || "(empty)"}`);
+  else console.log(`  ok   choosing an agent writes it to the address bar`);
+
+  if (trouble.length) report("shared-link console", trouble[0]);
+  await page.close();
+}
+
+/*
  * The other two engines, which nothing here had ever loaded.
  *
  * Every check in this repository drives Chromium, so "it works" has meant "it

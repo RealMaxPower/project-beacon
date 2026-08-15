@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "@/components/shell/ActionBar";
 import { StepRail } from "@/components/shell/StepRail";
 import { ExpertToggle } from "@/components/shell/ExpertToggle";
@@ -11,7 +11,7 @@ import { Verdict } from "./Verdict";
 import { TwelveRuns } from "./TwelveRuns";
 import { BaselineCompare } from "./BaselineCompare";
 import { ExportBundle } from "./ExportBundle";
-import { emptyStates, type StepKey } from "@/data/copy";
+import { emptyStates, steps, type StepKey } from "@/data/copy";
 import { evidenceFor, eventsFor, fixtures, scenarios } from "@/data/fixtures";
 
 /**
@@ -57,6 +57,32 @@ export function Playground({ scenarioId: requested = null }: Props) {
 
   const runnable = useMemo(() => new Set(fixtures.map((f) => f.scenario)), []);
 
+  /*
+   * Where you are, in the address bar.
+   *
+   * The scenario has been in the path since the routes stopped being
+   * fragments; the agent and the step were held only in React state, so Back
+   * left the playground instead of stepping back, a refresh lost the run, and
+   * a verdict could not be sent to anyone. On a site whose argument is that
+   * evidence should be something you hand to someone else, that last one is
+   * the thesis with a hole in it.
+   *
+   * A fragment rather than more path, deliberately. The path was moved out of
+   * fragments because a fragment is never sent to a server and so cannot be
+   * indexed — which is exactly why it suits this: wizard position is per-page
+   * state, not a page. It costs no prerendered documents, no sitemap entries
+   * and no new URL space, and `/playground/<scenario>` stays the one indexable
+   * address.
+   */
+  const writeFragment = useCallback((subject: string | null, next: StepKey) => {
+    const fragment = subject ? `#agent=${encodeURIComponent(subject)}&step=${next}` : "";
+    const url = `${window.location.pathname}${fragment}`;
+    // `pushState`, so Back steps through the wizard rather than leaving it.
+    if (url !== `${window.location.pathname}${window.location.hash}`) {
+      window.history.pushState(null, "", url);
+    }
+  }, []);
+
   const go = useCallback((next: StepKey) => {
     setStep(next);
     setReached((seen) => new Set(seen).add(next));
@@ -70,6 +96,55 @@ export function Playground({ scenarioId: requested = null }: Props) {
      * page that had half-loaded. The router does this for pages already.
      */
     window.scrollTo({ top: 0 });
+    setSubjectKey((subject) => {
+      writeFragment(subject, next);
+      return subject;
+    });
+  }, [writeFragment]);
+
+  /*
+   * Read the fragment after mount, never during render.
+   *
+   * Every page is prerendered, and the server cannot see a fragment — so a
+   * link naming step five would render the verdict on the client against a
+   * document showing step one, and React would throw the whole prerendered
+   * tree away. Applying it in an effect means the first client render is
+   * always the one the server sent, and the wizard moves immediately
+   * afterwards.
+   *
+   * `ran` is set for any step past the replay. That is not a shortcut around
+   * the deliberate "nothing has run yet" screen: the runs are recorded, the
+   * link names which one, and the verdict being shown is the verdict on disk.
+   * The empty state exists for a reader who arrived at step five having chosen
+   * nothing, and a link that names an agent is not that reader.
+   */
+  useEffect(() => {
+    const apply = () => {
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const subject = params.get("agent");
+      const target = params.get("step") as StepKey | null;
+
+      if (!subject || !fixtures.some((f) => f.key === subject)) return;
+      const known = steps.some((s) => s.key === target);
+      const next: StepKey = known && target ? target : "subject";
+
+      setSubjectKey(subject);
+      setRan(next === "verdict" || next === "repeat");
+      setStep(next);
+      setReached((seen) => {
+        const walked = new Set(seen);
+        for (const { key } of steps) {
+          walked.add(key);
+          if (key === next) break;
+        }
+        return walked;
+      });
+    };
+
+    apply();
+    // Back and forward move through the wizard rather than out of it.
+    window.addEventListener("popstate", apply);
+    return () => window.removeEventListener("popstate", apply);
   }, []);
 
   const evidence = subjectKey ? evidenceFor(subjectKey) : null;
@@ -83,6 +158,7 @@ export function Playground({ scenarioId: requested = null }: Props) {
     setRan(false);
     setReached(new Set<StepKey>(["scenario"]));
     setStep("scenario");
+    window.history.pushState(null, "", window.location.pathname);
     window.scrollTo({ top: 0 });
   }, []);
 
@@ -232,6 +308,7 @@ export function Playground({ scenarioId: requested = null }: Props) {
               onPick={(key) => {
                 setSubjectKey(key);
                 setRan(false);
+                writeFragment(key, "subject");
                 go("world");
               }}
             />
