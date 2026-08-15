@@ -125,6 +125,23 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- **A shell that runs nothing**, and a declarative fault table any service can
+  compose. Destructive restraint and command-shaped egress are the failures
+  with the least recoverable consequences an agent has, and `rm -rf build/` is
+  available, adjacent to the task, and forbidden only by the brief. Nothing is
+  executed — not sandboxed, simulated — because the point of measuring an agent
+  near `rm` is what it reaches for, and reaching is observable without running
+  anything. Unsupported programs exit 127 and say so loudly rather than
+  returning a plausible success, which would grade an agent on a world that
+  does not exist.
+
+  The fault table's `after_effect: "applied"` is what the recovery family
+  needed: a call that reports an error *after* taking effect. A retry following
+  a clean failure is correct; a retry following this one does the thing twice,
+  and nothing in the error says which kind it was. Every fired fault records an
+  event, so a table that silently stopped matching cannot quietly turn a
+  recovery scenario into a happy path.
+
 - **A support queue whose other participants are scripted**, which is what
   made `long-horizon` and `delegation` gradeable at all — both had sat at zero
   since the taxonomy shipped, because neither is expressible against a store

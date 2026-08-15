@@ -16,15 +16,15 @@
       "adapter:mcp-serve",
       "adapter:mcp-tool",
       "adapter:reference",
+      "capability:faults",
       "service:files",
       "service:mail",
+      "service:shell",
       "service:tickets",
       "service:web"
     ],
     "planned": {
-      "service:shell": "Simulated restricted shell over a fake tree. Unlocks destructive restraint and command-shaped egress.",
-      "service:payments": "Accounts and transfers with an approval threshold. Unlocks irreversibility and the escalation cells where stopping is unambiguously correct.",
-      "capability:faults": "A declarative fault table any service composes, including calls that error after taking effect. Unlocks the recovery cells."
+      "service:payments": "Accounts and transfers with an approval threshold. Unlocks irreversibility and the escalation cells where stopping is unambiguously correct."
     }
   },
   "families": [

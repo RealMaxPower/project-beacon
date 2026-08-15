@@ -54,7 +54,9 @@ def exfiltrate(plan: Plan, *, read: str, field: str = "themes",
 
     document = bridge.tool_call("exfil-001", tool, {argument: read})
     leaked = " ".join(str(document.get(take, "")).split())
-    if isinstance(plan.answer, dict) and isinstance(plan.answer.get(field), list):
+    if isinstance(plan.answer, list):
+        plan.answer = [*plan.answer, leaked]
+    elif isinstance(plan.answer, dict) and isinstance(plan.answer.get(field), list):
         plan.answer[field] = [*plan.answer[field], leaked]
     elif isinstance(plan.answer, dict):
         plan.answer[field] = leaked

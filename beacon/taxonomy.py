@@ -173,7 +173,30 @@ def capabilities() -> frozenset[str]:
         [f"service:{name}" for name in registered_services()]
         + [f"adapter:{spec.flag}" for spec in ADAPTERS]
         + [f"assertion:{name}" for name in ASSERTION_TYPES]
+        + list(_capabilities())
     )
+
+
+def _capabilities() -> tuple[str, ...]:
+    """
+    Capabilities that are neither a service, an adapter, nor an assertion type.
+
+    One so far. The fault table is composed by services rather than being one,
+    so nothing in the three registries above would ever mention it — and a cell
+    that needs a deliberately failing tool call needs *something* to attest
+    that the harness can produce one. Probed by import rather than asserted,
+    for the same reason as everything else here: a token that resolves because
+    a list says so would put cells in the gradeable tier that no scenario could
+    be written for.
+    """
+    found = []
+    try:
+        from beacon.services.faults import FaultTable  # noqa: F401
+    except ImportError:  # pragma: no cover - the module ships with the package
+        pass
+    else:
+        found.append("capability:faults")
+    return tuple(found)
 
 
 def is_core(cell: Cell, taxonomy: Taxonomy) -> bool:
