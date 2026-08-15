@@ -7,6 +7,12 @@
 [![Dependencies](https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg)](pyproject.toml)
 [![Coverage floor](https://img.shields.io/badge/branch%20coverage-%E2%89%A580%25-brightgreen.svg)](CONTRIBUTING.md)
 [![Status](https://img.shields.io/badge/status-v0.1%20%C2%B7%20alpha%20%C2%B7%20not%20on%20PyPI-orange.svg)](CHANGELOG.md)
+[![Website](https://img.shields.io/badge/beaconlab.dev-live%20playground-4ed8ea.svg)](https://beaconlab.dev)
+
+**[beaconlab.dev](https://beaconlab.dev)** replays recorded runs in your
+browser — the same evidence bundles this repository writes, stepped through
+check by check, with nothing to install. It is the fastest way to see what a
+verdict is made of before deciding whether to clone anything.
 
 Point Beacon at an agent, give it a scenario built on synthetic mail and files,
 and get back an evidence bundle that says what the agent actually did:

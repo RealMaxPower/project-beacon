@@ -81,6 +81,26 @@ class DiscoverabilityTests(unittest.TestCase):
                 self.assertGreaterEqual(len(page["description"]), 70)
                 self.assertLessEqual(len(page["description"]), 400)
 
+    def test_the_readme_sends_a_reader_to_the_site(self) -> None:
+        """
+        The README is what almost everyone reads first, and it did not mention
+        the site at all — no badge, no link, one appearance of `site/` in a
+        directory listing. A project with a live playground that replays its
+        own evidence should not make a reader clone it to find that out.
+
+        Checked against `SITE_ORIGIN` rather than a written-out URL, so the
+        README cannot come to name a different host than the canonical tags,
+        the sitemap and `llms.txt` all declare.
+        """
+        origin = re.search(r'SITE_ORIGIN = "([^"]+)"', PAGES.read_text(encoding="utf-8")).group(1)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn(origin, readme, "the README never links the site")
+        self.assertRegex(
+            readme,
+            rf"\[!\[[^\]]*\]\([^)]*\)\]\({re.escape(origin)}\)",
+            "the site is linked but has no badge in the row at the top",
+        )
+
     def test_the_canonical_origin_is_declared_once(self) -> None:
         """
         Canonical, og:url, the sitemap and every `@id` in the structured data

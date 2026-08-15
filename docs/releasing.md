@@ -121,6 +121,13 @@ each one currently states the opposite:
 
 - `CHANGELOG.md` — `## [Unreleased]` becomes `## [0.1.0]`, and the paragraph
   under it says `pip install` does not work
+- `README.md` — the website badge and the paragraph under it link
+  `https://beaconlab.dev`, which resolved to a parked host answering 403 while
+  this was written. Load it before tagging: a dead link in the first screen of
+  the README is the first thing a reader meets. The same origin appears in
+  every canonical tag, the sitemap, `robots.txt` and `llms.txt`, so if it is
+  wrong it is wrong in eleven places — `tests/test_site_seo.py` holds the
+  README to whatever `SITE_ORIGIN` says, so they move together or not at all.
 - `README.md` — the status badge reads `not on PyPI`, and the Quickstart says
   "Not on PyPI yet, so clone it"
 - `pyproject.toml` — the `Changelog` URL points at the file rather than
