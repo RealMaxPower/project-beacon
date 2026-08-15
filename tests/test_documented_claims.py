@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SITE = ROOT / "site"
 README = ROOT / "README.md"
 SUBJECTS_README = ROOT / "examples" / "subjects" / "README.md"
 MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
@@ -116,6 +117,94 @@ class A2ADefectCountTests(unittest.TestCase):
         )
         self.assertIsNotNone(match, "the README claim moved; repoint this guard")
         self.assertEqual(_as_number(match.group(1)), self.sdk_total)
+
+
+class StatedCountTests(unittest.TestCase):
+    """
+    Two counts the README states about itself, and nothing was checking either.
+
+    It said "over 400 tests" while the suite was near 700 — true, and wrong by
+    forty percent — in the sentence whose own argument is that a number in
+    prose goes stale the week after it is written and nobody notices. And its
+    licence section described "the four woff2 files … Space Grotesk and
+    JetBrains Mono" when ten files and five families ship. `OFL.txt` named all
+    five correctly, so the notice was right and the README's account of it was
+    not, which is the more embarrassing direction for a licensing claim.
+
+    Both are derived here rather than read, so neither can drift again.
+    """
+
+    README = ROOT / "README.md"
+
+    def test_the_stated_test_count_is_not_far_below_the_real_one(self) -> None:
+        """
+        A floor, not an equality: the count moves with every commit and a
+        README that has to be edited each time will not be. Thirty percent of
+        slack, which "over 400" against 698 had long exhausted.
+        """
+        stated = re.search(
+            r"(?:Nearly|Over|More than|Around)\s+([\d,]+)\s+tests", self.README.read_text(encoding="utf-8")
+        )
+        self.assertIsNotNone(stated, "the README no longer states a test count")
+        claimed = int(stated.group(1).replace(",", ""))
+
+        loader = unittest.TestLoader()
+        actual = loader.discover(str(ROOT / "tests"), top_level_dir=str(ROOT)).countTestCases()
+        self.assertGreater(actual, 0, "no tests were discovered; this guard would pass on anything")
+        self.assertLessEqual(
+            claimed, actual, f"the README claims {claimed} tests and there are {actual}"
+        )
+        self.assertGreaterEqual(
+            claimed,
+            actual * 0.7,
+            f"the README says {claimed} and there are {actual}; it understates by more than a third",
+        )
+
+
+@unittest.skipUnless(SITE.is_dir(), "the site is not present in this checkout")
+class FontLicenceTests(unittest.TestCase):
+    """
+    The licence section, against the fonts actually under `site/public/fonts/`.
+
+    Split from the count check above rather than sharing its class, because
+    this one reads `site/` and that one must not: the sdist does not carry the
+    site, and a guard that skipped the whole class would take the test count
+    with it — silent in an unpacked sdist, which is exactly where a stale
+    README claim would go unnoticed.
+    """
+
+    README = ROOT / "README.md"
+
+    def test_the_licence_section_describes_the_fonts_that_ship(self) -> None:
+        fonts = sorted((SITE / "public" / "fonts").glob("*.woff2"))
+        self.assertTrue(fonts, "no fonts found; this guard would pass on anything")
+        readme = self.README.read_text(encoding="utf-8")
+
+        families = sorted({path.name.split("-latin")[0] for path in fonts})
+        self.assertGreaterEqual(len(families), 2, "too few families to be worth checking")
+
+        # Compared with the letters only. A filename cannot carry the
+        # capitalisation of a brand — `jetbrains-mono` is JetBrains Mono — and
+        # a guard that demanded a spelling derived from the filename would be
+        # asserting its own naming convention rather than the licence claim.
+        # `assertIn` against the README prints the README, which is not a
+        # useful way to learn that one word is missing.
+        flat = re.sub(r"[^a-z]", "", readme.lower())
+        for family in families:
+            wanted = re.sub(r"[^a-z]", "", family.lower())
+            with self.subTest(family=family):
+                self.assertTrue(
+                    wanted in flat,
+                    f"{family} ships under site/public/fonts/ and the licence section omits it",
+                )
+
+        words = {2: "two", 3: "three", 4: "four", 5: "five", 10: "ten", 12: "twelve"}
+        counted = words.get(len(fonts))
+        if counted:
+            self.assertTrue(
+                f"{counted} woff2 files" in readme,
+                f"{len(fonts)} woff2 files ship; the README does not say {counted!r}",
+            )
 
 
 class ReferencedPathTests(unittest.TestCase):

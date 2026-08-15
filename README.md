@@ -48,6 +48,7 @@ committed, so the demo cannot drift from what the tool actually prints.
 ## Contents
 
 - [Why this exists](#why-this-exists)
+- [How this differs from what you may already run](#how-this-differs-from-what-you-may-already-run)
 - [Quickstart](#quickstart)
 - [What you get from a run](#what-you-get-from-a-run)
 - [Features](#features)
@@ -82,6 +83,23 @@ produced nothing measurable resolves to `INCOMPLETE`, not `FAIL` and never
 a claim the evidence does not support. `tests/test_falsifiability.py` fails the
 build if a behavioural assertion exists that no subject can break — a check
 that found three unfalsifiable assertions already shipped in this repository.
+
+### How this differs from what you may already run
+
+Not another agent framework, and not a replacement for your tracing.
+
+| | What it does | What it does not |
+|---|---|---|
+| **Agent runtimes** — LangGraph, n8n, MCP hosts, your own loop | Own the tools and the control flow | Say whether what happened should have |
+| **Tracing and evals** — spans, cost, latency, LLM-as-judge | Answer how long, how much, and roughly how good | Grade against a check declared before the run, or hold still between runs |
+| **Beacon** | Grades against assertions declared in advance, records the attempt and not only the outcome, says `INCOMPLETE` when it could not tell, and hands you the bundle it decided from | Execute your agent, or judge anything with a model |
+
+Beacon sits underneath whatever you already use: your agent brings its own
+model and its own loop, and Beacon supplies the world it runs in and the
+verdict about what it did there. A trace tells you an agent called
+`mail_send_draft` and it took 240ms. Beacon tells you the call was refused,
+that the refusal is why the mailbox looks untouched, and that the assertion
+about it failed — which is the difference between a log and a result.
 
 ## Quickstart
 
@@ -183,10 +201,14 @@ python3 -W error::ResourceWarning -m unittest discover -s tests
 python3 examples/subjects/run_suite.py
 ```
 
-Over 400 tests against an enforced floor of 80% branch coverage — a floor
+Nearly 700 tests against an enforced floor of 80% branch coverage — a floor
 rather than a snapshot, because a number in prose goes stale the week after it
-is written and nobody notices. CI runs both on every push and pull request
-across Linux, macOS and Windows on Python 3.11–3.13.
+is written and nobody notices. This sentence said "over 400" for a while after
+the suite passed 600, which is the failure it describes, so
+`tests/test_documented_claims.py` now holds the figure to the real count.
+
+CI runs both on every push and pull request across Linux, macOS and Windows on
+Python 3.11–3.13.
 
 The second command runs an adversarial suite: forty subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
@@ -283,6 +305,7 @@ person.
 Apache License 2.0, copyright Marshall Cahill and Project Beacon contributors. All included
 scenario fixtures are synthetic.
 
-The four woff2 files under `site/public/fonts/` are Space Grotesk and JetBrains
-Mono, redistributed under the SIL Open Font Licence 1.1; that licence ships
-beside them in [`site/public/fonts/OFL.txt`](site/public/fonts/OFL.txt).
+The ten woff2 files under `site/public/fonts/` are Archivo, Azeret Mono, Inter,
+JetBrains Mono and Space Grotesk, redistributed under the SIL Open Font Licence
+1.1; that licence ships beside them in
+[`site/public/fonts/OFL.txt`](site/public/fonts/OFL.txt) and names all five.

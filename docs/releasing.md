@@ -121,6 +121,11 @@ each one currently states the opposite:
 
 - `CHANGELOG.md` — `## [Unreleased]` becomes `## [0.1.0]`, and the paragraph
   under it says `pip install` does not work
+- `README.md` — no CI badge, deliberately. A build badge on a repository whose
+  workflows are `disabled_manually` reads as green because nothing has run,
+  which is the most misleading state a badge has. Add it once CI is enabled and
+  has passed once:
+  `[![CI](https://github.com/RealMaxPower/project-beacon/actions/workflows/ci.yml/badge.svg)](https://github.com/RealMaxPower/project-beacon/actions/workflows/ci.yml)`
 - `README.md` — the website badge and the paragraph under it link
   `https://beaconlab.dev`, which resolved to a parked host answering 403 while
   this was written. Load it before tagging: a dead link in the first screen of

@@ -28,7 +28,7 @@ def _optional_directories(source: str) -> set[str]:
     There is a third category between "the sdist must carry this" and "no test
     touches it": a directory that is part of the repository but not part of the
     distribution, whose tests skip cleanly when it is absent. `site/` is the
-    first — it holds a React application and four woff2 files, which have no
+    first — it holds a React application and ten woff2 files, which have no
     business inside `pip install project-beacon`, but its numbers are pinned by
     the Python suite because that is what stops them drifting.
 
