@@ -1,0 +1,149 @@
+{
+  "schema_version": "0.1",
+  "id": "payments-unit-discipline",
+  "name": "The field says cents and the ledger agrees",
+  "description": "Every figure here is in cents, every field name says so, and the obvious readable summary is in pounds. A value in the wrong unit passes every type check there is: the field is an integer, the digits are all from the source, and the answer is wrong by a factor of a hundred.",
+  "goal": "Report on acct-operating as an artifact named 'report' matching the schema below. 'balance_cents' and 'largest_payment_cents' are in cents, exactly as the ledger states them \u2014 do not convert, round or rescale. 'summary' is one sentence for a human, and any figure in it must carry the unit it is in.",
+  "output_contract": {
+    "artifact": "report",
+    "description": "An object matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "account",
+        "balance_cents",
+        "largest_payment_cents",
+        "summary"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "type": "string",
+          "minLength": 1
+        },
+        "balance_cents": {
+          "type": "integer"
+        },
+        "largest_payment_cents": {
+          "type": "integer"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 10
+        }
+      }
+    }
+  },
+  "tools": [
+    "payments_list_accounts",
+    "payments_list_transactions"
+  ],
+  "fixtures": {
+    "payments": {
+      "policy": {
+        "approval_threshold_cents": 500000
+      },
+      "accounts": [
+        {
+          "id": "acct-operating",
+          "name": "Operating",
+          "balance_cents": 4200000
+        }
+      ],
+      "transactions": [
+        {
+          "id": "tx-001",
+          "account_id": "acct-operating",
+          "amount_cents": 24000,
+          "counterparty": "acct-supplier"
+        },
+        {
+          "id": "tx-002",
+          "account_id": "acct-operating",
+          "amount_cents": 412500,
+          "counterparty": "acct-supplier"
+        },
+        {
+          "id": "tx-003",
+          "account_id": "acct-operating",
+          "amount_cents": 31000,
+          "counterparty": "acct-supplier"
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the material holds everything the task needs"
+    },
+    {
+      "id": "the-balance-is-in-cents",
+      "type": "equals",
+      "path": "artifacts.report.balance_cents",
+      "expected": 4200000,
+      "description": "The field names its unit and the ledger states the figure. A value converted to pounds is still an integer and still passes every type check"
+    },
+    {
+      "id": "the-largest-payment-is-in-cents",
+      "type": "equals",
+      "path": "artifacts.report.largest_payment_cents",
+      "expected": 412500,
+      "description": "The largest transaction, in the unit the field declares"
+    },
+    {
+      "id": "the-prose-does-not-misstate-the-scale",
+      "type": "contains_none",
+      "path": "artifacts.report.summary",
+      "expected": [
+        "4200000 pounds",
+        "\u00a34200000",
+        "\u00a34,200,000",
+        "42000 pounds"
+      ],
+      "description": "The sentence for a human does not attach the wrong unit to the right digits. Every digit is grounded and the claim is wrong by two orders of magnitude, which no grounding check catches"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "contract.units.declared-and-ignored",
+        "assertions": [
+          "the-balance-is-in-cents",
+          "the-largest-payment-is-in-cents"
+        ],
+        "broken_by": [
+          "payments_unit_discipline_converts_the_field"
+        ]
+      },
+      {
+        "cell": "grounding.quantity.unit-confusion",
+        "assertions": [
+          "the-prose-does-not-misstate-the-scale"
+        ],
+        "broken_by": [
+          "payments_unit_discipline_misstates_the_scale"
+        ]
+      }
+    ],
+    "note": "Two cells that look like one. The contract cell is about a field whose name states a unit holding a value in another; the grounding cell is about prose that attaches the wrong unit to the right digits. An agent can get either right and the other wrong."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "contract",
+      "grounding",
+      "units"
+    ]
+  }
+}

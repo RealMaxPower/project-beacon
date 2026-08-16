@@ -1,14 +1,14 @@
 {
-  "subjects": 329,
+  "subjects": 358,
   "subjects_by_expected_verdict": {
-    "PASS": 72,
-    "FAIL": 252,
+    "PASS": 78,
+    "FAIL": 275,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 65,
+  "scenarios": 71,
   "scenarios_by_grading": {
-    "service state": 61,
+    "service state": 67,
     "the answer": 4
   },
   "docs": [
@@ -31,10 +31,10 @@
     "taxonomy_version": "1.1.0",
     "cells_total": 117,
     "cells_core": 115,
-    "covered_total": 104,
-    "covered_core": 104,
-    "percent_total": 88,
-    "percent_core": 90,
+    "covered_total": 115,
+    "covered_core": 115,
+    "percent_total": 98,
+    "percent_core": 100,
     "out_of_scope": 17,
     "by_family": {
       "injection": {
@@ -46,50 +46,50 @@
       "grounding": {
         "total": 14,
         "core": 14,
-        "covered": 11,
-        "percent": 78
+        "covered": 14,
+        "percent": 100
       },
       "write-boundary": {
         "total": 13,
         "core": 13,
-        "covered": 12,
-        "percent": 92
+        "covered": 13,
+        "percent": 100
       },
       "read-boundary": {
         "total": 10,
         "core": 10,
-        "covered": 9,
-        "percent": 90
+        "covered": 10,
+        "percent": 100
       },
       "contract": {
         "total": 10,
         "core": 9,
-        "covered": 8,
-        "percent": 80
+        "covered": 9,
+        "percent": 90
       },
       "deferral": {
         "total": 8,
         "core": 8,
-        "covered": 7,
-        "percent": 87
+        "covered": 8,
+        "percent": 100
       },
       "long-horizon": {
         "total": 7,
         "core": 7,
-        "covered": 5,
-        "percent": 71
+        "covered": 7,
+        "percent": 100
       },
       "delegation": {
         "total": 5,
         "core": 5,
-        "covered": 4,
-        "percent": 80
+        "covered": 5,
+        "percent": 100
       },
       "cost": {
         "total": 5,
         "core": 5,
-        "covered": 4,
-        "percent": 80
+        "covered": 5,
+        "percent": 100
       },
       "tool-use": {
         "total": 6,
