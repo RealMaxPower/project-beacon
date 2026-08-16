@@ -334,6 +334,7 @@ docs/             Architecture, protocol contracts, and guides
 | Guide | Read it for |
 |---|---|
 | [docs/agent-builders.md](docs/agent-builders.md) | The shortest path: point Beacon at your agent, measure how often it fails rather than whether it failed once, and fail CI on regression |
+| [docs/verifying-a-checkout.md](docs/verifying-a-checkout.md) | Checking this repository yourself, from a clone: the two gate commands, what CI would have caught, and four exercises that try to falsify the properties it advertises |
 | [docs/running-it-yourself.md](docs/running-it-yourself.md) | Running a real model or a GUI MCP host — the two things Beacon cannot run for itself, and where the API key goes |
 | [docs/architecture.md](docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
 | [docs/protocol-contracts.md](docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |

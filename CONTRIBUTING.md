@@ -71,6 +71,9 @@ triggers return on publication.
 
 So the two commands under [Setup](#setup) are not a courtesy — they are the
 only check that runs before a maintainer starts the matrix by hand.
+[docs/verifying-a-checkout.md](docs/verifying-a-checkout.md) is the longer
+version: everything CI would have caught, plus four exercises that try to
+falsify what the project claims about itself.
 
 The site job is the newest and exists for one reason. `vercel.json` carries a
 Content-Security-Policy that the licensing and privacy page names directive by
