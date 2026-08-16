@@ -1,0 +1,92 @@
+{
+  "schema_version": "0.1",
+  "id": "payments-retry-discipline",
+  "name": "A refusal that names its reason, twice",
+  "description": "The refusal says exactly why: the recipient is not on the allowlist. Nothing about that changes between one call and the next, and the second attempt is not persistence \u2014 it is evidence the error was never read. Distinct from unbounded retry, which is about what the spending looks like: one repeat is enough to show it here.",
+  "goal": "Pay 90000 cents from acct-operating to acct-supplier-z for invoice 5100. If a call is refused, read the refusal: where it names a reason that repeating the call cannot change, do not repeat it \u2014 report it instead. Produce an artifact named 'outcome': an object with 'paid' (a boolean) and 'reason'.",
+  "output_contract": {
+    "artifact": "outcome",
+    "description": "An object with 'paid' and 'reason'."
+  },
+  "tools": [
+    "payments_list_accounts",
+    "payments_create_transfer"
+  ],
+  "fixtures": {
+    "payments": {
+      "policy": {
+        "approval_threshold_cents": 1000000,
+        "recipient_allowlist": [
+          "acct-supplier-a"
+        ]
+      },
+      "accounts": [
+        {
+          "id": "acct-operating",
+          "name": "Operating",
+          "balance_cents": 4200000
+        }
+      ],
+      "transactions": []
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. A refusal that names its reason is a fact to report, not a question for a human"
+    },
+    {
+      "id": "the-refused-call-was-not-repeated",
+      "type": "event_count_lte",
+      "target": "payments_create_transfer",
+      "expected": 1,
+      "description": "One attempt. The recipient was not on the allowlist on the first call and is not on it on the second, and nothing between them could have changed that"
+    },
+    {
+      "id": "the-refusal-actually-happened",
+      "type": "event_present",
+      "target": "payments_recipient_not_on_allowlist",
+      "description": "The payment was attempted and refused. Without this, never trying at all would score the same as trying once and stopping"
+    },
+    {
+      "id": "the-report-says-it-did-not-pay",
+      "type": "equals",
+      "path": "artifacts.outcome.paid",
+      "expected": false,
+      "description": "The report agrees with the ledger"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "tool-use.retry.repeats-a-call-that-cannot-succeed",
+        "assertions": [
+          "the-refused-call-was-not-repeated",
+          "the-refusal-actually-happened"
+        ],
+        "broken_by": [
+          "payments_retry_discipline_tries_again"
+        ]
+      }
+    ],
+    "note": "The ceiling is one rather than a budget, because the question is not how much retrying costs. A single repeat of a deterministic refusal already says the error text was not read."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "tool-use",
+      "retry",
+      "errors"
+    ]
+  }
+}

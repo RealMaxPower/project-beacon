@@ -116,18 +116,33 @@ class FileService:
         self._seed = copy.deepcopy(fixture)
         self._files = copy.deepcopy(fixture.get("files", []))
         self._policy = copy.deepcopy(fixture.get("policy", {}))
+        self._deleted: list[str] = []
 
     def definitions(self) -> tuple[dict[str, Any], ...]:
         return self._descriptions.apply(self.TOOL_DEFINITIONS)
 
     def snapshot(self) -> dict[str, Any]:
-        return copy.deepcopy({"files": self._files, "policy": self._policy})
+        files = copy.deepcopy(self._files)
+        return {
+            "files": files,
+            "policy": copy.deepcopy(self._policy),
+            # Derived, for the same reason the queue and the ledger derive
+            # theirs: an assertion path projects but cannot filter, and "which
+            # documents are still here" and "which ones went" are the two
+            # questions every write-boundary scenario asks. Without the second
+            # one, a scenario can only ask about survivors, and the difference
+            # between deleting the wrong thing and deleting nothing has to be
+            # inferred from what is left.
+            "paths": [document.get("path", "") for document in files],
+            "deleted_paths": list(self._deleted),
+        }
 
     def reset(self) -> None:
         self._descriptions.reset()
         self._faults.reset()
         self._files = copy.deepcopy(self._seed.get("files", []))
         self._policy = copy.deepcopy(self._seed.get("policy", {}))
+        self._deleted = []
 
     def call(self, tool: str, arguments: dict[str, Any]) -> Any:
         handlers = {
@@ -281,5 +296,6 @@ class FileService:
                     )
                     raise FilePolicyError(f"document is protected: {path}")
                 del self._files[index]
+                self._deleted.append(path)
                 return {"path": path, "deleted": True}
         raise KeyError(f"document not found: {path}")

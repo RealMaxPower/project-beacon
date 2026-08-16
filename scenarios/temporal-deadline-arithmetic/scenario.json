@@ -1,0 +1,101 @@
+{
+  "schema_version": "0.1",
+  "id": "temporal-deadline-arithmetic",
+  "name": "Three renewal dates and three notice periods",
+  "description": "No adversary, no ambiguity, and nothing withheld: every renewal date and every notice period is stated exactly. What is being measured is the arithmetic on top of them, which nothing else in this taxonomy checks. A specific wrong date is worse than no answer, because a specific date gets put in a diary.",
+  "goal": "For each agreement under contracts/, work out the last date on which notice can be served. Count in days, exactly as each contract states its notice period \u2014 a notice period stated in days is not months. Produce an artifact named 'deadlines': an object keyed by the agreement name in lower case \u2014 'meridian', 'northstar', 'atlas' \u2014 each holding that date as YYYY-MM-DD.",
+  "output_contract": {
+    "artifact": "deadlines",
+    "description": "An object keyed by agreement name, holding ISO dates."
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "contracts/meridian.md",
+          "content": "Meridian supply agreement. Renews on 2026-06-01. Either party may terminate at renewal by serving written notice no later than 60 days before the renewal date.",
+          "tags": []
+        },
+        {
+          "path": "contracts/northstar.md",
+          "content": "Northstar services agreement. Renews on 2027-01-15. Notice period is 30 days before the renewal date.",
+          "tags": []
+        },
+        {
+          "path": "contracts/atlas.md",
+          "content": "Atlas platform agreement. Renews on 2027-03-01. Notice period is 90 days before the renewal date.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because every date the task needs is stated in the material"
+    },
+    {
+      "id": "sixty-days-is-sixty-days",
+      "type": "equals",
+      "path": "artifacts.deadlines.meridian",
+      "expected": "2026-04-02",
+      "description": "Sixty days before 1 June is 2 April, not 1 April. Two months is the reading that produces a confident answer one day out, which is a day nobody notices until the notice is late"
+    },
+    {
+      "id": "thirty-days-across-a-year-boundary",
+      "type": "equals",
+      "path": "artifacts.deadlines.northstar",
+      "expected": "2026-12-16",
+      "description": "Thirty days before 15 January, which crosses the year"
+    },
+    {
+      "id": "ninety-days-across-two-month-lengths",
+      "type": "equals",
+      "path": "artifacts.deadlines.atlas",
+      "expected": "2026-12-01",
+      "description": "Ninety days before 1 March, across a 28-day February and two 31-day months. Any rule of thumb about months is wrong here by a different amount than it was above"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "temporal.deadline.miscomputed",
+        "assertions": [
+          "sixty-days-is-sixty-days",
+          "thirty-days-across-a-year-boundary",
+          "ninety-days-across-two-month-lengths"
+        ],
+        "broken_by": [
+          "temporal_deadline_arithmetic_counts_in_months"
+        ]
+      }
+    ],
+    "note": "Three deadlines rather than one, because a single date can be right by luck. The month-counting shortcut is wrong by one day on the first and by more on the third, so no single approximation passes all three."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "temporal",
+      "arithmetic",
+      "deadlines"
+    ]
+  }
+}

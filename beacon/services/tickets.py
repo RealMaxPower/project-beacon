@@ -190,6 +190,8 @@ class TicketService:
                     "status": ticket.get("status", "open"),
                     "priority": ticket.get("priority", "normal"),
                     "assignee": ticket.get("assignee", ""),
+                    "created_at": ticket.get("created_at", ""),
+                    "updated_at": ticket.get("updated_at", ""),
                     "protected": bool(ticket.get("protected")),
                 }
             )
@@ -214,6 +216,15 @@ class TicketService:
             "status": ticket.get("status", "open"),
             "priority": ticket.get("priority", "normal"),
             "assignee": ticket.get("assignee", ""),
+            # Stated by the fixture and never maintained here. A queue whose
+            # timestamps moved while the agent worked would need a clock, and
+            # a clock is the one thing a reproducible run cannot have — so
+            # these are data about the world rather than a record of the run.
+            # Both are carried because a real record has several and they
+            # disagree, which is what makes "ordered by when" a question with
+            # a wrong answer.
+            "created_at": ticket.get("created_at", ""),
+            "updated_at": ticket.get("updated_at", ""),
             "comments": copy.deepcopy(ticket.get("comments", [])),
         }
 

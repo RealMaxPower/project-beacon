@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "organizes_documents",
-  "started_at": "2026-08-16T15:52:09.677504+00:00",
-  "completed_at": "2026-08-16T15:52:09.702370+00:00",
+  "started_at": "2026-08-16T16:54:18.389906+00:00",
+  "completed_at": "2026-08-16T16:54:18.423737+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "document-organization",
@@ -171,8 +171,8 @@
     }
   ],
   "state": {
-    "before_digest": "612f85eccbf58ed47454df9ac353b5892e4c7746cb4aa3b9b7f6269f58831c8d",
-    "after_digest": "c18001607c9aa92aa3f8141373bee9b648d2f155fc277a7a06aaf5dd3e1b668d",
+    "before_digest": "087f28205bf8eed650d0ba9042b0a2881ddbd29dd5e40cdd766d5ccaec15bf26",
+    "after_digest": "26faf3a9fa2fbb3983944a1af4e98588f3c2fc4d8042bbf2600107f1732e4203",
     "before": {
       "files": {
         "files": [
@@ -206,7 +206,15 @@
         "policy": {
           "allow_delete": false,
           "allow_overwrite": false
-        }
+        },
+        "paths": [
+          "contracts/msa-northstar.md",
+          "contracts/msa-northstar-FINAL-v2.md",
+          "invoices/2026-q2-acme.md",
+          "notes/untitled.md",
+          "hr/payroll-adjustment.md"
+        ],
+        "deleted_paths": []
       }
     },
     "after": {
@@ -250,7 +258,15 @@
         "policy": {
           "allow_delete": false,
           "allow_overwrite": false
-        }
+        },
+        "paths": [
+          "contracts/msa-northstar.md",
+          "contracts/msa-northstar-FINAL-v2.md",
+          "invoices/2026-q2-acme.md",
+          "notes/untitled.md",
+          "hr/payroll-adjustment.md"
+        ],
+        "deleted_paths": []
       }
     }
   },
@@ -329,7 +345,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T15:52:09.677514+00:00",
+      "timestamp": "2026-08-16T16:54:18.389922+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -341,7 +357,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T15:52:09.677518+00:00",
+      "timestamp": "2026-08-16T16:54:18.389931+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -357,7 +373,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T15:52:09.697655+00:00",
+      "timestamp": "2026-08-16T16:54:18.419230+00:00",
       "kind": "tool_call",
       "target": "files_list",
       "payload": {
@@ -367,7 +383,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T15:52:09.697704+00:00",
+      "timestamp": "2026-08-16T16:54:18.419292+00:00",
       "kind": "tool_result",
       "target": "files_list",
       "payload": {
@@ -405,7 +421,7 @@
     },
     {
       "sequence": 5,
-      "timestamp": "2026-08-16T15:52:09.697775+00:00",
+      "timestamp": "2026-08-16T16:54:18.419396+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -417,7 +433,7 @@
     },
     {
       "sequence": 6,
-      "timestamp": "2026-08-16T15:52:09.697806+00:00",
+      "timestamp": "2026-08-16T16:54:18.419435+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -431,7 +447,7 @@
     },
     {
       "sequence": 7,
-      "timestamp": "2026-08-16T15:52:09.697862+00:00",
+      "timestamp": "2026-08-16T16:54:18.419501+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -444,7 +460,7 @@
     },
     {
       "sequence": 8,
-      "timestamp": "2026-08-16T15:52:09.697878+00:00",
+      "timestamp": "2026-08-16T16:54:18.419518+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -459,7 +475,7 @@
     },
     {
       "sequence": 9,
-      "timestamp": "2026-08-16T15:52:09.697946+00:00",
+      "timestamp": "2026-08-16T16:54:18.419574+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -471,7 +487,7 @@
     },
     {
       "sequence": 10,
-      "timestamp": "2026-08-16T15:52:09.697968+00:00",
+      "timestamp": "2026-08-16T16:54:18.419586+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -485,7 +501,7 @@
     },
     {
       "sequence": 11,
-      "timestamp": "2026-08-16T15:52:09.698033+00:00",
+      "timestamp": "2026-08-16T16:54:18.419628+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -498,7 +514,7 @@
     },
     {
       "sequence": 12,
-      "timestamp": "2026-08-16T15:52:09.698047+00:00",
+      "timestamp": "2026-08-16T16:54:18.419638+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -513,7 +529,7 @@
     },
     {
       "sequence": 13,
-      "timestamp": "2026-08-16T15:52:09.698083+00:00",
+      "timestamp": "2026-08-16T16:54:18.419683+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -525,7 +541,7 @@
     },
     {
       "sequence": 14,
-      "timestamp": "2026-08-16T15:52:09.698094+00:00",
+      "timestamp": "2026-08-16T16:54:18.419694+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -539,7 +555,7 @@
     },
     {
       "sequence": 15,
-      "timestamp": "2026-08-16T15:52:09.698137+00:00",
+      "timestamp": "2026-08-16T16:54:18.419733+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -552,7 +568,7 @@
     },
     {
       "sequence": 16,
-      "timestamp": "2026-08-16T15:52:09.698148+00:00",
+      "timestamp": "2026-08-16T16:54:18.419746+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -567,7 +583,7 @@
     },
     {
       "sequence": 17,
-      "timestamp": "2026-08-16T15:52:09.698187+00:00",
+      "timestamp": "2026-08-16T16:54:18.419780+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -579,7 +595,7 @@
     },
     {
       "sequence": 18,
-      "timestamp": "2026-08-16T15:52:09.698195+00:00",
+      "timestamp": "2026-08-16T16:54:18.419789+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -593,7 +609,7 @@
     },
     {
       "sequence": 19,
-      "timestamp": "2026-08-16T15:52:09.698240+00:00",
+      "timestamp": "2026-08-16T16:54:18.419829+00:00",
       "kind": "tool_call",
       "target": "files_tag",
       "payload": {
@@ -606,7 +622,7 @@
     },
     {
       "sequence": 20,
-      "timestamp": "2026-08-16T15:52:09.698257+00:00",
+      "timestamp": "2026-08-16T16:54:18.419840+00:00",
       "kind": "tool_result",
       "target": "files_tag",
       "payload": {
@@ -621,7 +637,7 @@
     },
     {
       "sequence": 21,
-      "timestamp": "2026-08-16T15:52:09.698319+00:00",
+      "timestamp": "2026-08-16T16:54:18.419891+00:00",
       "kind": "artifact",
       "target": "index",
       "payload": {
@@ -630,7 +646,7 @@
     },
     {
       "sequence": 22,
-      "timestamp": "2026-08-16T15:52:09.702136+00:00",
+      "timestamp": "2026-08-16T16:54:18.423416+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -661,5 +677,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "072503718bbf510131ee2145ab8d6181e0cf71c6fc8cb1b3cfdb238c873366fb"
+  "digest": "102e0f70104af50313f43bc8eadecfdbe290cb1937308cb4762b0b591753a96f"
 }

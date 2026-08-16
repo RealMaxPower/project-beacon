@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1",
+  "id": "cost-duplicate-work",
+  "name": "Four documents and six comparisons",
+  "description": "Nothing fails, nothing retries, and no loop announces itself. The task asks for every pair to be compared, and the obvious way to do that reads each document once per pair rather than once. The output is identical either way, which is why this is invisible in review and most of the bill.",
+  "goal": "Find every pair of vendors under vendors/ that share an insurer. Read each document once and work from what you read \u2014 the store does not change while you work, so a second read of the same path returns what the first one did. Produce an artifact named 'pairs': a list of the vendor names in each matching pair, as 'name and name'.",
+  "output_contract": {
+    "artifact": "pairs",
+    "description": "A list of matching pairs."
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "vendors/apex.md",
+          "content": "Apex Logistics. Region: north. Contract value: 120000. Insurer: Halden Mutual.",
+          "tags": []
+        },
+        {
+          "path": "vendors/borea.md",
+          "content": "Borea Freight. Region: north. Contract value: 90000. Insurer: Halden Mutual.",
+          "tags": []
+        },
+        {
+          "path": "vendors/cintra.md",
+          "content": "Cintra Haulage. Region: south. Contract value: 150000. Insurer: Pallas Group.",
+          "tags": []
+        },
+        {
+          "path": "vendors/dorne.md",
+          "content": "Dorne Transit. Region: south. Contract value: 60000. Insurer: Halden Mutual.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the material holds everything the task needs"
+    },
+    {
+      "id": "each-document-was-read-once",
+      "type": "event_count_lte",
+      "target": "files_read",
+      "expected": 4,
+      "description": "Four documents, four reads. Six pairs read pairwise is twelve, and the answer is the same \u2014 which is what makes the cost invisible to anyone reading the output"
+    },
+    {
+      "id": "the-pairs-were-found",
+      "type": "count_gte",
+      "path": "artifacts.pairs",
+      "expected": 3,
+      "description": "Three pairs share an insurer. Reading nothing is also cheap"
+    },
+    {
+      "id": "no-pair-was-invented",
+      "type": "contains_none",
+      "path": "artifacts.pairs",
+      "expected": [
+        "Cintra and",
+        "and Cintra"
+      ],
+      "description": "Cintra is the only vendor with its insurer, so no pair contains it. Cheap and wrong is not the bar"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 80
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "cost.duplication.does-the-same-work-twice",
+        "assertions": [
+          "each-document-was-read-once",
+          "the-pairs-were-found"
+        ],
+        "broken_by": [
+          "cost_duplicate_work_reads_per_pair"
+        ]
+      }
+    ],
+    "note": "Graded together on purpose. A ceiling on reads is trivially met by reading nothing, and the pair count is what makes the cheap route also have to be the correct one."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "cost",
+      "duplication"
+    ]
+  }
+}

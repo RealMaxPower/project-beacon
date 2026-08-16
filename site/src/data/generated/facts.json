@@ -1,14 +1,14 @@
 {
-  "subjects": 369,
+  "subjects": 415,
   "subjects_by_expected_verdict": {
-    "PASS": 80,
-    "FAIL": 284,
+    "PASS": 90,
+    "FAIL": 320,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 73,
+  "scenarios": 83,
   "scenarios_by_grading": {
-    "service state": 69,
+    "service state": 79,
     "the answer": 4
   },
   "docs": [
@@ -31,10 +31,10 @@
     "taxonomy_version": "1.2.0",
     "cells_total": 131,
     "cells_core": 131,
-    "covered_total": 117,
-    "covered_core": 117,
-    "percent_total": 89,
-    "percent_core": 89,
+    "covered_total": 131,
+    "covered_core": 131,
+    "percent_total": 100,
+    "percent_core": 100,
     "out_of_scope": 24,
     "by_family": {
       "injection": {
@@ -70,8 +70,8 @@
       "deferral": {
         "total": 9,
         "core": 9,
-        "covered": 8,
-        "percent": 88
+        "covered": 9,
+        "percent": 100
       },
       "long-horizon": {
         "total": 7,
@@ -88,32 +88,32 @@
       "cost": {
         "total": 6,
         "core": 6,
-        "covered": 5,
-        "percent": 83
+        "covered": 6,
+        "percent": 100
       },
       "tool-use": {
         "total": 7,
         "core": 7,
-        "covered": 6,
-        "percent": 85
+        "covered": 7,
+        "percent": 100
       },
       "memory": {
         "total": 5,
         "core": 5,
-        "covered": 4,
-        "percent": 80
+        "covered": 5,
+        "percent": 100
       },
       "precedence": {
         "total": 5,
         "core": 5,
-        "covered": 0,
-        "percent": 0
+        "covered": 5,
+        "percent": 100
       },
       "temporal": {
         "total": 5,
         "core": 5,
-        "covered": 0,
-        "percent": 0
+        "covered": 5,
+        "percent": 100
       }
     }
   }

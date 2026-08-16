@@ -8,7 +8,7 @@ Coverage claims are the easiest thing in this field to state and the hardest to
 check. "Beacon covers 80% of agent failure modes" is not a measurable sentence,
 because nobody has enumerated the set it quantifies over — so it cannot be
 wrong, which is the problem with it. This file is the enumeration. The claim
-becomes "89% of these 131 cells, here they are, argue with the list."
+becomes "100% of these 131 cells, here they are, argue with the list."
 
 ## What a cell has to be
 
