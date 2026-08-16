@@ -163,14 +163,14 @@ of what Beacon is and is not ready to be trusted with.
 ## Coverage of a published taxonomy
 
 Beacon enumerates the failure modes it intends to measure in
-[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 117 cells across
-eleven families, each with the reason it is in scope and the capability it needs.
+[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 131 cells across
+thirteen families, each with the reason it is in scope and the capability it needs.
 The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
 not a measurement.
 
-The scenarios that ship cover 117 of the 117 cells this harness can grade today
-(100%), and 117 of 117 overall (100%). Neither figure is typed into that sentence:
+The scenarios that ship cover 117 of the 131 cells this harness can grade today
+(89%), and 117 of 131 overall (89%). Neither figure is typed into that sentence:
 `tests/test_taxonomy_coverage.py` computes both from the files and fails the
 build if this paragraph disagrees.
 
@@ -181,22 +181,25 @@ build if this paragraph disagrees.
 | `write-boundary` — does it change more than it was asked | 13 | 13 | 13 |
 | `read-boundary` — does it reach or leak what it should not | 10 | 10 | 10 |
 | `contract` — does the result keep its promised shape | 10 | 10 | 10 |
-| `deferral` — does it stop and ask when it should | 8 | 8 | 8 |
+| `deferral` — does it stop and ask when it should | 8 | 9 | 9 |
 | `long-horizon` — does it still obey the brief later | 7 | 7 | 7 |
 | `delegation` — is another agent's output data or truth | 5 | 5 | 5 |
-| `cost` — does it finish inside its budget | 5 | 5 | 5 |
-| `tool-use` — does it call what it means to call | 6 | 6 | 6 |
-| `memory` — does what it wrote come back as an order | 4 | 4 | 4 |
+| `cost` — does it finish inside its budget | 5 | 6 | 6 |
+| `tool-use` — does it call what it means to call | 6 | 7 | 7 |
+| `memory` — does what it wrote come back as an order | 4 | 5 | 5 |
+| `precedence` — which instruction wins when two legitimate ones disagree | 0 | 5 | 5 |
+| `temporal` — does it get deadlines, expiry and ordering right | 0 | 5 | 5 |
 
 "Gradeable now" is computed, not declared: a cell is gradeable when everything
-it requires exists in this build. All three columns have converged, which is
-the least informative state this table can be in — **read 100% as "the list is
-exhausted", not as "agent failure is"**. A taxonomy every cell of which is
-covered has stopped discriminating between harnesses, and the honest response
-is to widen the denominator rather than to publish the round number: 1.0.0 had
-ninety-five cells, 1.1.0 has 117, and the figure fell to 81% the day the new
-ones landed. It is meant to. The number going down when the list grows is the
-only evidence that the list was not chosen to flatter it.
+it requires exists in this build. Two families sit at zero and are published
+here for the same reason as the rejection list.
+
+**The figure is meant to fall.** 1.0.0 enumerated ninety-five cells and ended
+at 100%, which says the list was exhausted rather than that agent failure was —
+so 1.1.0 widened it to 117 and the number dropped to 81%, and 1.2.0 widens it
+to 131. Each time the denominator grows the percentage goes backwards, and that
+is the only evidence anyone has that the list was not chosen to flatter it. A
+coverage number that only ever goes up is measuring the author.
 
 A cell counts as covered only when a scenario binds it to a named assertion, a
 subject in the manifest is **observed making that assertion fail** when run, and

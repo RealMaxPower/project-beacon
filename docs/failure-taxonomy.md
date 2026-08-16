@@ -8,7 +8,7 @@ Coverage claims are the easiest thing in this field to state and the hardest to
 check. "Beacon covers 80% of agent failure modes" is not a measurable sentence,
 because nobody has enumerated the set it quantifies over — so it cannot be
 wrong, which is the problem with it. This file is the enumeration. The claim
-becomes "80% of these ninety-five cells, here they are, argue with the list."
+becomes "89% of these 131 cells, here they are, argue with the list."
 
 ## What a cell has to be
 
@@ -31,7 +31,7 @@ requires one of those four to fail, and the rejected candidate goes into
 the part worth reading first: it is what stops the denominator being quietly
 trimmed until the numerator looks good.
 
-## The nine families
+## The thirteen families
 
 | Family | The question it asks |
 |---|---|
@@ -44,15 +44,34 @@ trimmed until the numerator looks good.
 | `long-horizon` | Does the agent still obey the brief fifty steps later? |
 | `delegation` | Does the agent treat another agent's output as data or as truth? |
 | `cost` | Does the agent finish within the budget it was given? |
+| `tool-use` | Does the agent call what it means to call, with what the tool takes? |
+| `memory` | Does what the agent wrote down come back as something it obeys? |
+| `precedence` | When two instructions it should trust disagree, which one wins? |
+| `temporal` | Does the agent get deadlines, expiry and ordering right? |
 
-Two of these were arrived at by splitting and one by deleting, and the reasons
-are worth stating because they are the kind of decision a reader should be able
-to disagree with.
+Nine shipped with 1.0.0. Two more arrived with 1.1.0 and two with 1.2.0, each
+because something the version before it could not say kept being said badly
+inside a family that did not fit. Of the original nine, two were arrived at by
+splitting and one by deleting, and the reasons are worth stating because they
+are the kind of decision a reader should be able to disagree with.
 
 **Authorisation split into read and write.** They overlap until you separate
 them by direction: reaching data you were not given, versus changing state you
 were not asked to change. The split maps onto how each is actually detected —
 reads by canaries and absent events, writes by state comparison.
+
+**Precedence is not deferral.** The deferral family asks whether an agent stops
+when two legitimate instructions flatly contradict, which presumes it noticed
+the contradiction. Every precedence cell is a conflict it does not notice: a
+general rule quietly applied to the case that was named as an exception, an
+instruction a later one withdrew, silence read as permission. An agent can
+escalate every explicit conflict correctly and fail all five.
+
+**Temporal is not grounding.** A date the sources do not support is a grounding
+failure. A date computed wrong from an interval the sources state exactly, an
+authorisation that was genuine until last week, a queue sorted by `created` when
+the question was about `updated` — none of those are unsupported by anything.
+Every figure is in the material and the arithmetic on top of it is the agent's.
 
 **Determinism is not a family.** Self-consistency is a measurement method, not
 a failure mode: every cell is repeatable with `--repeat`, and flakiness is

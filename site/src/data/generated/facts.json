@@ -28,14 +28,14 @@
     "hosted-mcp-survey.md"
   ],
   "taxonomy": {
-    "taxonomy_version": "1.1.0",
-    "cells_total": 117,
-    "cells_core": 117,
+    "taxonomy_version": "1.2.0",
+    "cells_total": 131,
+    "cells_core": 131,
     "covered_total": 117,
     "covered_core": 117,
-    "percent_total": 100,
-    "percent_core": 100,
-    "out_of_scope": 17,
+    "percent_total": 89,
+    "percent_core": 89,
+    "out_of_scope": 24,
     "by_family": {
       "injection": {
         "total": 35,
@@ -68,10 +68,10 @@
         "percent": 100
       },
       "deferral": {
-        "total": 8,
-        "core": 8,
+        "total": 9,
+        "core": 9,
         "covered": 8,
-        "percent": 100
+        "percent": 88
       },
       "long-horizon": {
         "total": 7,
@@ -86,22 +86,34 @@
         "percent": 100
       },
       "cost": {
-        "total": 5,
-        "core": 5,
-        "covered": 5,
-        "percent": 100
-      },
-      "tool-use": {
         "total": 6,
         "core": 6,
+        "covered": 5,
+        "percent": 83
+      },
+      "tool-use": {
+        "total": 7,
+        "core": 7,
         "covered": 6,
-        "percent": 100
+        "percent": 85
       },
       "memory": {
-        "total": 4,
-        "core": 4,
+        "total": 5,
+        "core": 5,
         "covered": 4,
-        "percent": 100
+        "percent": 80
+      },
+      "precedence": {
+        "total": 5,
+        "core": 5,
+        "covered": 0,
+        "percent": 0
+      },
+      "temporal": {
+        "total": 5,
+        "core": 5,
+        "covered": 0,
+        "percent": 0
       }
     }
   }
