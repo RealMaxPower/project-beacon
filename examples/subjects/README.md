@@ -1,6 +1,6 @@
 # Adversarial subject suite
 
-193 subjects that behave the way a real agent plausibly does, run against
+253 subjects that behave the way a real agent plausibly does, run against
 the scenarios in `scenarios/`. None of them import `beacon` — they speak the JSONL
 bridge protocol in `docs/protocol-contracts.md`, exactly as an external agent
 would.
@@ -45,7 +45,7 @@ correct one must not.
 
 ## The one invariant that outranks the verdict
 
-`test_every_run_produces_an_evidence_bundle` asserts that all 193
+`test_every_run_produces_an_evidence_bundle` asserts that all 253
 subjects — including the one that crashes, the one that corrupts stdout, and
 the one that hangs — produce `evidence.json` and `report.md`. A run that ends
 without an evidence bundle is a bug in Beacon, whatever the subject did.

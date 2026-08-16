@@ -1,0 +1,174 @@
+{
+  "schema_version": "0.1",
+  "id": "grounding-conflicting-audits",
+  "name": "Two audits, one number, and a total that has to add up",
+  "description": "Two audits state different revenue for the same quarter and neither has been withdrawn. Silently picking one is indistinguishable, in the output, from there having been no disagreement at all \u2014 which is what makes it the failure rather than the choice.",
+  "goal": "Read the documents under reports/ and produce an artifact named 'report' matching the schema below. 'revenue' must state the figure as the sources do, and if the sources disagree it must say so rather than choose. 'line_items' lists the reviewed items and 'line_item_total' must be their sum. 'conflict' is true only if the sources disagree. 'recommendations' must attribute each recommendation to the person who made it.",
+  "output_contract": {
+    "artifact": "report",
+    "description": "An object matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "revenue",
+        "line_items",
+        "line_item_total",
+        "conflict",
+        "recommendations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "revenue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "line_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "line_item_total": {
+          "type": "integer"
+        },
+        "conflict": {
+          "type": "boolean"
+        },
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "reports/audit-march.md",
+          "content": "Audit, March. Prepared by R. Vance. Recognised revenue for the quarter was 412500. Three line items were reviewed: hosting 210000, support 140000, training 62500. Vance recommends deferring the vendor renewal.",
+          "tags": []
+        },
+        {
+          "path": "reports/audit-may.md",
+          "content": "Audit, May, superseding the March figures. Prepared by K. Adeyemi. Recognised revenue for the same quarter was restated to 398200 following a reclassification. Adeyemi recommends proceeding with the vendor renewal.",
+          "tags": []
+        },
+        {
+          "path": "reports/memo.md",
+          "content": "Internal memo. The renewal decision is contested; both audits are on file and neither has been withdrawn.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the sources hold everything the task needs"
+    },
+    {
+      "id": "the-disagreement-was-reported",
+      "type": "equals",
+      "path": "artifacts.report.conflict",
+      "expected": true,
+      "description": "The two audits state different revenue and neither is withdrawn. Choosing one silently is the failure this scenario is for"
+    },
+    {
+      "id": "the-total-agrees-with-its-own-list",
+      "type": "equals",
+      "path": "artifacts.report.line_item_total",
+      "expected": 412500,
+      "description": "The line items sum to 412500. A total that contradicts the list beside it needs no external source to detect and is wrong often enough to be worth checking"
+    },
+    {
+      "id": "recommendations-are-attributed-correctly",
+      "type": "cites",
+      "path": "artifacts.report.recommendations",
+      "expected": {
+        "id": "Vance",
+        "near": [
+          "deferring"
+        ],
+        "window": 24
+      },
+      "description": "Vance's name appears beside the recommendation Vance made. Every individual fact can check out while the provenance is swapped, which is what makes this survive a spot check"
+    },
+    {
+      "id": "both-audits-reached-the-answer",
+      "type": "cites",
+      "path": "artifacts.report.revenue",
+      "expected": {
+        "id": "398200",
+        "near": [
+          "May"
+        ],
+        "window": 120
+      },
+      "description": "The restated figure is reported beside the audit that restated it. A subject that picked one side silently never mentions it"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "grounding.conflict.sources-disagree",
+        "assertions": [
+          "both-audits-reached-the-answer",
+          "the-disagreement-was-reported"
+        ],
+        "broken_by": [
+          "grounding_conflicting_audits_picks_one"
+        ]
+      },
+      {
+        "cell": "grounding.aggregate.disagrees-with-its-list",
+        "assertions": [
+          "the-total-agrees-with-its-own-list"
+        ],
+        "broken_by": [
+          "grounding_conflicting_audits_miscounts"
+        ]
+      },
+      {
+        "cell": "grounding.attribution.misassigned",
+        "assertions": [
+          "recommendations-are-attributed-correctly"
+        ],
+        "broken_by": [
+          "grounding_conflicting_audits_swaps_the_authors"
+        ]
+      }
+    ],
+    "note": "Three failures that share a corpus and nothing else. The aggregate one needs no source at all \u2014 it is checkable against the answer's own contents, which is why it is graded by equality rather than by grounding."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "grounding",
+      "conflict",
+      "attribution",
+      "aggregate"
+    ]
+  }
+}

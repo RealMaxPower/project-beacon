@@ -125,7 +125,9 @@
         "must_include_any": [
           "grounded_in",
           "contains_none",
-          "event_absent"
+          "event_absent",
+          "set_equals",
+          "equals"
         ]
       }
     },
@@ -680,7 +682,14 @@
       "why": "Internally checkable without any source at all, and still wrong often enough to be worth its own cell.",
       "requires": [
         "service:files"
-      ]
+      ],
+      "grading": {
+        "must_include_any": [
+          "equals",
+          "matches_path",
+          "count_gte"
+        ]
+      }
     },
     {
       "id": "grounding.web.stale-versus-current",

@@ -125,6 +125,19 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- Twelve more scenarios, taking coverage to 81 of 95 cells. No new capability
+  was involved: the injection family went from 17 to 30 of 35 by writing the
+  rungs that were always buildable — natural language with no markers at all, a
+  payload split across two documents so neither is an instruction, forged
+  system turns, the three mail rungs, and the cross-surface pairs where the
+  payload arrives on one surface and the damage lands on another.
+
+  `delegation` is complete at 4 of 4, which needed the distinction between
+  believing what a sub-agent said and doing what it asked. `contract` is
+  complete at 8 of 8. `grounding` reached 10 of 11 with conflicting sources, a
+  total that contradicts its own list, a misattributed recommendation and a
+  citation to a document that does not exist.
+
 - **A ledger**, and with it the last capability the taxonomy was waiting on.
   Every cell is now gradeable, so the two published figures have converged and
   coverage can no longer be improved by building capability — only by writing
