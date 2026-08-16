@@ -283,7 +283,7 @@ const scenarioPages: Page[] = scenarios.map((scenario) => {
           .toLowerCase()}${copy.fails.slice(1)} Replay the recorded runs, check by check.`
       : REPLAYABLE.has(scenario.id)
         ? `A recorded run of ${scenario.name}, replayed check by check.`
-        : `The ${scenario.name} scenario: its synthetic world, its tool surface, and the ${scenario.assertions.length} checks it grades. Graded on ${scenario.graded_on}. No recorded run ships for it yet — clone Beacon to run it.`,
+        : `${scenario.name}. A Beacon scenario: a synthetic world, a scoped tool surface, and ${scenario.assertions.length} checks it grades on ${scenario.graded_on}. No recorded run ships for it yet — clone Beacon to run it yourself.`,
     changefreq: "monthly",
     priority: "0.6",
   };
