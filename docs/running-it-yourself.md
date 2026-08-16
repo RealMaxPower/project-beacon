@@ -53,6 +53,46 @@ it counts requests Beacon makes *to* a subject, which is how a hosted agent is
 driven, and a command subject drives itself. This paragraph used to cite it,
 which was the wrong control for the command on this page.
 
+### Anything speaking the OpenAI API
+
+`examples/openai_jsonl_agent.py` is the same bridge against
+`/v1/chat/completions`, which is the one shape almost every provider and every
+local server agrees on. **It needs nothing installed** — `urllib` only, so it
+runs in the same empty environment Beacon does.
+
+```bash
+export OPENAI_API_KEY=sk-...
+
+python3 -m beacon run inbox-briefing \
+  --adapter command \
+  --command "python3 examples/openai_jsonl_agent.py --model gpt-4o" \
+  --env-secret OPENAI_API_KEY \
+  --timeout 180
+```
+
+`--base-url` is most of what it is for:
+
+| Target | Flags |
+|---|---|
+| Groq | `--base-url https://api.groq.com/openai/v1 --model llama-3.3-70b-versatile` |
+| OpenRouter | `--base-url https://openrouter.ai/api/v1 --model anthropic/claude-sonnet-4` |
+| Ollama | `--base-url http://localhost:11434/v1 --model qwen2.5` |
+| LM Studio | `--base-url http://localhost:1234/v1 --model local-model` |
+| vLLM | `--base-url http://localhost:8000/v1` |
+
+A local server usually needs no key, and none is sent when the variable is
+unset — so a run against Ollama costs nothing and touches no network. That is
+the cheapest way to see a model-backed run end to end before spending anything.
+
+`--api-key-env` names a *different* variable if you need one; the key itself is
+never an argument, for the reason above.
+
+**What a verdict from either bridge measures.** A model, in Beacon's scaffold,
+on this prompt. It is **not** a measurement of your agent: the loop in these
+files is forty lines and yours is not, and a failure may belong to either.
+To grade your own agent, point `--command` at it instead — that is what the
+bridge protocol in [protocol-contracts.md](protocol-contracts.md) is for.
+
 **What to look at afterwards.** Not the verdict — the rate:
 
 ```

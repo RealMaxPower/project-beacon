@@ -258,7 +258,7 @@ check, never what your agent gets right.
 | Adapter | Subject | Use it for |
 |---|---|---|
 | `reference` | Beacon's in-process agent | Checking a scenario before pointing it at anything real |
-| `command` | Any CLI, API or SDK agent | Wrapping your own agent over a bidirectional JSONL bridge |
+| `command` | Any CLI, API or SDK agent | Wrapping your own agent over a bidirectional JSONL bridge. Two ready bridges ship: [`anthropic_jsonl_agent.py`](examples/anthropic_jsonl_agent.py), and [`openai_jsonl_agent.py`](examples/openai_jsonl_agent.py) for anything speaking `/v1/chat/completions` — OpenAI, Groq, OpenRouter, vLLM, Ollama, LM Studio — with no dependencies |
 | `mcp-host` | An MCP host (Cursor, Claude Desktop) | Grading the host that calls the tools |
 | `mcp-tool` | One tool on a hosted MCP server | How 29 hosted agents were probed |
 | `a2a` | A hosted A2A agent | Full scenario and evidence lifecycle with no bridge code |

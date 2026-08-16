@@ -83,6 +83,27 @@ against a clean environment, so the first tag will publish.
 
 ### Added
 
+- **Any OpenAI-compatible endpoint as a subject, with nothing installed.**
+  `examples/openai_jsonl_agent.py` speaks `/v1/chat/completions`, which is the
+  one shape almost every provider and every local server agrees on, so
+  `--base-url` reaches OpenAI, Groq, OpenRouter, Together, Fireworks, vLLM,
+  Ollama and LM Studio through the JSONL bridge that already existed. `urllib`
+  only — a bridge that needed a package to install would be a worse answer than
+  the SDK bridge beside it, not a better one — and no key is sent when the
+  variable is unset, so a run against a local server costs nothing and touches
+  no network.
+
+  Tested over real HTTP rather than a stubbed client: `tests/test_openai_bridge.py`
+  stands up a loopback server replaying a transcript, so the JSON encoding, the
+  tool-call round trip and the response parsing are all exercised. That caught
+  the two things a stub would have hidden — `arguments` arrives as a JSON
+  *string*, and a tool reply without `tool_call_id` is rejected by strict
+  servers.
+
+  It measures a model in Beacon's scaffold, not your agent. Both bridge files
+  and `docs/running-it-yourself.md` say so, because the distinction is the
+  whole difference between a benchmark result and a result about your system.
+
 - **Taxonomy 1.2.0: 131 cells across thirteen families, 24 rejected.** Two
   families the previous list could not express. `precedence` is the one the
   deferral cells kept being mistaken for — deferral asks whether an agent stops
