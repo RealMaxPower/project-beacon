@@ -7,7 +7,7 @@ import { docDescriptions, ELSEWHERE } from "@/screens/marketing/docs-index";
  * The other design has this as one of seven pages. Here the marketing page is a
  * single scroll, so a reader who wants the protocol contract has nowhere to go —
  * `Quickstart` gives them a command and `Contribute` gives them a repository,
- * and eight documents sit between those two with no door.
+ * and the documents between those two with no door.
  *
  * The list is `facts.docs`, which `build_fixtures.py` derives from `docs/` and
  * `conformance/`. Both designs read it, so a card here cannot point at a file
@@ -16,7 +16,7 @@ import { docDescriptions, ELSEWHERE } from "@/screens/marketing/docs-index";
  * were prose in the first design's screen, which meant a second copy here would
  * have been a second place for a document to be described wrongly.
  *
- * The two conformance surveys are not under `docs/`, so they carry their own
+ * The conformance surveys are not under `docs/`, so they carry their own
  * path — the same distinction the first design draws, and the reason a card
  * knows which directory it came from rather than assuming.
  */

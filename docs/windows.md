@@ -33,8 +33,8 @@ python -m beacon run scenarios/inbox-briefing/scenario.json --repeat 5
 python examples/subjects/run_suite.py
 ```
 
-Expected: `PASS` with nine passing assertions, `Determinism: STABLE across 5
-runs`, and `40/40 verdicts correct`.
+Expected: `PASS` with ten passing assertions, `Determinism: STABLE across 5
+runs`, and `415/415 verdicts correct`.
 
 ## Paths in `--command`
 

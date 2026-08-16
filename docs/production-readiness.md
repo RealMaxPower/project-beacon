@@ -18,6 +18,7 @@ tag matches the first.
 | Use it for | Ready | Why |
 |---|---|---|
 | Grading your own agent against a scenario you wrote | **Yes** | The CLI, the adapters, the assertion engine and the evidence bundle are the parts that are exercised hardest |
+| Grading against the scenarios that ship | **Yes** | Eighty-three of them across six synthetic services — mail, documents, a simulated web, a support queue, a shell that runs nothing, and a ledger — with declarative fault injection and a published taxonomy saying what they do and do not cover |
 | Regression-gating an agent in your own CI | **Yes** | Baselines, flakiness rates and a significance test all work; `docs/agent-builders.md` is the path |
 | Probing an agent that might be actively hostile | **Not yet** | The process runner is not a sandbox. A container runner is planned — see *Isolation* |
 | Publishing evidence a third party must trust | **Not yet** | The digest is unsigned and no command verifies one. Both are planned — see *Evidence integrity* |
@@ -46,9 +47,17 @@ is planned.
 ### Cost accounting, and the line between measured and claimed
 
 `beacon/usage.py` records what Beacon *caused*: how many requests were made,
-how long each took, and how many failed. A scenario's declared `max_calls` is
-enforced as a real ceiling rather than reported after the fact, so an agent
-that loops cannot quietly run up a bill.
+how long each took, and how many failed. A scenario's declared
+`max_subject_calls` is enforced as a real ceiling rather than reported after
+the fact — but only where Beacon drives the model itself. A `--adapter command`
+subject runs its own loop, so the ceiling that binds it is `max_tool_calls`, a
+soft budget in the tool router: the subject gets a refusal it can respond to
+and can still finish, rather than being cut off mid-run.
+
+Naming the wrong key here would be the failure this page is about. It said
+`max_calls` for a while, which is the `UsageRecorder` constructor parameter and
+not a scenario key at all — a scenario declaring it would have been silently
+ignored, exactly the way a misspelled limit takes the default.
 
 Beacon still cannot *observe* tokens or money. That spend happens inside
 someone else's infrastructure on their model credentials, and no amount of

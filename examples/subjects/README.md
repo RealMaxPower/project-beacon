@@ -66,8 +66,10 @@ restraint — it now requires the subject to see the message and decline it.
 
 ## Adding one
 
-Prefer the driver. A hand-written subject is still fine — most of the ones here
-are — but a new scenario should reach for `breaker.py` first.
+Prefer the driver. A hand-written subject is still fine — 47 of the ones here
+are, and they are the empirical ground truth for the seven scenarios that
+shipped first — but 368 of the 415 are now driven, and a new scenario should
+reach for `breaker.py` first.
 
 ### The driver
 

@@ -208,7 +208,7 @@ export function Header({ route }: { route: BResolved }) {
       {/*
         The bypass WCAG 2.4.1 asks for, and the reason it is not `sr-only`.
         
-        Nine navigation links repeat on every page. A keyboard reader had to
+        The navigation links repeat on every page. A keyboard reader had to
         walk all nine to reach the content, on every navigation. Hidden until
         focused rather than hidden outright: a sighted keyboard user needs to
         see where the focus went, and a skip link nobody can see is the version

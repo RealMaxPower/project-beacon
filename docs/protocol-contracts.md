@@ -12,8 +12,17 @@ output belongs on standard error or in a `log` message.
 `start`
 
 - `protocol_version`: bridge protocol version.
-- `run_id`: opaque run identifier.
-- `scenario`: public scenario description, goal, output contract, and limits.
+- `run_id`: opaque run identifier. **It is not stable within a `beacon run`.**
+  A scenario may declare `repeat` (1–3), in which case Beacon executes the
+  subject that many times against freshly built services, and each pass gets
+  its own `run_id` of the form `<run>-repeat-N` and its own workspace. A
+  subject that keys anything off `run_id` will see it change; a subject that
+  keys off nothing will not notice. Only the first pass's events are graded —
+  later passes contribute their artifacts, end state and ending, which is what
+  a cross-run assertion such as `same_shape_across_runs` reads.
+- `scenario`: `schema_version`, `id`, `name`, description, goal, output
+  contract and limits. Assertions and scenario metadata are both withheld — a
+  subject that can read the grading criteria is not being evaluated.
 - `tools`: MCP-shaped tool definitions, restricted to the scenario's surface.
 
 `scenario.output_contract.artifact`, when present, names the artifact the
@@ -110,7 +119,9 @@ ephemeral token, or the server answers 401.
 
 `beacon_submit`
 
-- `status`: `completed` or `failed`.
+- `status`: `completed`, `failed`, `input_required` or `declined` — the same
+  four endings the JSONL bridge accepts, described above. `failed` resolves to
+  INCOMPLETE; the other three are endings the subject chose and are graded.
 - `summary`: what the subject did.
 - `artifact`: required when the scenario declares an output contract; recorded
   under the contracted artifact name.

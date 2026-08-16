@@ -164,12 +164,47 @@ export type Provenance = "repo" | "proposal" | "illustrative";
  * gives a floor rather than a figure for both, because an exact number on a
  * website is wrong as soon as somebody writes a test.
  */
+export interface AdapterFact {
+  id: string;
+  subject: string;
+  interface: string;
+  reached_by: string;
+  status: string;
+  level: number;
+  /** Whether this adapter can be the subject of a graded run, or only inspects. */
+  run: boolean;
+  subject_id?: string;
+}
+
+export interface TaxonomyFacts {
+  taxonomy_version: string;
+  cells_total: number;
+  cells_core: number;
+  covered_total: number;
+  covered_core: number;
+  percent_total: number;
+  percent_core: number;
+  out_of_scope: number;
+  by_family: Record<
+    string,
+    { total: number; core: number; covered: number; percent: number }
+  >;
+}
+
 export interface Facts {
   subjects: number;
   subjects_by_expected_verdict: Record<Verdict, number>;
   subjects_with_open_defects: number;
   scenarios: number;
   scenarios_by_grading: Record<"service state" | "the answer", number>;
+  adapters: AdapterFact[];
   docs: string[];
   surveys: string[];
+  /**
+   * Computed by `build_fixtures.py` from `taxonomy/failure-modes.json`. It was
+   * exported and then declared nowhere for two taxonomy versions, so the one
+   * taxonomy sentence on the site was hand-typed and said "ninety-five" while
+   * this said 131.
+   */
+  taxonomy: TaxonomyFacts;
 }

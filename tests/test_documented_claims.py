@@ -294,17 +294,156 @@ class ReferencedPathTests(unittest.TestCase):
         """
         The rates in the builder guide are the ones in the committed baselines,
         or the guide is quoting a measurement the repository cannot show.
+
+        This used to assert only that the substring "2/12" appeared *somewhere*
+        in the file, and it passed for months while a table four screens lower
+        printed `12 / 12` and `4 / 12` for the same two runs — inverting the
+        story the section told, in the guide a new user is pointed at. Every
+        fraction is checked now, against the assertion it names.
         """
-        guide = " ".join(
-            (ROOT / "docs" / "agent-builders.md").read_text(encoding="utf-8").split()
+        guide = (ROOT / "docs" / "agent-builders.md").read_text(encoding="utf-8")
+        recorded = {
+            path.name.split(".")[0]: json.loads(path.read_text(encoding="utf-8"))
+            for path in sorted((ROOT / "baselines").glob("*.json"))
+        }
+        fractions = {
+            f"{round(rate * bundle['runs'])}/{bundle['runs']}"
+            for bundle in recorded.values()
+            for rate in bundle.get("assertion_pass_rates", {}).values()
+        }
+        self.assertTrue(fractions, "no baseline rates were parsed; the guard is decorative")
+
+        quoted = re.findall(r"(\d+)\s*/\s*(\d+)", guide)
+        self.assertTrue(quoted, "the guide no longer quotes a measured rate")
+        for numerator, denominator in quoted:
+            with self.subTest(fraction=f"{numerator}/{denominator}"):
+                self.assertIn(
+                    f"{numerator}/{denominator}",
+                    fractions,
+                    f"the guide quotes {numerator}/{denominator}, which no "
+                    f"committed baseline records. Recorded: {sorted(fractions)}",
+                )
+
+
+class DocumentedInventoryTests(unittest.TestCase):
+    """
+    Lists and counts in prose, checked against the registries they describe.
+
+    Every one of these was wrong when the guard was written, and none of them
+    was catchable by the checks that existed. `docs/architecture.md` said
+    "Beacon ships `mail` and `files`" with six registered; `docs/windows.md`
+    told a Windows user to expect "nine passing assertions" and "40/40 verdicts
+    correct" against ten and 415; the builder guide documented eight assertion
+    types out of eighteen.
+
+    The link and path guards above pass on all of it, because a stale sentence
+    names no broken path. Nothing reads a count.
+    """
+
+    DOCS = sorted((ROOT / "docs").glob("*.md"))
+
+    def _tracked_prose(self) -> list[Path]:
+        return [*self.DOCS, README, SUBJECTS_README, ROOT / "CONTRIBUTING.md"]
+
+    def test_every_shipped_service_is_named_where_services_are_enumerated(self) -> None:
+        """
+        A sentence naming two or more services is claiming to list them.
+
+        Not a ban on mentioning one service — `files` alone in an example is
+        fine. The failure mode is the half-list that reads as complete, which
+        is what "Beacon ships `mail` and `files`" became the day `web` landed.
+        """
+        from beacon.services import registered_services
+
+        services = sorted(registered_services())
+        # Sentences, not lines: a list of six service names wraps, and a
+        # line-based check reported the last one as missing because it had
+        # been pushed onto the next line by the margin.
+        for path in self._tracked_prose():
+            text = " ".join(path.read_text(encoding="utf-8").split())
+            for sentence in re.split(r"(?<=[.!?])\s+", text):
+                named = [name for name in services if f"`{name}`" in sentence]
+                if len(named) < 2:
+                    continue
+                with self.subTest(file=path.relative_to(ROOT), sentence=sentence[:60]):
+                    self.assertEqual(
+                        sorted(named),
+                        services,
+                        f"{path.name} enumerates services but names "
+                        f"{sorted(named)} of {services}: {sentence[:120]}",
+                    )
+
+    def test_no_document_states_a_stale_verdict_tally(self) -> None:
+        """`N/N verdicts correct` is the suite's own output, so it is checkable."""
+        expected = len(json.loads(MANIFEST.read_text(encoding="utf-8"))["subjects"])
+        for path in self._tracked_prose():
+            text = path.read_text(encoding="utf-8")
+            for quoted in re.findall(r"(\d+)\s*/\s*(\d+)\s+verdicts correct", text):
+                with self.subTest(file=path.relative_to(ROOT), quoted=quoted):
+                    self.assertEqual(
+                        [int(quoted[0]), int(quoted[1])],
+                        [expected, expected],
+                        f"{path.name} states {quoted[0]}/{quoted[1]} verdicts "
+                        f"against {expected} subjects",
+                    )
+
+    def test_the_readme_layout_names_every_core_module(self) -> None:
+        """
+        A module missing from the layout block is invisible to the path guard,
+        which only checks that named paths exist. `beacon/assertions.py` was
+        added by a commit that moved eighteen assertion handlers into it, and
+        `models.py` — which CONTRIBUTING calls a published contract — had never
+        been listed at all.
+        """
+        listed = README.read_text(encoding="utf-8")
+        modules = sorted(
+            path.name
+            for path in (ROOT / "beacon").glob("*.py")
+            if path.name not in {"__init__.py", "__main__.py"}
         )
-        recorded = json.loads(
-            (ROOT / "baselines" / "web-extraction-contract.claude-sonnet-5.json")
-            .read_text(encoding="utf-8")
+        missing = [name for name in modules if name not in listed]
+        self.assertEqual(
+            missing,
+            [],
+            f"the repository layout does not mention {missing}",
         )
-        rate = recorded["assertion_pass_rates"]["result-matches-the-contract"]
-        passed = round(rate * recorded["runs"])
-        self.assertIn(f"{passed}/{recorded['runs']}", guide)
+
+    #: Assertion types the builder guide may leave out, and why. Empty on
+    #: purpose: if a type is worth registering it is worth a row, and an
+    #: exemption should have to be argued for in writing here rather than by
+    #: quietly not mentioning it.
+    UNDOCUMENTED_ASSERTIONS: dict[str, str] = {}
+
+    def test_the_builder_guide_names_every_assertion_type(self) -> None:
+        """
+        The guide documented eight of eighteen, and the ten it omitted were
+        not the obscure ones: `equals` is the most-used type in the shipped
+        scenarios, and `matches_path` is the only one that compares what an
+        agent *said* against what the state records.
+        """
+        from beacon.assertions import REGISTRY
+
+        guide = (ROOT / "docs" / "agent-builders.md").read_text(encoding="utf-8")
+        missing = sorted(
+            name
+            for name in REGISTRY
+            if f"`{name}`" not in guide and name not in self.UNDOCUMENTED_ASSERTIONS
+        )
+        self.assertEqual(
+            missing,
+            [],
+            f"docs/agent-builders.md does not mention {missing}. Add a row, or "
+            f"add the name to UNDOCUMENTED_ASSERTIONS with a reason.",
+        )
+
+    def test_the_evidence_version_is_stated_correctly_wherever_it_appears(self) -> None:
+        from beacon.models import EVIDENCE_VERSION
+
+        for path in self._tracked_prose():
+            text = path.read_text(encoding="utf-8")
+            for quoted in re.findall(r"`evidence_version`[^.\n]*?`(\d+\.\d+)`", text):
+                with self.subTest(file=path.relative_to(ROOT), quoted=quoted):
+                    self.assertEqual(quoted, EVIDENCE_VERSION)
 
 
 if __name__ == "__main__":

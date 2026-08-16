@@ -215,10 +215,11 @@ class MatrixCoverageTests(unittest.TestCase):
 
 class LocalEquivalentTests(unittest.TestCase):
     """
-    CI runs on a pull request now, which makes the local commands a first pass
-    rather than the only pass. They still have to be written down: they are the
-    fast answer while you are working, and the two things the pull-request
-    template asks you to tick.
+    CI is started by hand while this repository is private, so the local
+    commands are not a first pass — they are the only pass until a maintainer
+    dispatches the matrix. That is exactly why they have to be written down:
+    they are the fast answer while you are working, and the two things the
+    pull-request template asks you to tick.
     """
 
     def test_contributing_gives_the_commands_ci_will_run(self) -> None:

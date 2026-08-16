@@ -43,12 +43,12 @@ against real subjects out of `examples/subjects/` and commits what Beacon wrote:
 ```text
 src/data/generated/
   index.json          which demos exist, and what each one shows
-  scenarios.json      the seven scenarios, read from scenarios/*/scenario.json
+  scenarios.json      every shipped scenario, read from scenarios/*/scenario.json
   baselines.json      the recorded multi-run measurements, from baselines/
   <demo>/evidence.json, events.json, report.md
 ```
 
-Four of the five demos are adversarial subjects that already existed, chosen
+Most of the demos are adversarial subjects that already existed, chosen
 because they produce the states the playground needs to show:
 
 | Demo | Subject | Verdict |

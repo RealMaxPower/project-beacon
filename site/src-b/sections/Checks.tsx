@@ -42,7 +42,7 @@ const CHECKS = [
   },
   {
     command: "npm run visual",
-    what: "Real Chrome, both designs, both themes, four widths",
+    what: "Real Chrome, both themes, every route from phone to desktop widths",
     catches:
       "Text overlapping text, horizontal overflow, clipped text, tap targets under 44px, a scroller with no cue, a header bar padded unevenly, and a button that offers no hand.",
   },

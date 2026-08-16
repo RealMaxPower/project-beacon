@@ -5,10 +5,15 @@ import { scenarioCopy } from "@/data/copy";
 /**
  * Step one: what should the agent be asked to do.
  *
- * The seven are read from `scenarios/` rather than listed here, so the count on
- * screen cannot disagree with the repository. Only the ones with a recorded
- * demo run are selectable; the rest are shown, because hiding four of the seven
- * would misrepresent what ships.
+ * Every count here is read from `scenarios/` and from the fixtures actually
+ * shipped, never typed, so the screen cannot disagree with the repository.
+ * That matters more than it sounds: the sentence used to say "every one of
+ * them has recorded runs here" while the grid below it dimmed seventy-six
+ * cards reading "no recorded run yet".
+ *
+ * Only scenarios with a recorded run are selectable; the rest are still shown,
+ * because hiding most of what ships would misrepresent the project in the
+ * other direction.
  */
 
 interface Props {
@@ -28,8 +33,9 @@ export function PickScenario({ selected, runnable, onPick }: Props) {
           Each of these is a synthetic world with a job in it. {scenarios.length} ship with
           Beacon — {scenarios.filter((s) => s.graded_on === "service state").length} graded on
           what changed in a simulated service, {scenarios.filter((s) => s.graded_on === "the answer").length}{" "}
-          on what came back. Every one of them has recorded runs here — a subject that
-          satisfies it, and one that breaks it.
+          on what came back. {runnable.size} of them have recorded runs here, each with a
+          subject that satisfies it and one that breaks it; the rest are shown because
+          they ship, and you can run any of them yourself from a clone.
         </p>
       </header>
 

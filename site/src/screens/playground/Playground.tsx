@@ -28,8 +28,8 @@ interface Props {
    * A scenario named by the URL — `#/playground/<id>`, which is how a scenario
    * card on the marketing pages opens this already pointed at itself.
    *
-   * Matched on `id` rather than `slug`. They are the same string for six of the
-   * seven; `inbox-briefing` is the directory and `inbox-briefing-draft-only` is
+   * Matched on `id` rather than `slug`. They are the same string for all but one of
+   * the eighty-three; `inbox-briefing` is the directory and `inbox-briefing-draft-only` is
    * the id, and that is the one scenario with five recorded subjects — so
    * linking by slug would fail on precisely the card most likely to be clicked.
    */
@@ -90,7 +90,7 @@ export function Playground({ scenarioId: requested = null }: Props) {
      * The top of the new step, not wherever the old one left you.
      *
      * Cards further down a grid are the ones most likely to be clicked — the
-     * scenario picker is seven cards deep — and advancing kept the scroll
+     * scenario picker is eighty-three cards deep — and advancing kept the scroll
      * position, so you arrived at step three already scrolled past its
      * heading, with the sticky header covering the step rail. It read as a
      * page that had half-loaded. The router does this for pages already.
@@ -215,7 +215,7 @@ export function Playground({ scenarioId: requested = null }: Props) {
             onClick={() => go("repeat")}
             className="hit-target inline-flex items-center rounded-row bg-text px-4 text-[13px] font-medium text-bg"
           >
-            Run it twelve times
+            See the repeated runs
           </button>
         ),
       };

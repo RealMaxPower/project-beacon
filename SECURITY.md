@@ -17,9 +17,10 @@ and the smallest reproduction you have. A scenario file or subject script that
 demonstrates the issue is ideal — and if it does so through Beacon's own
 adapters, keep the fixtures synthetic.
 
-Expect an acknowledgement within a week. Because this is a pre-alpha project
-with no release channel, there is no patch-time commitment yet; we will tell
-you what we intend to do and when. We will credit you in the fix unless you
+Expect an acknowledgement within a week. Because nothing has been published
+yet — the release pipeline is built and tested, but no tag has been cut and
+there is nothing on PyPI to patch — there is no patch-time commitment yet; we
+will tell you what we intend to do and when. We will credit you in the fix unless you
 prefer otherwise.
 
 Please give us a reasonable chance to respond before disclosing publicly.

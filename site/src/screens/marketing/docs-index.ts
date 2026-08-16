@@ -12,6 +12,8 @@
  * check against the filesystem.
  */
 
+import { facts } from "@/data/fixtures";
+
 const REPO = "https://github.com/RealMaxPower/project-beacon/blob/main";
 const TREE = "https://github.com/RealMaxPower/project-beacon/tree/main";
 
@@ -49,7 +51,7 @@ export const docDescriptions: Record<string, string> = {
   "agent-builders.md":
     "The shortest path if you have an agent: point Beacon at it, measure how often it fails rather than whether it failed once, and fail CI when it regresses.",
   "failure-taxonomy.md":
-    "The ninety-five failure modes Beacon means to measure, the four tests a candidate has to pass to be one of them, and the list of candidates that were rejected with the reason each was turned down.",
+    `The ${facts.taxonomy.cells_total} failure modes Beacon means to measure in taxonomy ${facts.taxonomy.taxonomy_version}, the four tests a candidate has to pass to be one of them, and the ${facts.taxonomy.out_of_scope} candidates that were rejected with the reason each was turned down.`,
   "architecture.md":
     "The run lifecycle, and the boundary that keeps the core ignorant of any particular model provider or agent runtime.",
   "protocol-contracts.md":

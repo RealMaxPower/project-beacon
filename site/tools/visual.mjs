@@ -61,7 +61,7 @@ const { server, base: BASE } = await startStaticServer();
 const ROUTES = [
   ["b", "/", "dark"],
   // The playground inside the marketing shell. Its geometry is measured here
-  // rather than inferred from the landing page: same seven-step flow, a
+  // rather than inferred from the landing page: same six-step flow, a
   // different header above it and a different composited ground under it.
   ["b-playground", "/playground", "dark"],
   // Licensing and privacy. Long prose in a measured column is where a width

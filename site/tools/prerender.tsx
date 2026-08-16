@@ -26,7 +26,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SiteB } from "@b/SiteB";
 import { PAGES, SITE_ORIGIN, SITE_NAME, FAQ, type Page } from "@b/pages";
-import { scenarios, loadAllRuns } from "@/data/fixtures";
+import { scenarios, fixtures, loadAllRuns } from "@/data/fixtures";
 import { scenarioCopy } from "@/data/copy";
 import { toMarkdown } from "./to-markdown";
 
@@ -253,6 +253,15 @@ function document(page: Page, markup: string): string {
  * anything?" — is a better title than any phrase invented for the purpose,
  * because it is what somebody would actually ask.
  */
+/*
+ * Which scenarios actually have a bundle on this site. Seventeen runs cover
+ * seven scenarios; the other seventy-six ship as scenarios and nothing more.
+ * The description below used to promise "a recorded run of X" for every one of
+ * them — in the <title>, the meta description, the sitemap, the markdown twin
+ * and llms.txt, which are exactly the strings an answer engine quotes back.
+ */
+const REPLAYABLE = new Set(fixtures.map((fixture) => fixture.scenario));
+
 const scenarioPages: Page[] = scenarios.map((scenario) => {
   /*
    * `id` for the URL, `slug` for the copy, and they are not always the same
@@ -272,7 +281,9 @@ const scenarioPages: Page[] = scenarios.map((scenario) => {
       ? `${copy.tests} Graded on ${scenario.graded_on}; it fails when ${copy.fails
           .charAt(0)
           .toLowerCase()}${copy.fails.slice(1)} Replay the recorded runs, check by check.`
-      : `A recorded run of ${scenario.name}, replayed check by check.`,
+      : REPLAYABLE.has(scenario.id)
+        ? `A recorded run of ${scenario.name}, replayed check by check.`
+        : `The ${scenario.name} scenario: its synthetic world, its tool surface, and the ${scenario.assertions.length} checks it grades. Graded on ${scenario.graded_on}. No recorded run ships for it yet — clone Beacon to run it.`,
     changefreq: "monthly",
     priority: "0.6",
   };

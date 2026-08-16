@@ -1,5 +1,13 @@
 # Beacon — manual test plan, walked
 
+> **A dated record, not a current description.** This walk was made on
+> 2026-08-02, when seven scenarios and forty adversarial subjects shipped and
+> `inbox-briefing` had nine assertions. Eighty-three scenarios and 415 subjects
+> ship now, and the figures below have not been rewritten — a document whose
+> whole genre is "I checked these numbers on this day" is worth less if the
+> numbers are quietly updated afterwards. Read it for what the walk found and
+> how it was done. For today's figures, run the commands in §8 yourself.
+
 Against `http://localhost:5173` on 2026-08-02, Chrome. Every expected value was
 re-derived from `site/src/data/generated/` and the repo before comparing, so the
 plan and the screen were checked against a third thing rather than each other.

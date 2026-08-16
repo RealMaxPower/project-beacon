@@ -62,9 +62,15 @@ no wording should imply otherwise.
 
 ## Continuous integration
 
-Every push to `main` and every pull request runs the full matrix — three
-operating systems by three Python versions — plus the schema-conformance job,
-the CLI vertical slice, the coverage floor, and the site.
+The full matrix — three operating systems by three Python versions — plus the
+schema-conformance job, the CLI vertical slice, the coverage floor and the
+site, is **started by hand** while this repository is private. Every workflow
+is `workflow_dispatch` only, and `tests/test_workflow_triggers.py` fails the
+build if a push or pull-request trigger reappears. The push and pull-request
+triggers return on publication.
+
+So the two commands under [Setup](#setup) are not a courtesy — they are the
+only check that runs before a maintainer starts the matrix by hand.
 
 The site job is the newest and exists for one reason. `vercel.json` carries a
 Content-Security-Policy that the licensing and privacy page names directive by
@@ -73,12 +79,12 @@ automatic on merge, `vercel.json` is a file a pull request can edit, and until
 that job existed the only thing checking it was `npm run headers` on one
 laptop.
 
-It did not, for the first months of this project. Actions minutes are billed on
-private repositories and the runner multipliers are uneven — Linux 1x, Windows
-2x, macOS 10x — and the matrix measured at roughly 104 billed minutes per push,
-three quarters of it macOS. Free on a public repository; expensive on a private
-one. The matrix was kept through that period rather than trimmed, so restoring
-it was a one-line change.
+The reason the triggers are off is cost, not doubt about the matrix. Actions
+minutes are billed on private repositories and the runner multipliers are
+uneven — Linux 1x, Windows 2x, macOS 10x — and the matrix measures at roughly
+104 billed minutes per push, three quarters of it macOS. Free on a public
+repository; expensive on a private one. The matrix is being kept intact rather
+than trimmed, so restoring the triggers is a one-line change.
 
 `conformance.yml` is still manual, and permanently. It calls third-party MCP
 servers and hosted agents. Free minutes changed what a weekly cron costs us and
@@ -168,9 +174,11 @@ outright there, which left the rule enforced nowhere anybody could clone. The
 same test keeps this paragraph and the requirement above together, so the rule
 cannot go back to being stated without being kept.
 
-**CI runs on your pull request** — see above. Say what you ran locally anyway,
-and what you could not: a green check covers the matrix, not the judgement
-about whether the assertion you added is one that can actually fail.
+**CI does not run on your pull request** — see above; a maintainer starts it by
+hand while this repository is private. So say what you ran locally and what you
+could not. Even once the triggers return, a green check covers the matrix, not
+the judgement about whether the assertion you added is one that can actually
+fail.
 
 ## Security
 

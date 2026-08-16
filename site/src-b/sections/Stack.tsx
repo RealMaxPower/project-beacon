@@ -1,11 +1,12 @@
 import { Band } from "../components/Band";
+import { facts } from "@/data/fixtures";
 
 /**
  * What it can be pointed at.
  *
  * The source design draws upstream systems flowing into a band and out again,
- * and that is the right picture for Beacon too: five adapters in, one bundle
- * out, with the grading in between and the same on every path. A flat grid of
+ * and that is the right picture for Beacon too: adapters in, one bundle out,
+ * with the grading in between and the same on every path. A flat grid of
  * adapter names — which is what stood here first — says what Beacon connects to
  * and nothing about what it does with the connection.
  *
@@ -13,15 +14,17 @@ import { Band } from "../components/Band";
  * graded at level 1 and the in-process reference agent at level 4; drawing them
  * as equivalent inputs would be flattering and wrong, so each chip carries its
  * own, and the caption underneath says what a level is.
+ *
+ * The list is read from `facts.adapters`, which `build_fixtures.py` takes from
+ * the same registry `beacon adapters` prints. It was typed here once, and by
+ * the time anyone read it back it listed `mcp-stdio` — an inspection entry
+ * point, not something you can grade a run through — while omitting
+ * `mcp-tool`, which is how twenty-nine hosted agents were actually probed.
  */
 
-const ADAPTERS = [
-  ["a2a", "L2", "A2A agent over HTTP or JSON-RPC"],
-  ["mcp-host", "L1", "any MCP-speaking agent host"],
-  ["mcp-stdio", "L1", "an MCP server over stdio"],
-  ["command", "L3", "any CLI, API or SDK agent, over JSONL"],
-  ["reference", "L4", "Beacon's own in-process agent"],
-] as const;
+const ADAPTERS = facts.adapters
+  .filter((adapter) => adapter.run)
+  .sort((a, b) => a.level - b.level);
 
 export function Stack() {
   return (
@@ -38,13 +41,13 @@ export function Stack() {
       */}
       <div className="flex flex-col items-center">
         <ul className="grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {ADAPTERS.map(([id, level, what]) => (
-            <li key={id} className="rounded-lg border border-b-line px-4 py-3.5">
+          {ADAPTERS.map((adapter) => (
+            <li key={adapter.id} className="rounded-lg border border-b-line px-4 py-3.5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-b-mono text-[13px] text-b-src">{id}</span>
-                <span className="b-eyebrow text-b-faint">{level}</span>
+                <span className="font-b-mono text-[13px] text-b-src">{adapter.id}</span>
+                <span className="b-eyebrow text-b-faint">L{adapter.level}</span>
               </div>
-              <p className="mt-1.5 text-[12.5px] leading-snug text-b-muted">{what}</p>
+              <p className="mt-1.5 text-[12.5px] leading-snug text-b-muted">{adapter.subject}</p>
             </li>
           ))}
         </ul>

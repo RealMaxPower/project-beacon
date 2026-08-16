@@ -11,6 +11,86 @@
     "service state": 79,
     "the answer": 4
   },
+  "adapters": [
+    {
+      "id": "reference",
+      "subject": "Beacon reference inbox agent",
+      "interface": "in-process",
+      "reached_by": "beacon run --adapter reference",
+      "status": "MVP",
+      "level": 4,
+      "subject_id": "reference-inbox-agent",
+      "run": true
+    },
+    {
+      "id": "command",
+      "subject": "Any wrapped CLI/API/SDK agent",
+      "interface": "bidirectional JSONL",
+      "reached_by": "beacon run --adapter command",
+      "status": "MVP",
+      "level": 3,
+      "subject_id": "jsonl-command",
+      "run": true
+    },
+    {
+      "id": "mcp-host",
+      "subject": "Any MCP-speaking agent host",
+      "interface": "Beacon serves MCP over HTTP; adapter owns lifecycle",
+      "reached_by": "beacon run --adapter mcp-host",
+      "status": "MVP",
+      "level": 1,
+      "subject_id": "mcp-host",
+      "run": true
+    },
+    {
+      "id": "mcp-tool",
+      "subject": "One tool on a hosted MCP server",
+      "interface": "Beacon calls the server; the tool is the subject",
+      "reached_by": "beacon run --adapter mcp-tool",
+      "status": "MVP",
+      "level": 1,
+      "subject_id": "mcp-tool",
+      "run": true
+    },
+    {
+      "id": "a2a",
+      "subject": "A2A agent",
+      "interface": "A2A v1.0 HTTP+JSON or JSON-RPC",
+      "reached_by": "beacon run --adapter a2a",
+      "status": "discover/send spike",
+      "level": 2,
+      "subject_id": "a2a",
+      "run": true
+    },
+    {
+      "id": "mcp-serve",
+      "subject": "An MCP host you connect yourself",
+      "interface": "Beacon serves MCP over HTTP and waits",
+      "reached_by": "beacon serve-mcp",
+      "status": "MVP",
+      "level": 1,
+      "subject_id": "mcp-serve",
+      "run": false
+    },
+    {
+      "id": "mcp-stdio",
+      "subject": "MCP server",
+      "interface": "MCP stdio client",
+      "reached_by": "beacon mcp-inspect",
+      "status": "inspect/call",
+      "level": 1,
+      "run": false
+    },
+    {
+      "id": "a2a-http",
+      "subject": "A2A agent",
+      "interface": "A2A Agent Card discovery",
+      "reached_by": "beacon a2a-inspect",
+      "status": "inspect",
+      "level": 2,
+      "run": false
+    }
+  ],
   "docs": [
     "agent-builders.md",
     "architecture.md",

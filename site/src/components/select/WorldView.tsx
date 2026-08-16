@@ -3,7 +3,7 @@ import type { ScenarioSummary } from "@/data/types";
 /**
  * The world a scenario hands its subject, whatever shape that world is.
  *
- * Only three of the seven scenarios are a mailbox. The rest give the agent a
+ * Most scenarios are not a mailbox. The rest give the agent a
  * folder of documents, a captured web page, or a block of content — and the
  * screen used to say "there is no world to draw" for four of them, which was
  * true of the component and false of the scenario. Every one of them has

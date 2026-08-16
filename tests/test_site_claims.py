@@ -355,19 +355,39 @@ class CountingClaimTests(unittest.TestCase):
 
         Comments are stripped first. A docstring explaining that seven
         scenarios ship is documentation, not a claim rendered at a visitor.
+
+        The `"screens" in path.parts` filter this used to carry threw away the
+        entire shipped design. `SOURCE_TREES` includes `src-b`, correctly and
+        for the reason spelled out at the top of this file, and then every
+        `src-b/sections/*.tsx` was discarded because none of them sits under a
+        `screens/` directory — so the guard scanned six playground files and
+        `copy.ts`. What it could not see: "the ninety-five failure modes" for a
+        131-cell taxonomy, an adapter panel naming five of eight, and "both
+        designs, four widths" for one design and five widths. The `.ts`
+        extension was missing for the same reason.
+
+        The nouns are the second half of the fix. Counting only `subjects` and
+        `scenarios` left `cells`, `families`, `services`, `adapters`,
+        `assertion types` and `widths` unguarded, and every one of those had
+        drifted.
         """
         surfaces = [
             path
             for tree in SOURCE_TREES
             if tree.is_dir()
-            for path in sorted(tree.rglob("*.tsx"))
-            if "screens" in path.parts
-        ] + [SRC / "data" / "copy.ts"]
+            for suffix in ("*.tsx", "*.ts")
+            for path in sorted(tree.rglob(suffix))
+        ]
+        countable = (
+            r"(?:adversarial\s+)?subjects|scenarios|cells|failure\s+modes|families|"
+            r"synthetic\s+services|services|adapters|assertion\s+types|widths"
+        )
+        words = r"\d+|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+        words += r"thirteen|twenty[- ]one|forty|ninety[- ]five"
         for path in surfaces:
             text = " ".join(_without_comments(path.read_text(encoding="utf-8")).split())
             for pattern in (
-                r"\b(?:\d+|forty|twenty[- ]one|seven)\s+(?:adversarial\s+)?subjects\b",
-                r"\b(?:\d+|seven)\s+scenarios\b",
+                rf"\b(?:{words})\s+(?:{countable})\b",
                 r"\bthe\s+seven\s+that\s+ship\b",
                 r"\bthe\s+same\s+seven\b",
             ):

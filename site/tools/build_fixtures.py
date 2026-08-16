@@ -14,7 +14,7 @@ trusted by people who will not trust a friendly summary.
 
 So nothing here is authored. Each fixture is a real `run_scenario` call against
 a real subject from `examples/subjects/`, and the bundle it writes is the bundle
-the site ships. The subjects were already there: forty of them, each recorded in
+the site ships. The subjects were already there: hundreds of them, each recorded in
 `manifest.json` with the verdict it should produce. A demo agent that misbehaves
 is not something this site needed to invent.
 
@@ -338,7 +338,7 @@ def _scenarios() -> list[dict[str, Any]]:
     Every scenario that ships, read from its own file.
 
     The site states how many there are and what each one grades. Counting the
-    directory means it cannot say eight when there are seven, and cannot
+    directory means it cannot say eight when there are seven of something, and cannot
     describe a tool surface the scenario does not declare.
     """
     out: list[dict[str, Any]] = []
@@ -404,15 +404,42 @@ def _baselines() -> list[dict[str, Any]]:
     return out
 
 
+def _adapters() -> list[dict[str, Any]]:
+    """
+    The adapter table, read from the registry the CLI dispatches on.
+
+    `run` is the axis a reader cares about — which of these can be the subject
+    of a graded run — and it is not derivable from the id, so it is taken from
+    whether `reached_by` is a `beacon run` invocation. The rest are inspection
+    and serving entry points, which is a different question and was being
+    presented as the same one.
+    """
+    from beacon.cli import adapter_rows
+
+    # `adapter_rows` is what `beacon adapters` prints, including the
+    # integration level, which is probed from each adapter's own descriptor
+    # rather than declared. Rebuilding the rows here would be a second answer
+    # to the same question.
+    return [
+        {**row, "run": str(row["reached_by"]).startswith("beacon run")}
+        for row in adapter_rows()
+    ]
+
+
 def _facts() -> dict[str, Any]:
     """
     The counts the marketing pages state, each derived from what it counts.
 
     Deliberately omitted: the number of tests and the coverage percentage. The
-    README stopped giving exact figures for those and says "over 400 tests,
-    against an enforced floor of 80%" instead — a claim that stays true as the
-    suite grows. A website repeating today's exact count would be wrong by next
-    week, and there is nothing here to pin it to.
+    README states those as a band rather than a figure — a claim that stays
+    true as the suite grows. A website repeating today's exact count would be
+    wrong by next week, and there is nothing here to pin it to.
+
+    Everything else that a page states as a fact belongs here rather than in a
+    component. The adapter list is the newest arrival and the clearest case:
+    it was typed into one panel, and by the time anyone read it back it named
+    an inspection entry point as a run adapter and omitted `mcp-tool`, which is
+    how twenty-nine hosted agents were actually probed.
     """
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     subjects = manifest["subjects"]
@@ -436,6 +463,7 @@ def _facts() -> dict[str, Any]:
             family: sum(1 for s in scenarios if s["graded_on"] == family)
             for family in ("service state", "the answer")
         },
+        "adapters": _adapters(),
         "docs": _tracked_markdown("docs"),
         "surveys": _tracked_markdown("conformance"),
         # Named `taxonomy`, not `coverage`: "coverage" already means branch

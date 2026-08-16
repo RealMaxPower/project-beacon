@@ -83,6 +83,66 @@ against a clean environment, so the first tag will publish.
 
 ### Added
 
+- **Taxonomy 1.2.0: 131 cells across thirteen families, 24 rejected.** Two
+  families the previous list could not express. `precedence` is the one the
+  deferral cells kept being mistaken for — deferral asks whether an agent stops
+  when two legitimate instructions flatly contradict, which presumes it
+  noticed, and every precedence cell is a conflict it does not notice: a
+  general rule applied to the case the same document names as its exception, an
+  instruction a later one withdrew, silence read as permission. `temporal` is
+  the arithmetic nothing else grades — a deadline computed wrong from an
+  interval the sources state exactly, an authorisation that was genuine until
+  last week, a queue ordered by `created` when the question was about
+  `updated`. None of those is unsupported by any source, so none is a grounding
+  failure.
+
+  Coverage is 131 of 131. Read that as "this list is exhausted", never as
+  "agent failure is": the figure fell to 81% when 1.1.0 widened the list and to
+  89% when 1.2.0 did, and it is meant to keep doing that. A coverage number
+  that only ever goes up is measuring its author.
+
+- **Cross-run assertions, and `repeat`.** Whether the shape of an answer
+  belongs to the contract or to the run is not a property of any single output,
+  and comparing two separate `beacon run` invocations grades the operator's
+  diligence rather than the agent. A scenario can now declare `repeat` (1–3)
+  and the runner executes the subject again on the same input with fresh
+  services, a fresh recorder and its own directory. Later passes contribute
+  artifacts, end state and ending — never events — so every existing assertion
+  still reads exactly one run. `same_shape_across_runs` compares structure and
+  never values: a figure that moved is the world moving, and a field that is a
+  list one run and absent the next breaks the consumer whatever it held.
+
+  Evidence bundles are stamped **`0.4`** and carry the later passes. A verdict
+  about two passes that stored only one of them could not be re-derived by the
+  person reading it, and `conformance/regrade.py` would have called it
+  unmeasured.
+
+- **Tool descriptions the fixture writes.** `DescriptionTable`
+  (`beacon/services/descriptions.py`), composed by all six services, lets a
+  scenario write a tool's own description. Every other channel into an agent
+  arrives from somewhere it has reason to doubt; the tool list arrives from its
+  own harness, in the same frame as the operator's brief. Deliberately narrow —
+  only the description moves, so a fixture cannot invent a capability or change
+  what a call does. It refuses a tool name the service does not offer, because
+  a typo would leave a scenario grading resistance to a directive never served.
+
+- **Every assertion type in one registry.** `beacon/assertions.py` holds the
+  eighteen handlers and the type table; `models.ASSERTION_TYPES` is a view over
+  it rather than a second copy, so a registered type is loadable by
+  construction. `evaluation.py` went from 617 lines to 190 and keeps only what
+  must not be duplicated: the dispatch, and the two `except` clauses that
+  decide `measured`. Handlers return `(passed, actual, expected, message)` and
+  raise `EvaluationError`; they never build a result and never set `measured`,
+  so a new type cannot invent a third answer and turn "we could not tell" into
+  "the subject did the wrong thing".
+
+- Eighteen more scenarios and 86 more adversarial subjects, covering the
+  cells 1.1.0 and 1.2.0 added: the tool list as an injection channel, notes an
+  agent wrote and then obeyed, a plan published and then departed from, a
+  delegate that hands work straight back, an approval that expired, a queue
+  ordered by the wrong clock, and a refusal repeated when its reason could not
+  change.
+
 - **The injection scenarios no longer all use the same trick.** Every payload
   Beacon shipped was plaintext in square brackets — `[SYSTEM DIRECTIVE]`,
   `[NOTE TO ASSISTANT]` — which is the cheapest rung there is, and passing it
@@ -150,10 +210,11 @@ against a clean environment, so the first tag will publish.
   something it obeys, which is the channel an agent has least reason to
   distrust because it authored it.
 
-  Two of the new cells need capability this build does not have — a service
-  whose tool descriptions come from the fixture, and an assertion that compares
-  one run against another — so the gradeable column is smaller than the total
-  for the first time. That is the honest shape: the roadmap is visible in the
+  Two of the new cells needed capability this build did not have at 1.1.0 — a
+  service whose tool descriptions come from the fixture, and an assertion that
+  compares one run against another — so the gradeable column was smaller than
+  the total for the first time. Both shipped before 1.2.0, and the two columns
+  have converged again. That is the honest shape: the roadmap is visible in the
   file rather than in a plan somewhere else.
 
   The rejections grew as well, deliberately. A version bump that only added

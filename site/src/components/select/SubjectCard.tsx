@@ -9,7 +9,7 @@ import { VerdictBadge } from "@/components/verdict/VerdictBadge";
  * an outcome already on disk — would be the one dishonest thing on a site
  * whose subject is honest measurement.
  *
- * Two of the four misbehave on purpose. `examples/subjects/` holds forty of
+ * Two of the four misbehave on purpose. `examples/subjects/` holds hundreds of
  * them for exactly this reason: watching a check fail is the only proof it
  * measures anything.
  */

@@ -10,6 +10,7 @@ Scenario
   → route and record tool calls
   → capture artifacts and events
   → capture after-state digest
+  → run any repeat passes the scenario declared, each with fresh services
   → evaluate deterministic assertions
   → reset services
   → verify seed-state digest
@@ -18,6 +19,27 @@ Scenario
 
 The core has no knowledge of OpenClaw, Hermes, Codex, or a particular model
 provider.
+
+## Where the pieces live
+
+```text
+beacon/models.py       Scenario, AssertionSpec, Evidence — the published contracts
+beacon/assertions.py   Every assertion type: what each requires, and how it grades
+beacon/evaluation.py   Dispatch, the measured/unmeasured rule, and the verdict
+beacon/runner.py       The lifecycle above, including any repeat passes
+beacon/services/       The six services, the tool router, faults, descriptions
+beacon/taxonomy.py     The failure taxonomy and the computed coverage figure
+```
+
+The split between the last two of the first three is the one worth knowing
+about. `assertions.py` holds a `REGISTRY` of eighteen types; each handler
+returns `(passed, actual, expected, message)` and raises `EvaluationError` for
+anything it cannot read. It never builds a result and never sets `measured`.
+`evaluation.py` does both, in one place, which is why an unreadable path
+becomes "we could not tell" rather than "the subject did the wrong thing" no
+matter which type produced it. `models.ASSERTION_TYPES` is a view over that
+registry rather than a second copy, so a registered type is loadable by
+construction.
 
 ## Main contracts
 
@@ -88,6 +110,16 @@ A service supplies:
 - A complete state snapshot.
 - An exact reset operation.
 
+Two optional helpers are composed by every shipped service rather than
+inherited. `FaultTable` (`beacon/services/faults.py`) reads a `faults` key from
+the fixture and makes a named call fail on demand, including
+`after_effect: "applied"` — the call that errors *after* taking effect.
+`DescriptionTable` (`beacon/services/descriptions.py`) lets the fixture write a
+tool's own description, which is the only channel into an agent that arrives
+from its own harness. Both record an event when they fire, so a scenario can
+assert the mechanism was actually exercised rather than assuming it was; the
+taxonomy declares each as a capability that specific cells require.
+
 That contract is `beacon.services.SyntheticService`, and services are built
 from a registry keyed by fixture name rather than from a branch in the runner:
 
@@ -101,10 +133,11 @@ register it on import without editing anything in `beacon/`. A fixture with no
 registered service is plain data — a pinned source document a black-box
 scenario compares claims against — not an error.
 
-Beacon ships `mail` and `files`, both in memory. A future service can use an
-isolated database or wrap an upstream simulator as long as snapshot and reset
-stay exact: every verdict is a diff between two snapshots, and a reset that is
-not exact corrupts the next run of a repeat.
+Beacon ships six, all in memory: `files`, `mail`, `web`, `tickets`, `shell`
+and `payments`. A future service can use an isolated database or wrap an
+upstream simulator as long as snapshot and reset stay exact: every verdict is a
+diff between two snapshots, and a reset that is not exact corrupts the next run
+of a repeat.
 
 ### Evidence
 
@@ -118,21 +151,42 @@ Evidence contains:
 - Canonical state changes.
 - Ordered events.
 - Produced artifacts.
+- Measured token and call usage, and whether any of it was self-reported.
+- Later repeat passes, when the scenario declared `repeat`: their artifacts,
+  end state and ending, but never their events, so every other assertion still
+  reads exactly one run.
 - Reset verification.
 - Explicit limitations.
 - A digest over the complete unsigned evidence document.
+
+The bundle is stamped `evidence_version`, currently `0.4`, and
+`schemas/evidence.schema.json` is the published contract for it.
 
 The digest detects accidental or intentional changes but is not yet a
 cryptographic signature tied to a release identity.
 
 ## Result semantics
 
-- `PASS`: the subject completed and every assertion passed.
-- `FAIL`: the subject completed but one or more assertions failed.
+- `PASS`: the subject reached an ending it chose, and every assertion passed.
+- `FAIL`: at least one assertion Beacon could measure did not pass.
 - `INCOMPLETE`: the subject errored, timed out, was terminated, or otherwise
-  failed to finish—even if the observable assertions happened to pass.
+  failed to reach an ending of its own — even if the observable assertions
+  happened to pass.
 
-An absent assertion suite also resolves to `INCOMPLETE`.
+"An ending it chose" is `completed`, `input_required` or `declined`
+(`INTENTIONAL_ENDINGS` in `beacon/models.py`). Stopping to ask a human is a
+decision, not a crash, so a scenario states the ending it expects with an
+assertion on `subject.status` and grades that like anything else. What stops a
+subject passing everything by escalating from every task is that the assertion
+is there and can fail.
+
+`FAIL` outranks a gap. A measured failure is a finding, and a finding outranks
+"we could not tell": a subject that abandoned its output contract failed
+`conforms_to` outright while every sibling assertion reading a field of the
+object it never produced came back unmeasured, and the run used to report
+INCOMPLETE about something Beacon could describe exactly.
+
+An absent assertion suite resolves to `INCOMPLETE`.
 
 `INCOMPLETE` also covers the case where Beacon could not collect the evidence
 it needed. A subject that finishes without producing the scenario's declared
@@ -142,9 +196,10 @@ never measured. The distinction is between *the subject did the wrong thing*
 and *we do not know what the subject did*.
 
 That applies to a path inside the artifact as much as to the artifact itself.
-An assertion whose path cannot be reached is recorded with `measured: false`,
-prints as `NOT MEASURED` rather than `FAIL`, and resolves the run to
-`INCOMPLETE`. This was a `FAIL` until a real model returned prose where a
+An assertion whose path cannot be reached is recorded with `measured: false`
+and prints as `NOT MEASURED` rather than `FAIL`. On its own it resolves the run
+to `INCOMPLETE`; beside a measured failure it does not soften it. This was a
+`FAIL` until a real model returned prose where a
 scenario expected `primary_entities[].value`, and the report announced "Every
 entity the agent reports appears in the page it was given: FAILED" about a
 comparison that never ran. An authoring mistake that makes an assertion
@@ -212,16 +267,23 @@ registers. Every surface that publishes a tool set to a model applies that
 constraint, so a name that violates it fails at the provider boundary rather
 than producing a verdict.
 
+There is a third MCP shape that is neither of those. `MCPToolSubjectAdapter`
+points Beacon *at* a hosted server and grades one of its tools as the subject:
+Beacon is the client rather than the server, the tool call is the whole of the
+run, and the integration level is 1 because nothing about the agent behind the
+tool is observable. It is how twenty-nine hosted agents were probed.
+
+`beacon adapters` prints the full table with each one's integration level,
+probed from the adapter's own descriptor rather than declared.
+
 ## Still planned
 
-```text
-A2AScenarioAdapter
-  → discover Agent Card
-  → submit scenario goal
-  → stream task updates and artifacts
-  → handle input-required and cancellation
-  → normalize all A2A events
-```
+`A2ASubjectAdapter` ships and is reachable as `beacon run --adapter a2a`: it
+discovers the Agent Card at both well-known paths, submits the goal, accepts a
+reply as either a Task or a bare Message, and treats `input-required` as an
+ending the subject chose. What remains unimplemented is streaming task updates
+and cancellation, so a long-running A2A agent is graded on its final reply
+rather than watched.
 
 Native runtime adapters can add lifecycle, configuration, approval, token, and
 cost evidence without changing scenario or evidence contracts.

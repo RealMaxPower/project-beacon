@@ -45,7 +45,7 @@ import { B_NOT_FOUND, useBRoute } from "./router-b";
  * utilities resolve through token *names*, so `tokens-b.css` declares those
  * names against this palette and all of it repaints — see the alias block
  * there for why a second copy was the wrong answer. What arrives here is one
- * implementation of a seven-step flow, and one place for its claims to be
+ * implementation of a six-step flow, and one place for its claims to be
  * checked.
  *
  * It is a route rather than a band because it is not an argument. Every

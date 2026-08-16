@@ -1,5 +1,13 @@
 # Manual test plan
 
+> **Partly stale, and known to be.** The playground sections (§2–§5) were
+> re-checked against the current build. The marketing sections (§1) still
+> describe the earlier design — they name buttons like "Replay all five →" and
+> a five-row agent comparison that the current hero does not have. They are
+> kept rather than deleted because the *checks* in them are still the right
+> checks; the labels they quote are not. Re-walk §1 against the running site
+> before trusting its specifics, and correct it as you go.
+
 For a person, or a pair working through it in chat, against the dev server.
 
 ```bash
@@ -13,12 +21,18 @@ Every expected value below is real. They come from the recorded bundles in
 remembered. If a number here disagrees with the screen, one of the two is a
 bug — say which you saw.
 
-**What is in the playground now:** seven scenarios, every one of them with
-recorded runs — seventeen in total. Five of those seventeen are the inbox
-scenario; the other six scenarios have two each, one subject that satisfies the
-scenario and one that breaks it. Nothing is dimmed and nothing says "no
-recorded run"; if you see either, that text is only reachable when a scenario
-has no bundle, and something has gone missing.
+**What is in the playground now:** eighty-three scenario cards, of which
+**seven are selectable** — those are the ones with recorded bundles, seventeen
+runs in total. Five of the seventeen are the inbox scenario; the other six
+scenarios have two each, one subject that satisfies the scenario and one that
+breaks it.
+
+**The other seventy-six cards are dimmed and read "no recorded run yet". That
+is correct.** They ship as scenarios you can run from a clone; the playground
+replays a curated subset. This paragraph used to say the opposite — "nothing is
+dimmed… if you see either, something has gone missing" — which asked a tester
+to file the intended behaviour as a defect. If a *selectable* card has no
+bundle, or a dimmed one turns out to have one, that is the bug.
 
 ## Do not spend time on these
 
@@ -29,7 +43,7 @@ nothing:
 |---|---|
 | `npm run smoke` | Every screen renders without throwing, against real fixtures. |
 | `npm run lint:render` | 139 rendered screens: `undefined` / `NaN` / `[object Object]` on screen, empty headings, duplicate ids, `aria-controls` pointing at nothing, unlabelled buttons, nested interactive elements, duplicate `main` / `banner` / `contentinfo` landmarks, and 35 JSON panels hashed against the files they name. Every page is rendered **inside the app shell** as well as on its own, because a landmark collision only exists in the combination. |
-| `npm run visual` | Text overlapping text, horizontal overflow, clipped text, tap targets under 44px — 7 pages × 4 widths, in Chrome. Needs `npm run preview` running. |
+| `npm run visual` | Text overlapping text, horizontal overflow, clipped text, tap targets under 44px — 12 routes × 5 widths (320 to 1600), in Chrome. Needs `npm run preview` running. |
 | `npm run headers` | Serves `dist/` with the real headers from `vercel.json` and walks every page under them. A Content-Security-Policy cannot be reviewed by reading it: `style-src 'self'` looks like it forbids the `style={{ width }}` on the pass-rate bars and does not, because React sets those through the CSSOM. Too strict and the bars vanish; too loose and the header is decorative. `vite preview` serves no custom headers, so it cannot see any of this. |
 
 `npm run check` runs the first two plus fixture reproducibility.
@@ -168,8 +182,10 @@ the page.
 
 ### 1.4 Home — the rest
 
-- Stat strip: **7** scenarios, **40** adversarial subjects, **40/40** verdicts
-  correct, **0** runtime dependencies.
+- Stat strip: the scenario and subject counts, verdicts correct, and **0**
+  runtime dependencies. Every figure is read from `facts.json` rather than
+  typed, so check it against `python3 -m beacon scenarios | tail -1` and the
+  manifest rather than against a number written here.
 - "What doesn't exist yet" has **5** dashed cards, the first being *Not on
   PyPI*.
 - The terminal block is dark in **both** themes, with a `bash` label and dimmed
@@ -221,7 +237,7 @@ inventory of what works today.
   at step 02, with the address bar reading `#/playground/<id>`.
 
 **It is a bug if** a card lands you on step 01. It used to, and it asked you to
-find again, among seven, the card you had just chosen.
+find again, among eighty-three, the card you had just chosen.
 
 The one to click deliberately is **Can it triage an inbox without sending
 anything?** — its id is `inbox-briefing-draft-only` while its folder is
@@ -247,11 +263,13 @@ Go to `#/playground` with no scenario in the address.
 - **7** cards, **none dimmed**, all clickable.
 - Every card shows **What it tests** and **Fails when**, and a footer reading
   `N assertions · N tools`.
-- The intro says every one of them has recorded runs.
+- The intro says how many of them have recorded runs, and does not claim all
+  of them do.
 
-**It is a bug if** any card is greyed out or carries a "no recorded run yet"
-note. Every scenario has bundles now; that state is for a scenario that does
-not.
+**It is a bug if** a card that is *selectable* has no bundle, or a card that is
+dimmed turns out to have one. Seventy-six of the eighty-three are dimmed and
+read "no recorded run yet", and that is the intended state — this paragraph
+used to say the opposite, which asked you to file correct behaviour.
 
 **It is a bug if** any note text sits on top of the card below it.
 
@@ -327,7 +345,8 @@ changed reports this run as identical to one that never tried.
 
 ## 3 · The other sixteen runs
 
-Every scenario has a subject that satisfies it and one that breaks it. Run
+Every scenario in the playground has a subject that satisfies it and one that
+breaks it. Run
 both of each. The verdict, the pass count, and **which** assertion fails are
 the point — a FAIL for the wrong reason is a worse bug than a FAIL that does
 not happen.

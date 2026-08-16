@@ -150,16 +150,33 @@ is accepted as uninteresting even where it is statistically real.
 A model rephrases its output every run. Assertions keyed to exact wording
 break constantly and get disabled, which is worse than not having them.
 
+All eighteen types are registered in
+[beacon/assertions.py](../beacon/assertions.py); these are the ones that
+survive a rewrite best.
+
 | Assertion | Use it for |
 |---|---|
 | `grounded_in` | Every claim appears in a source you pinned. Catches invented facts. |
 | `cites` | An identifier appears *near* something only that document contains — a citation, not a name-drop. |
 | `contains_any` | Any acceptable phrasing counts. Good for "did it decline". |
-| `set_equals` | Which items were acted on, order-independent. |
-| `event_absent` | A forbidden action was never attempted, even if policy blocked it. |
-| `unchanged` | State the agent should not have touched. |
-| `conforms_to` | The output has the shape your consumers parse. Reports every violation, with paths. |
 | `contains_none` | A string that must never appear did not. Leaked secrets, canaries, forbidden phrasing. |
+| `contains` | One value is present, case-insensitively, in text or in a list. |
+| `equals` | An exact value. The most-used type here, and the right one for a state field. |
+| `set_equals` | Which items were acted on, order-independent. Membership only — it cannot see duplicates. |
+| `count_gte` / `count_lte` | How many items, without pinning which. |
+| `conforms_to` | The output has the shape your consumers parse. Reports every violation, with paths. |
+| `unchanged` | State the agent should not have touched. |
+| `event_absent` | A forbidden action was never attempted, even if policy blocked it. |
+| `event_present` | Something the run turns on actually happened — the confound control for restraint. |
+| `event_count_gte` / `event_count_lte` | How many times it reached for a tool. Counts attempts, not replies. |
+| `event_order` | One action came before another. Approval before payment, verify before close. |
+| `matches_path` | Two paths in the evidence agree — what the agent *said* it did against what the state records. |
+| `same_shape_across_runs` | The answer's structure is a property of the contract, not of the run. Needs scenario `repeat`. |
+
+`matches_path` is the one most worth reaching for that people do not think of:
+"the agent reports it closed twelve tickets, the queue says nine" is among the
+most common real failures, and every other assertion compares a path to a
+literal rather than to another path.
 
 Two rules learned the hard way:
 
@@ -181,18 +198,29 @@ evidence does not support — Beacon's own starter scenario shipped two of them.
 
 ## Shape and truth are different questions
 
-`conforms_to` grades structure. `grounded_in` grades content. An agent can be
-flawless at one and hopeless at the other, and you need to know which:
+`conforms_to` grades structure. `grounded_in` grades content. They answer
+different questions, and the recorded runs above show why you need both —
+and in which order:
 
 ```
-web-extraction-contract     result matches the contract   12 / 12
-web-extraction-grounding    entities grounded in the page  4 / 12
+web-extraction-contract     result-matches-the-contract   passed  2/12
+web-extraction-grounding    entities-grounded            measured 0/12
 ```
 
-Those are the same twelve runs of the same live agent. Every field a consumer
-parses was present and correctly typed every time; two runs in three, the
-values in those fields were invented. A schema check alone would have called
-this agent healthy.
+Those are the same twelve runs of the same live agent, read from
+[baselines/web-extraction-contract.claude-sonnet-5.json](../baselines/web-extraction-contract.claude-sonnet-5.json)
+and [baselines/web-extraction-grounding.claude-sonnet-5.json](../baselines/web-extraction-grounding.claude-sonnet-5.json).
+The shape held twice in twelve. The grounding check was never evaluated at
+all — not failed, *unmeasured* — because it reads `primary_entities[].value`
+and ten replies had no such path.
+
+That is the order the two checks come in. An agent that cannot hold its shape
+has not been shown to be truthful; it has not been asked. A harness that
+scored those ten as fabrication would be publishing a rate it never measured,
+which is why they resolve INCOMPLETE and not FAIL.
+
+On the two runs where the shape did hold, the fabrication was real — the model
+recited the page's older wording, as recorded above.
 
 Declare the schema from what your agent actually returns, not from its
 documentation — record some runs first, then write the contract from them.
@@ -259,19 +287,26 @@ credentials. It measures what it caused, and enforces a ceiling:
 ```json
 "limits": {
   "timeout_seconds": 120,
+  "max_protocol_messages": 60,
   "max_subject_calls": 2,
-  "max_subject_seconds": 180
+  "max_subject_seconds": 180,
+  "max_tool_calls": 40
 }
 ```
 
-`max_subject_calls` is enforced, not advisory, so an agent that loops cannot
-run up a bill unobserved. Counts and per-call timings land in the evidence
-bundle under `usage`.
+Which of these binds depends on who is driving. `max_subject_calls` and
+`max_subject_seconds` are enforced where Beacon calls the model itself; a
+`--adapter command` subject drives its own loop, so they do not bind it — see
+[running-it-yourself.md](running-it-yourself.md). `max_tool_calls` is the one
+that does: it is a soft budget in the tool router, so a subject that loops gets
+a refusal it can respond to rather than a truncated run. Counts and per-call
+timings land in the evidence bundle under `usage`.
 
 ## Test your own domain
 
-A scenario graded on *state* needs a synthetic service. Beacon ships `mail`
-and `files`; `project-beacon init --service <name>` generates a third, or write one
+A scenario graded on *state* needs a synthetic service. Beacon ships six —
+`files`, `mail`, `web`, `tickets`, `shell` and `payments`;
+`project-beacon init --service <name>` generates another, or write one
 and register it without touching Beacon's source:
 
 ```python
@@ -291,6 +326,16 @@ two snapshots, and a reset that is not exact corrupts the next run of a
 repeat. Assertions read paths out of the snapshot and cannot filter, so
 anything you want to assert on has to be something the snapshot names — derive
 it there rather than trying to express it in the assertion.
+
+Two helpers are worth composing, as all six shipped services do. `FaultTable`
+([beacon/services/faults.py](../beacon/services/faults.py)) reads a `faults`
+key from the fixture and makes a call fail on demand — including
+`after_effect: "applied"`, the call that errors *after* taking effect, which is
+what separates an agent that reconciles from one that retries blindly.
+`DescriptionTable` ([beacon/services/descriptions.py](../beacon/services/descriptions.py))
+lets the fixture write a tool's own description, so a scenario can poison the
+one channel an agent has no reason to distrust. Both record an event, so a
+scenario can assert the mechanism actually fired rather than assuming it did.
 
 See [beacon/services/files.py](../beacon/services/files.py), which was written
 entirely against the published contract and needed no change to the runner,
