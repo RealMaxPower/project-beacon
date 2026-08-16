@@ -27,12 +27,15 @@ runs in total. Five of the seventeen are the inbox scenario; the other six
 scenarios have two each, one subject that satisfies the scenario and one that
 breaks it.
 
-**The other seventy-six cards are dimmed and read "no recorded run yet". That
-is correct.** They ship as scenarios you can run from a clone; the playground
-replays a curated subset. This paragraph used to say the opposite — "nothing is
-dimmed… if you see either, something has gone missing" — which asked a tester
-to file the intended behaviour as a defect. If a *selectable* card has no
-bundle, or a dimmed one turns out to have one, that is the bug.
+**The other seventy-six are listed, not carded.** They sit in a collapsed
+disclosure below the cards reading "76 more scenarios ship with Beacon", each
+as a name, a slug and a check count. They ship as scenarios you can run from a
+clone; the playground replays a curated subset.
+
+Two earlier versions of this paragraph were both wrong. It first said every
+scenario had recorded runs, which was false. It was then corrected to describe
+seventy-six dimmed cards, which was true and unusable — the seven you can
+actually replay were scattered among them in identical cards.
 
 ## Do not spend time on these
 
@@ -263,13 +266,15 @@ Go to `#/playground` with no scenario in the address.
 - **7** cards, **none dimmed**, all clickable.
 - Every card shows **What it tests** and **Fails when**, and a footer reading
   `N assertions · N tools`.
-- The intro says how many of them have recorded runs, and does not claim all
-  of them do.
+- The intro says how many have recorded runs you can replay, and does not
+  claim all of them do.
 
-**It is a bug if** a card that is *selectable* has no bundle, or a card that is
-dimmed turns out to have one. Seventy-six of the eighty-three are dimmed and
-read "no recorded run yet", and that is the intended state — this paragraph
-used to say the opposite, which asked you to file correct behaviour.
+**It is a bug if** any card in the top grid cannot be selected, or if a
+scenario appears both as a card and in the disclosure below. Every card up
+there has a bundle; everything without one is in the list.
+
+**It is a bug if** the disclosure's summary does not say how many are inside
+it. A count in the summary is the difference between collapsing and hiding.
 
 **It is a bug if** any note text sits on top of the card below it.
 
