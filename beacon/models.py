@@ -31,10 +31,21 @@ SCENARIO_KEYS = frozenset(
         "limits",
         "metadata",
         "coverage",
+        "repeat",
     }
 )
 
 ASSERTION_KEYS = frozenset({"id", "type", "description", "path", "expected", "target"})
+
+CROSS_RUN_ASSERTIONS = frozenset({"same_shape_across_runs"})
+"""
+Assertion types that read more than one pass of the same subject.
+
+Named here rather than inferred, because the scenario loader has to refuse
+`repeat` without one of them and the evaluator has to mark one of them
+unmeasured without `repeat`. Two rules, one list, so they cannot drift apart
+and leave a scenario paying for a second pass nothing reads.
+"""
 
 ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "equals": {"requires": ("path", "expected")},
@@ -48,6 +59,7 @@ ASSERTION_TYPES: dict[str, dict[str, Any]] = {
     "cites": {"requires": ("path", "expected"), "citation_expected": True},
     "set_equals": {"requires": ("path", "expected")},
     "unchanged": {"requires": ("path",)},
+    "same_shape_across_runs": {"requires": ("path",)},
     "event_absent": {"requires": ("target",)},
     "event_present": {"requires": ("target",)},
     "event_count_gte": {
@@ -434,6 +446,11 @@ class Scenario:
     limits: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
     coverage: dict[str, Any] = field(default_factory=dict)
+    #: How many times the subject is run against the same input in one run.
+    #: One unless the scenario grades something no single pass can show — see
+    #: `same_shape_across_runs`. Withheld from `public_dict`: a subject told
+    #: it will be run twice is not being asked the same question twice.
+    repeat: int = 1
 
     @property
     def required_artifact(self) -> str | None:
@@ -489,6 +506,20 @@ class Scenario:
             raise ScenarioError("output_contract must be an object")
         _check_shape_is_published(assertions, output_contract)
         coverage = _check_coverage(value.get("coverage", {}), set(assertion_ids))
+        repeat = value.get("repeat", 1)
+        if not isinstance(repeat, int) or isinstance(repeat, bool) or not 1 <= repeat <= 3:
+            raise ScenarioError("repeat must be an integer between 1 and 3")
+        if repeat > 1 and not any(
+            assertion.type in CROSS_RUN_ASSERTIONS for assertion in assertions
+        ):
+            # Running a subject twice costs twice as much and changes nothing
+            # a single pass could not show, unless something grades the
+            # comparison. A scenario that declared it by accident should hear
+            # about it at load time rather than in the bill.
+            raise ScenarioError(
+                "repeat above 1 needs an assertion that compares runs: "
+                + ", ".join(sorted(CROSS_RUN_ASSERTIONS))
+            )
         return cls(
             schema_version=str(value["schema_version"]),
             id=str(value["id"]),
@@ -502,6 +533,7 @@ class Scenario:
             limits=dict(value.get("limits", {})),
             metadata=dict(value.get("metadata", {})),
             coverage=coverage,
+            repeat=repeat,
         )
 
     @classmethod
@@ -638,7 +670,7 @@ class AssertionResult:
         return asdict(self)
 
 
-EVIDENCE_VERSION = "0.3"
+EVIDENCE_VERSION = "0.4"
 """
 The version stamped on bundles this build writes.
 
@@ -712,6 +744,12 @@ class Evidence:
     usage: dict[str, Any]
     reset_verified: bool
     limitations: list[str]
+    #: Later passes of the same subject on the same input, for a scenario that
+    #: declared `repeat`. Empty for every other scenario, which is all but one
+    #: of them. Recorded because a verdict about two passes that only stores
+    #: one of them cannot be re-derived by the person reading it — and
+    #: `conformance/regrade.py` would report it unmeasured.
+    repeat: list[dict[str, Any]] = field(default_factory=list)
     digest: str = ""
 
     @classmethod
@@ -766,6 +804,7 @@ class Evidence:
             state_diff=dict(value.get("state_diff", {})),
             events=list(value.get("events", [])),
             artifacts=dict(value.get("artifacts", {})),
+            repeat=list(value.get("repeat", [])),
             usage=dict(value.get("usage", {})),
             reset_verified=bool(value.get("reset_verified", False)),
             limitations=list(value.get("limitations", [])),

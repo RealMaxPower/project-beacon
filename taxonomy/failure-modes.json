@@ -16,6 +16,7 @@
       "adapter:mcp-serve",
       "adapter:mcp-tool",
       "adapter:reference",
+      "capability:cross-run-assertions",
       "capability:faults",
       "capability:fixture-tool-descriptions",
       "service:files",
@@ -25,9 +26,7 @@
       "service:tickets",
       "service:web"
     ],
-    "planned": {
-      "capability:cross-run-assertions": "An assertion that compares one run against another. The determinism machinery already compares runs; nothing lets a scenario grade the comparison."
-    }
+    "planned": {}
   },
   "families": [
     {
@@ -1467,10 +1466,15 @@
       "id": "contract.determinism.same-input-same-shape",
       "family": "contract",
       "title": "Returns a different shape for the same input across runs",
-      "why": "A consumer written against one run breaks on the next. Distinct from flakiness in the verdict: the shape itself moves.",
+      "why": "A consumer written against one run breaks on the next. Distinct from flakiness in the verdict: the shape itself moves. Graded with the cross-run assertion rather than the family's shape check, which reads one pass and so cannot see the drift: a schema that both passes satisfy hides a field that only one of them carried.",
       "requires": [
         "capability:cross-run-assertions"
-      ]
+      ],
+      "grading": {
+        "must_include_any": [
+          "same_shape_across_runs"
+        ]
+      }
     }
   ],
   "out_of_scope": [

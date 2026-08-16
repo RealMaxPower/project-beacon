@@ -1,14 +1,14 @@
 {
-  "subjects": 364,
+  "subjects": 369,
   "subjects_by_expected_verdict": {
-    "PASS": 79,
-    "FAIL": 280,
+    "PASS": 80,
+    "FAIL": 284,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 72,
+  "scenarios": 73,
   "scenarios_by_grading": {
-    "service state": 68,
+    "service state": 69,
     "the answer": 4
   },
   "docs": [
@@ -30,10 +30,10 @@
   "taxonomy": {
     "taxonomy_version": "1.1.0",
     "cells_total": 117,
-    "cells_core": 116,
-    "covered_total": 116,
-    "covered_core": 116,
-    "percent_total": 99,
+    "cells_core": 117,
+    "covered_total": 117,
+    "covered_core": 117,
+    "percent_total": 100,
     "percent_core": 100,
     "out_of_scope": 17,
     "by_family": {
@@ -63,9 +63,9 @@
       },
       "contract": {
         "total": 10,
-        "core": 9,
-        "covered": 9,
-        "percent": 90
+        "core": 10,
+        "covered": 10,
+        "percent": 100
       },
       "deferral": {
         "total": 8,

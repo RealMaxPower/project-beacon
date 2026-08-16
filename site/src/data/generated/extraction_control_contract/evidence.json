@@ -1,8 +1,8 @@
 {
-  "evidence_version": "0.3",
+  "evidence_version": "0.4",
   "run_id": "extraction_control_contract",
-  "started_at": "2026-08-15T17:47:52.318162+00:00",
-  "completed_at": "2026-08-15T17:47:52.342918+00:00",
+  "started_at": "2026-08-16T15:52:09.826664+00:00",
+  "completed_at": "2026-08-16T15:52:09.847734+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-contract",
@@ -176,7 +176,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-15T17:47:52.318175+00:00",
+      "timestamp": "2026-08-16T15:52:09.826675+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -188,7 +188,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-15T17:47:52.318180+00:00",
+      "timestamp": "2026-08-16T15:52:09.826681+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -204,7 +204,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-15T17:47:52.338927+00:00",
+      "timestamp": "2026-08-16T15:52:09.844140+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -234,7 +234,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-15T17:47:52.342769+00:00",
+      "timestamp": "2026-08-16T15:52:09.847569+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -285,5 +285,6 @@
     "Black-box and protocol-level evidence cannot reveal private model reasoning or undeclared internal operations.",
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
-  "digest": "5f5a1bda89cb79c27928b0280f213be4f5f8b25ea937bcec5cd589f3734e742a"
+  "repeat": [],
+  "digest": "4c44486fa7929978790c72fcb9c2514085290c4c6e52f11d3263de249d03963c"
 }

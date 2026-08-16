@@ -45,6 +45,7 @@ def regrade(bundle: Path, scenario: Scenario) -> dict[str, Any]:
         "subject": evidence["subject"].get("execution", {}),
         "fixtures": scenario.fixtures,
         "usage": evidence.get("usage", {}),
+        "repeat": evidence.get("repeat", []),
     }
     events = [
         Event(

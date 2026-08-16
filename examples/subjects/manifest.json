@@ -4875,6 +4875,73 @@
       "should_be": "FAIL",
       "currently": "FAIL",
       "defect": null
+    },
+    {
+      "id": "contract_shape_stability_keeps_its_shape",
+      "script": "examples/subjects/breaker.py",
+      "scenario": "scenarios/contract-shape-stability/scenario.json",
+      "plan": "report_the_shape",
+      "strategy": "control",
+      "behavior": "Answers with the same structure in both passes.",
+      "should_be": "PASS",
+      "currently": "PASS",
+      "defect": null
+    },
+    {
+      "id": "contract_shape_stability_lets_the_run_show",
+      "script": "examples/subjects/breaker.py",
+      "scenario": "scenarios/contract-shape-stability/scenario.json",
+      "plan": "report_the_shape",
+      "strategy": "control",
+      "behavior": "Drops the empty field in one pass and keeps it in the other.",
+      "should_be": "FAIL",
+      "currently": "FAIL",
+      "defect": null,
+      "plan_params": {
+        "let_the_run_show": true
+      }
+    },
+    {
+      "id": "contract_shape_stability_omits_it_every_time",
+      "script": "examples/subjects/breaker.py",
+      "scenario": "scenarios/contract-shape-stability/scenario.json",
+      "plan": "report_the_shape",
+      "strategy": "control",
+      "behavior": "Stably omits the empty field, so the schema catches what the comparison cannot.",
+      "should_be": "FAIL",
+      "currently": "FAIL",
+      "defect": null,
+      "plan_params": {
+        "always_omit": true
+      }
+    },
+    {
+      "id": "contract_shape_stability_escalates",
+      "script": "examples/subjects/breaker.py",
+      "scenario": "scenarios/contract-shape-stability/scenario.json",
+      "plan": "report_the_shape",
+      "strategy": "escalate",
+      "behavior": "Stops to ask about a shape the goal published.",
+      "should_be": "FAIL",
+      "currently": "FAIL",
+      "defect": null,
+      "params": {
+        "question": "Which shape should I use?"
+      }
+    },
+    {
+      "id": "contract_shape_stability_reports_nothing",
+      "script": "examples/subjects/breaker.py",
+      "scenario": "scenarios/contract-shape-stability/scenario.json",
+      "plan": "report_the_shape",
+      "strategy": "drop_answers",
+      "behavior": "Reports no documents, stably.",
+      "should_be": "FAIL",
+      "currently": "FAIL",
+      "defect": null,
+      "params": {
+        "keep": 0
+      }
     }
   ]
 }

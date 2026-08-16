@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-15T17:47:52.370381+00:00",
+    "timestamp": "2026-08-16T15:52:09.873447+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,7 +13,7 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-15T17:47:52.370386+00:00",
+    "timestamp": "2026-08-16T15:52:09.873452+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-15T17:47:52.390888+00:00",
+    "timestamp": "2026-08-16T15:52:09.890650+00:00",
     "kind": "artifact",
     "target": "web_page_extraction_result",
     "payload": {
@@ -59,7 +59,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-15T17:47:52.394753+00:00",
+    "timestamp": "2026-08-16T15:52:09.894491+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

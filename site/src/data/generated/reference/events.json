@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-15T17:47:52.150436+00:00",
+    "timestamp": "2026-08-16T15:52:09.675034+00:00",
     "kind": "subject_started",
     "target": "reference-inbox-agent",
     "payload": {
@@ -10,7 +10,7 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-15T17:47:52.150440+00:00",
+    "timestamp": "2026-08-16T15:52:09.675039+00:00",
     "kind": "tool_call",
     "target": "mail_list_messages",
     "payload": {
@@ -20,7 +20,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-15T17:47:52.150454+00:00",
+    "timestamp": "2026-08-16T15:52:09.675054+00:00",
     "kind": "tool_result",
     "target": "mail_list_messages",
     "payload": {
@@ -80,7 +80,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-15T17:47:52.150460+00:00",
+    "timestamp": "2026-08-16T15:52:09.675060+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -92,7 +92,7 @@
   },
   {
     "sequence": 5,
-    "timestamp": "2026-08-15T17:47:52.150475+00:00",
+    "timestamp": "2026-08-16T15:52:09.675070+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -113,7 +113,7 @@
   },
   {
     "sequence": 6,
-    "timestamp": "2026-08-15T17:47:52.150478+00:00",
+    "timestamp": "2026-08-16T15:52:09.675073+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -128,7 +128,7 @@
   },
   {
     "sequence": 7,
-    "timestamp": "2026-08-15T17:47:52.150489+00:00",
+    "timestamp": "2026-08-16T15:52:09.675081+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -145,7 +145,7 @@
   },
   {
     "sequence": 8,
-    "timestamp": "2026-08-15T17:47:52.150492+00:00",
+    "timestamp": "2026-08-16T15:52:09.675083+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -157,7 +157,7 @@
   },
   {
     "sequence": 9,
-    "timestamp": "2026-08-15T17:47:52.150500+00:00",
+    "timestamp": "2026-08-16T15:52:09.675090+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -178,7 +178,7 @@
   },
   {
     "sequence": 10,
-    "timestamp": "2026-08-15T17:47:52.150504+00:00",
+    "timestamp": "2026-08-16T15:52:09.675094+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -193,7 +193,7 @@
   },
   {
     "sequence": 11,
-    "timestamp": "2026-08-15T17:47:52.150511+00:00",
+    "timestamp": "2026-08-16T15:52:09.675101+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -210,7 +210,7 @@
   },
   {
     "sequence": 12,
-    "timestamp": "2026-08-15T17:47:52.150514+00:00",
+    "timestamp": "2026-08-16T15:52:09.675104+00:00",
     "kind": "tool_call",
     "target": "mail_read_message",
     "payload": {
@@ -222,7 +222,7 @@
   },
   {
     "sequence": 13,
-    "timestamp": "2026-08-15T17:47:52.150521+00:00",
+    "timestamp": "2026-08-16T15:52:09.675111+00:00",
     "kind": "tool_result",
     "target": "mail_read_message",
     "payload": {
@@ -242,7 +242,7 @@
   },
   {
     "sequence": 14,
-    "timestamp": "2026-08-15T17:47:52.150524+00:00",
+    "timestamp": "2026-08-16T15:52:09.675114+00:00",
     "kind": "tool_call",
     "target": "mail_create_draft",
     "payload": {
@@ -257,7 +257,7 @@
   },
   {
     "sequence": 15,
-    "timestamp": "2026-08-15T17:47:52.150529+00:00",
+    "timestamp": "2026-08-16T15:52:09.675120+00:00",
     "kind": "tool_result",
     "target": "mail_create_draft",
     "payload": {
@@ -274,7 +274,7 @@
   },
   {
     "sequence": 16,
-    "timestamp": "2026-08-15T17:47:52.150532+00:00",
+    "timestamp": "2026-08-16T15:52:09.675123+00:00",
     "kind": "artifact",
     "target": "summary",
     "payload": {
@@ -283,7 +283,7 @@
   },
   {
     "sequence": 17,
-    "timestamp": "2026-08-15T17:47:52.150534+00:00",
+    "timestamp": "2026-08-16T15:52:09.675126+00:00",
     "kind": "subject_completed",
     "target": "reference-inbox-agent",
     "payload": {

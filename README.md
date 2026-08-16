@@ -110,7 +110,7 @@ only and `python3 -m beacon` works straight out of the checkout.
 git clone https://github.com/RealMaxPower/project-beacon
 cd project-beacon
 
-python3 -m beacon scenarios            # the seventy-two that ship
+python3 -m beacon scenarios            # the seventy-three that ship
 python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
 python3 -m beacon init my-first-probe  # scaffold your own
 ```
@@ -169,8 +169,8 @@ The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
 not a measurement.
 
-The scenarios that ship cover 116 of the 116 cells this harness can grade today
-(100%), and 116 of 117 overall (99%). Neither figure is typed into that sentence:
+The scenarios that ship cover 117 of the 117 cells this harness can grade today
+(100%), and 117 of 117 overall (100%). Neither figure is typed into that sentence:
 `tests/test_taxonomy_coverage.py` computes both from the files and fails the
 build if this paragraph disagrees.
 
@@ -180,7 +180,7 @@ build if this paragraph disagrees.
 | `grounding` — does it assert what no source supports | 14 | 14 | 14 |
 | `write-boundary` — does it change more than it was asked | 13 | 13 | 13 |
 | `read-boundary` — does it reach or leak what it should not | 10 | 10 | 10 |
-| `contract` — does the result keep its promised shape | 9 | 9 | 10 |
+| `contract` — does the result keep its promised shape | 10 | 10 | 10 |
 | `deferral` — does it stop and ask when it should | 8 | 8 | 8 |
 | `long-horizon` — does it still obey the brief later | 7 | 7 | 7 |
 | `delegation` — is another agent's output data or truth | 5 | 5 | 5 |
@@ -189,14 +189,14 @@ build if this paragraph disagrees.
 | `memory` — does what it wrote come back as an order | 4 | 4 | 4 |
 
 "Gradeable now" is computed, not declared: a cell is gradeable when everything
-it requires exists in this build. Every cell is gradeable as of the ledger
-service, so the two columns have converged, and the covered column has now
-caught them both. What is left is the one cell nothing here can grade: it needs an
-assertion that compares one run against another, and the determinism machinery
-compares runs without letting a scenario grade the comparison. It is published
-as unbuilt rather than removed, for the same reason as the rejection list — a
-denominator that drops what the harness cannot reach measures the harness
-rather than the agent.
+it requires exists in this build. All three columns have converged, which is
+the least informative state this table can be in — **read 100% as "the list is
+exhausted", not as "agent failure is"**. A taxonomy every cell of which is
+covered has stopped discriminating between harnesses, and the honest response
+is to widen the denominator rather than to publish the round number: 1.0.0 had
+ninety-five cells, 1.1.0 has 117, and the figure fell to 81% the day the new
+ones landed. It is meant to. The number going down when the list grows is the
+only evidence that the list was not chosen to flatter it.
 
 A cell counts as covered only when a scenario binds it to a named assertion, a
 subject in the manifest is **observed making that assertion fail** when run, and
@@ -224,7 +224,7 @@ check, never what your agent gets right.
 
 | Capability | What it does |
 |---|---|
-| **Seventy-two scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
+| **Seventy-three scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
 | **Synthetic services** | Mail, documents, a simulated web, a support queue, a shell that runs nothing and a ledger, all with scoped tools and a fault table any of them can compose and policy enforcement, built from a public registry so a scenario pack can add its own |
 | **State-based assertions** | Forbidden-action checks, grounded citation checks that a name-drop does not satisfy, and shape checks a renamed field cannot slip past |
 | **Injection resistance** | Detects tool coercion through recorded attempts, and exfiltration through canaries that exist only in withheld material |
@@ -272,7 +272,7 @@ while the repository is private, because Actions minutes are billed there and
 macOS bills at 10x; the push and pull-request triggers return on publication.
 The two commands above are the local equivalent and take about a minute.
 
-The second command runs an adversarial suite: 364 subjects that behave in a
+The second command runs an adversarial suite: 369 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).

@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from beacon.models import ASSERTION_TYPES, Scenario, ScenarioError
+from beacon.models import (
+    ASSERTION_TYPES,
+    CROSS_RUN_ASSERTIONS,
+    SCENARIO_KEYS,
+    Scenario,
+    ScenarioError,
+)
 from beacon.services import registered_services
 
 
@@ -181,11 +187,13 @@ def _capabilities() -> tuple[str, ...]:
     """
     Capabilities that are neither a service, an adapter, nor an assertion type.
 
-    Both are composed by services rather than being one, so nothing in the
-    three registries above would ever mention them — and a cell that needs a
-    deliberately failing tool call, or a tool description the fixture wrote,
-    needs *something* to attest that the harness can produce one. Probed by
-    import rather than asserted, for the same reason as everything else here: a
+    Three, and none of them fits the three registries above. Two are composed
+    by services rather than being one — the fault table and the description
+    table — and the third is a property of two modules agreeing: an assertion
+    type that reads more than one pass is useless unless the loader will let a
+    scenario ask for a second one.
+
+    Probed rather than asserted, for the same reason as everything else here: a
     token that resolves because a list says so would put cells in the gradeable
     tier that no scenario could be written for.
     """
@@ -202,6 +210,12 @@ def _capabilities() -> tuple[str, ...]:
         pass
     else:
         found.append("capability:fixture-tool-descriptions")
+    # Two halves, and a cell that needs the comparison needs both: an assertion
+    # type that reads more than one pass, and a loader that will let a scenario
+    # ask for one. Either alone would resolve the token while leaving the cell
+    # ungradeable.
+    if CROSS_RUN_ASSERTIONS <= set(ASSERTION_TYPES) and "repeat" in SCENARIO_KEYS:
+        found.append("capability:cross-run-assertions")
     return tuple(found)
 
 

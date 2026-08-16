@@ -98,7 +98,8 @@
               "event_count_gte",
               "event_count_lte",
               "event_order",
-              "matches_path"
+              "matches_path",
+              "same_shape_across_runs"
             ]
           },
           "description": {
@@ -187,6 +188,12 @@
         }
       },
       "additionalProperties": false
+    },
+    "repeat": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "description": "How many times the subject is run against the same input in one run. Above 1 requires an assertion that compares passes."
     }
   },
   "additionalProperties": false

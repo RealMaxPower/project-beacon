@@ -103,6 +103,72 @@ def _build_services(
     return router, services, snapshots
 
 
+def _repeat_passes(
+    scenario: Scenario,
+    adapter: SubjectAdapter,
+    run_dir: Path,
+    first_recorder: EventRecorder,
+) -> list[dict[str, Any]]:
+    """
+    Run the subject again on the same input, for a scenario that asked.
+
+    One question needs this and no other: whether the shape of the answer is a
+    property of the contract or of the run. A single pass cannot show it — the
+    output was whatever it was — and comparing two separate `beacon run`
+    invocations grades the operator's diligence rather than the agent.
+
+    Everything the second pass touches is fresh: its own services from the same
+    fixture, its own recorder, its own directory. Nothing carries over, so the
+    subject is answering the same question rather than a question about what it
+    did last time.
+
+    What comes back is deliberately thin — artifacts, end state, ending. The
+    first pass keeps the events and the state diff, so every existing assertion
+    still reads exactly one run and nothing double-counts. A failure in a later
+    pass is recorded and not raised: the subject has already done the work
+    once, and losing the run would cost more than the comparison is worth.
+    """
+    if scenario.repeat <= 1:
+        return []
+    passes: list[dict[str, Any]] = []
+    for index in range(2, scenario.repeat + 1):
+        recorder = EventRecorder()
+        router, services, _ = _build_services(scenario, recorder)
+        pass_dir = run_dir / f"repeat-{index}"
+        pass_dir.mkdir(parents=True, exist_ok=False)
+        context = ExecutionContext(
+            run_id=f"{run_dir.name}-repeat-{index}",
+            run_dir=pass_dir,
+            scenario=scenario,
+            tools=router,
+            recorder=recorder,
+            usage=UsageRecorder(
+                max_calls=scenario.limits.get("max_subject_calls"),
+                max_seconds=scenario.limits.get("max_subject_seconds"),
+            ),
+        )
+        try:
+            result = adapter.execute(context)
+        except Exception as exc:
+            first_recorder.record(
+                "repeat_pass_failed",
+                scenario.id,
+                {"pass": index, "error_type": type(exc).__name__, "message": str(exc)},
+            )
+            continue
+        passes.append(
+            {
+                "pass": index,
+                "artifacts": context.artifacts,
+                "after": {
+                    name: service.snapshot() for name, service in services.items()
+                },
+                "subject": result.to_dict(),
+            }
+        )
+    return passes
+
+
 def run_scenario(
     scenario: Scenario,
     adapter: SubjectAdapter,
@@ -176,6 +242,9 @@ def run_scenario(
         )
 
     after = {name: service.snapshot() for name, service in services.items()}
+
+    repeats = _repeat_passes(scenario, adapter, run_dir, recorder)
+
     evaluation_root = {
         "before": before,
         "after": after,
@@ -185,6 +254,10 @@ def run_scenario(
         # against the source the scenario pinned for it.
         "fixtures": scenario.fixtures,
         "usage": context.usage.summary(),
+        # Empty unless the scenario declared `repeat`. A list rather than a
+        # single entry so an assertion comparing passes does not have to care
+        # how many there were.
+        "repeat": repeats,
     }
     # Load-time validation should make this unreachable, but a run that dies
     # here dies after the subject has already done the work, discarding the
@@ -270,6 +343,7 @@ def run_scenario(
         events=events_payload,
         artifacts=context.artifacts,
         usage=context.usage.summary(),
+        repeat=repeats,
         reset_verified=reset_verified,
         limitations=limitations,
     )

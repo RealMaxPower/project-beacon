@@ -6,7 +6,7 @@
 - **Integration:** in-process (level 4)
 - **Assertions:** 10/10 passed
 - **Reset verified:** yes
-- **Evidence digest:** `95ccc7696b409e2fd970b5a5857ff2f0075903018040c6247bf4436a5cb953a3`
+- **Evidence digest:** `62ffb690bd53b6a07205a053bffb17343dde9885c75ccfab3999884071b93d6e`
 
 ## Assertions
 

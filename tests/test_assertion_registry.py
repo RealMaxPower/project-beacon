@@ -31,10 +31,18 @@ a value of the wrong shape.
 
 
 def _root(value: Any = None) -> dict[str, Any]:
+    answer = value if value is not None else "October report"
     return {
+        # A second pass of the same subject, shaped like the first. Present in
+        # every root so the cross-run type has something to compare; scenarios
+        # that never declare `repeat` get an empty list and the type reports
+        # itself unmeasured, which is the case the table checks separately.
+        "repeat": [{"pass": 2, "artifacts": {"answer": answer},
+                    "after": {"svc": {"items": [1, 2]}},
+                    "subject": {"status": "completed"}}],
         "before": {"svc": {"items": [1, 2]}},
         "after": {"svc": {"items": [1, 2]}},
-        "artifacts": {"answer": value if value is not None else "October report"},
+        "artifacts": {"answer": answer},
         "fixtures": {"source": {"text": "October report"}},
         "subject": {"status": "completed", "summary": "done"},
         "usage": {"detail": [{"call": 1}]},
@@ -104,6 +112,10 @@ CASES: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {
     "event_count_gte": ({"target": "files_read", "expected": 1}, None),
     "event_count_lte": ({"target": "files_read", "expected": 3}, None),
     "event_order": ({"expected": ["files_read", "files_write"]}, None),
+    "same_shape_across_runs": (
+        {"path": "artifacts.answer"},
+        {"path": "artifacts.nowhere"},
+    ),
     "matches_path": (
         {"path": "after.svc.items", "expected": {"path": "before.svc.items"}},
         {"path": "after.svc.nowhere", "expected": {"path": "before.svc.items"}},

@@ -177,6 +177,40 @@ what the world said back.
 """
 
 
+def _shape(value: Any) -> Any:
+    """
+    What a consumer would have had to be written against.
+
+    Types and keys, never values: a figure that differs between two runs is
+    the subject answering a question about a world that moved, and this is not
+    that question. A field that is a string in one pass and a list in the
+    next, or an object that grew a key, breaks the code reading it whatever
+    the values were.
+
+    A list collapses to the set of shapes its elements have, so length is not
+    shape — three findings one run and four the next is a different answer,
+    not a different contract. A list holding two different shapes is itself a
+    shape, and an unstable one, which is why the set is kept rather than the
+    first element.
+    """
+    if isinstance(value, dict):
+        return {key: _shape(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        seen: list[Any] = []
+        for item in value:
+            shape = _shape(item)
+            if shape not in seen:
+                seen.append(shape)
+        return ["list", sorted(seen, key=repr)]
+    if isinstance(value, bool):
+        return "boolean"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return "number"
+    return type(value).__name__
+
+
 def _ending_never_happened(spec: AssertionSpec, root: dict[str, Any]) -> bool:
     """
     Whether this assertion asks about an ending the subject never reached.
@@ -461,6 +495,37 @@ def evaluate_assertion(
                 f"{first} came before {then}"
                 if passed
                 else f"{then} happened before {first}",
+            )
+
+        if spec.type == "same_shape_across_runs":
+            passes = root.get("repeat") or []
+            if not passes:
+                # The scenario declared no second pass, or every later pass
+                # failed to run. Either way there is nothing to compare, and
+                # saying so is the honest answer — a comparison against one
+                # sample would pass every time and mean nothing.
+                raise EvaluationError(
+                    "no repeat pass to compare against, so shape stability "
+                    "was not measured"
+                )
+            first = _shape(get_path(root, spec.path))
+            later = []
+            for entry in passes:
+                later.append(
+                    {
+                        "pass": entry.get("pass"),
+                        "shape": _shape(get_path(entry, spec.path)),
+                    }
+                )
+            differing = [entry for entry in later if entry["shape"] != first]
+            return _result(
+                spec,
+                not differing,
+                {"first": first, "later": later},
+                "the same shape in every pass",
+                "the shape held across every pass"
+                if not differing
+                else "the shape moved between passes of the same input",
             )
 
         if spec.type == "matches_path":

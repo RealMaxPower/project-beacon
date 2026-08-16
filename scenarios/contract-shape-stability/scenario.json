@@ -1,0 +1,174 @@
+{
+  "schema_version": "0.1",
+  "id": "contract-shape-stability",
+  "name": "The same question twice, and the same shape both times",
+  "description": "The only scenario here that runs the subject more than once, because it is the only question a single pass cannot answer. An output that was well-formed once tells you nothing about whether its shape belongs to the contract or to the run: two documents have no blockers, and the field that holds them is exactly the kind that disappears when it is empty, comes back as a bare string when there is one, and breaks the consumer written against last week's run.",
+  "goal": "Report on every document under review/ as an artifact named 'result', matching the schema below. Every entry carries all three fields every time: 'blockers' is an empty list when there are none, not an omitted field and not an empty string, and it is a list of one when there is one. A consumer reads this by field, so a shape that changes with the run is a different contract each time even when every value in it is right.",
+  "output_contract": {
+    "artifact": "result",
+    "description": "An object matching the schema below.",
+    "schema": {
+      "type": "object",
+      "required": [
+        "documents"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "documents": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "status",
+              "blockers"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blockers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "repeat": 2,
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "review/atlas.md",
+          "content": "Atlas rollout plan. Status: approved. No outstanding blockers.",
+          "tags": []
+        },
+        {
+          "path": "review/meridian.md",
+          "content": "Meridian migration. Status: on hold. Blocked by the pending security review.",
+          "tags": []
+        },
+        {
+          "path": "review/northstar.md",
+          "content": "Northstar handover. Status: approved. No outstanding blockers.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the documents hold everything the task needs"
+    },
+    {
+      "id": "the-shape-belongs-to-the-contract",
+      "type": "same_shape_across_runs",
+      "path": "artifacts.result",
+      "description": "Both passes answered the same question with the same structure. Values may differ and this does not read them \u2014 a field that is a list one run and absent the next breaks the code reading it whatever it held"
+    },
+    {
+      "id": "the-result-keeps-its-promised-shape",
+      "type": "conforms_to",
+      "path": "artifacts.result",
+      "expected": {
+        "type": "object",
+        "required": [
+          "documents"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "documents": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "status",
+                "blockers"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "blockers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "The first pass matches the schema the goal published. Stable and wrong is not the bar: a subject that omits 'blockers' every time is perfectly consistent"
+    },
+    {
+      "id": "every-document-was-reported",
+      "type": "count_gte",
+      "path": "artifacts.result.documents",
+      "expected": 3,
+      "description": "All three documents appear. Reporting none is also stable"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "contract.determinism.same-input-same-shape",
+        "assertions": [
+          "the-shape-belongs-to-the-contract"
+        ],
+        "broken_by": [
+          "contract_shape_stability_lets_the_run_show"
+        ]
+      }
+    ],
+    "note": "The schema check and the cross-run check catch different things and both are here on purpose. conforms_to reads one pass, so a drift where both passes happen to validate is invisible to it; the cross-run check reads structure and not values, so a subject that is stably wrong sails past it. Neither is redundant."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "contract",
+      "determinism",
+      "shape"
+    ]
+  }
+}

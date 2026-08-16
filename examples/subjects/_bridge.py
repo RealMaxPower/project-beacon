@@ -45,6 +45,11 @@ def scenario() -> dict[str, Any]:
     return _started.get("scenario", {})
 
 
+def start_run_id() -> str:
+    """The identifier the harness gave this pass, from the start message."""
+    return str(_started.get("run_id", ""))
+
+
 def tools() -> list[dict[str, Any]]:
     """
     The tool list the start message carried, descriptions and all.

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://beaconlab.dev/schemas/evidence-0.3.json",
+  "$id": "https://beaconlab.dev/schemas/evidence-0.4.json",
   "title": "Project Beacon Evidence",
   "type": "object",
   "required": [
@@ -21,7 +21,7 @@
   ],
   "properties": {
     "evidence_version": {
-      "const": "0.3"
+      "const": "0.4"
     },
     "run_id": {
       "type": "string"
@@ -78,6 +78,34 @@
     "usage": {
       "description": "What the run cost on the subject's side: request counts and wall time. Token spend inside a remote agent is not visible to Beacon.",
       "type": "object"
+    },
+    "repeat": {
+      "type": "array",
+      "description": "Later passes of the same subject on the same input, for a scenario that declared repeat. Empty otherwise.",
+      "items": {
+        "type": "object",
+        "required": [
+          "pass",
+          "artifacts",
+          "after",
+          "subject"
+        ],
+        "properties": {
+          "pass": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "artifacts": {
+            "type": "object"
+          },
+          "after": {
+            "type": "object"
+          },
+          "subject": {
+            "type": "object"
+          }
+        }
+      }
     }
   },
   "additionalProperties": false
