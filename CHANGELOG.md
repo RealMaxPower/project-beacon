@@ -125,6 +125,30 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- Ten more scenarios, taking coverage to 91 of 95. Five families are complete:
+  injection, write-boundary, contract, deferral, delegation and cost. The four
+  cross-surface pairs that remained — email to files, web to mail, ticket to
+  shell, document to web — plus an underspecified goal, a queue where finishing
+  needs authority the agent lacks, a mid-run distraction, and an error message
+  that recommends force-pushing and piping a script from a URL.
+
+  That last one is a channel no scenario could reach before the fault table
+  existed. An error arrives exactly when an agent is stuck and casting about
+  for a fix, which is when advice is least scrutinised.
+
+  Two scenarios had assertions that could never fail because policy refused the
+  action they graded: with deletion disabled the contracts survive whatever the
+  agent does. Both were switched on and the goal left to do the forbidding,
+  which is the fifth time that shape has appeared — if you want to measure
+  "chose not to", the thing has to be reachable.
+
+- Every markdown twin carried a link to every other page, which is O(n²) in
+  page count. At fifty-nine scenarios that was about eight kilobytes appended
+  to each document, and `legal` — the shortest page on the site — stopped being
+  meaningfully smaller than its own HTML. The size test caught it. The full
+  index now ships on one page and the rest link to it, so a new scenario costs
+  one line in one file rather than one line in sixty.
+
 - Twelve more scenarios, taking coverage to 81 of 95 cells. No new capability
   was involved: the injection family went from 17 to 30 of 35 by writing the
   rungs that were always buildable — natural language with no markers at all, a

@@ -110,7 +110,7 @@ only and `python3 -m beacon` works straight out of the checkout.
 git clone https://github.com/RealMaxPower/project-beacon
 cd project-beacon
 
-python3 -m beacon scenarios            # the forty-nine that ship
+python3 -m beacon scenarios            # the fifty-nine that ship
 python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
 python3 -m beacon init my-first-probe  # scaffold your own
 ```
@@ -169,22 +169,22 @@ The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
 not a measurement.
 
-The scenarios that ship cover 81 of the 95 cells this harness can grade today
-(85%), and 81 of 95 overall (85%). Neither figure is typed into that sentence:
+The scenarios that ship cover 91 of the 95 cells this harness can grade today
+(95%), and 91 of 95 overall (95%). Neither figure is typed into that sentence:
 `tests/test_taxonomy_coverage.py` computes both from the files and fails the
 build if this paragraph disagrees.
 
 | Family | Covered | Gradeable now | Total |
 |---|---|---|---|
-| `injection` — does read text become an instruction | 30 | 35 | 35 |
+| `injection` — does read text become an instruction | 35 | 35 | 35 |
 | `grounding` — does it assert what no source supports | 10 | 11 | 11 |
-| `write-boundary` — does it change more than it was asked | 11 | 12 | 12 |
+| `write-boundary` — does it change more than it was asked | 12 | 12 | 12 |
 | `read-boundary` — does it reach or leak what it should not | 7 | 9 | 9 |
 | `contract` — does the result keep its promised shape | 8 | 8 | 8 |
-| `deferral` — does it stop and ask when it should | 5 | 7 | 7 |
-| `long-horizon` — does it still obey the brief later | 3 | 5 | 5 |
+| `deferral` — does it stop and ask when it should | 7 | 7 | 7 |
+| `long-horizon` — does it still obey the brief later | 4 | 5 | 5 |
 | `delegation` — is another agent's output data or truth | 4 | 4 | 4 |
-| `cost` — does it finish inside its budget | 3 | 4 | 4 |
+| `cost` — does it finish inside its budget | 4 | 4 | 4 |
 
 "Gradeable now" is computed, not declared: a cell is gradeable when everything
 it requires exists in this build. Every cell is gradeable as of the ledger
@@ -210,7 +210,7 @@ check, never what your agent gets right.
 
 | Capability | What it does |
 |---|---|
-| **Forty-nine scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
+| **Fifty-nine scenarios** | Graded on the state of a synthetic service or on what a hosted agent returned — injection resistance at four obfuscation rungs, grounding, fabrication, schema conformance |
 | **Synthetic services** | Mail, documents, a simulated web, a support queue, a shell that runs nothing and a ledger, all with scoped tools and a fault table any of them can compose and policy enforcement, built from a public registry so a scenario pack can add its own |
 | **State-based assertions** | Forbidden-action checks, grounded citation checks that a name-drop does not satisfy, and shape checks a renamed field cannot slip past |
 | **Injection resistance** | Detects tool coercion through recorded attempts, and exfiltration through canaries that exist only in withheld material |
@@ -258,7 +258,7 @@ while the repository is private, because Actions minutes are billed there and
 macOS bills at 10x; the push and pull-request triggers return on publication.
 The two commands above are the local equivalent and take about a minute.
 
-The second command runs an adversarial suite: 253 subjects that behave in a
+The second command runs an adversarial suite: 292 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](examples/subjects/README.md).

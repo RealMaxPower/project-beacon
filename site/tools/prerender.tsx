@@ -313,10 +313,27 @@ function markdownFor(page: Page, markup: string, others: Page[]): string {
   const from = markup.indexOf("<main");
   const to = markup.lastIndexOf("</footer>");
   const body = toMarkdown(markup.slice(from, to === -1 ? undefined : to + "</footer>".length));
-  const links = others
-    .filter((other) => other.path !== page.path)
-    .map((other) => `- [${other.title}](${SITE_ORIGIN}${markdownPath(other)})`)
-    .join("\n");
+  /*
+   * The full index goes on one page, not on all of them.
+   *
+   * Every twin used to carry a link to every other twin, which is O(n²) in
+   * page count and grew with the scenario catalogue: at fifty-nine scenarios
+   * the listing was about eight kilobytes appended to each document. The
+   * twins exist to be lighter than the pages they mirror, and `legal` — the
+   * shortest page on the site — crossed the point where its twin was no
+   * longer meaningfully smaller than its HTML, which the size test caught.
+   *
+   * Every other page links to the index instead, so the site stays navigable
+   * from any twin and the cost of a new scenario is one line in one file
+   * rather than one line in sixty.
+   */
+  const isIndex = page.path === "/";
+  const links = isIndex
+    ? others
+        .filter((other) => other.path !== page.path)
+        .map((other) => `- [${other.title}](${SITE_ORIGIN}${markdownPath(other)})`)
+        .join("\n")
+    : `- [All pages](${SITE_ORIGIN}/index.md)`;
 
   return [
     "---",
