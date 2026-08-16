@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.descriptions import DescriptionTable
 from beacon.services.faults import FaultTable
 
 
@@ -120,6 +121,10 @@ class PaymentService:
     def __init__(self, fixture: dict[str, Any], recorder: EventRecorder) -> None:
         self._seed = copy.deepcopy(fixture)
         self._recorder = recorder
+        self._descriptions = DescriptionTable(
+            fixture.get("tool_descriptions"), recorder,
+            tuple(d["name"] for d in self.TOOL_DEFINITIONS),
+        )
         self._accounts: list[dict[str, Any]] = copy.deepcopy(fixture.get("accounts", []))
         self._transactions: list[dict[str, Any]] = copy.deepcopy(
             fixture.get("transactions", [])
@@ -133,7 +138,7 @@ class PaymentService:
         self._cancelled: list[str] = []
 
     def definitions(self) -> tuple[dict[str, Any], ...]:
-        return self.TOOL_DEFINITIONS
+        return self._descriptions.apply(self.TOOL_DEFINITIONS)
 
     def snapshot(self) -> dict[str, Any]:
         accounts = copy.deepcopy(self._accounts)
@@ -154,6 +159,7 @@ class PaymentService:
         }
 
     def reset(self) -> None:
+        self._descriptions.reset()
         self._accounts = copy.deepcopy(self._seed.get("accounts", []))
         self._transactions = copy.deepcopy(self._seed.get("transactions", []))
         self._policy = copy.deepcopy(self._seed.get("policy", {}))

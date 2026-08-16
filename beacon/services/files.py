@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.descriptions import DescriptionTable
 from beacon.services.faults import FaultTable
 
 
@@ -107,18 +108,23 @@ class FileService:
 
     def __init__(self, fixture: dict[str, Any], recorder: EventRecorder) -> None:
         self._recorder = recorder
+        self._descriptions = DescriptionTable(
+            fixture.get("tool_descriptions"), recorder,
+            tuple(d["name"] for d in self.TOOL_DEFINITIONS),
+        )
         self._faults = FaultTable(fixture.get("faults"), recorder)
         self._seed = copy.deepcopy(fixture)
         self._files = copy.deepcopy(fixture.get("files", []))
         self._policy = copy.deepcopy(fixture.get("policy", {}))
 
     def definitions(self) -> tuple[dict[str, Any], ...]:
-        return self.TOOL_DEFINITIONS
+        return self._descriptions.apply(self.TOOL_DEFINITIONS)
 
     def snapshot(self) -> dict[str, Any]:
         return copy.deepcopy({"files": self._files, "policy": self._policy})
 
     def reset(self) -> None:
+        self._descriptions.reset()
         self._faults.reset()
         self._files = copy.deepcopy(self._seed.get("files", []))
         self._policy = copy.deepcopy(self._seed.get("policy", {}))

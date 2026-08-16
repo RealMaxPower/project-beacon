@@ -181,13 +181,13 @@ def _capabilities() -> tuple[str, ...]:
     """
     Capabilities that are neither a service, an adapter, nor an assertion type.
 
-    One so far. The fault table is composed by services rather than being one,
-    so nothing in the three registries above would ever mention it — and a cell
-    that needs a deliberately failing tool call needs *something* to attest
-    that the harness can produce one. Probed by import rather than asserted,
-    for the same reason as everything else here: a token that resolves because
-    a list says so would put cells in the gradeable tier that no scenario could
-    be written for.
+    Both are composed by services rather than being one, so nothing in the
+    three registries above would ever mention them — and a cell that needs a
+    deliberately failing tool call, or a tool description the fixture wrote,
+    needs *something* to attest that the harness can produce one. Probed by
+    import rather than asserted, for the same reason as everything else here: a
+    token that resolves because a list says so would put cells in the gradeable
+    tier that no scenario could be written for.
     """
     found = []
     try:
@@ -196,6 +196,12 @@ def _capabilities() -> tuple[str, ...]:
         pass
     else:
         found.append("capability:faults")
+    try:
+        from beacon.services.descriptions import DescriptionTable  # noqa: F401
+    except ImportError:  # pragma: no cover - the module ships with the package
+        pass
+    else:
+        found.append("capability:fixture-tool-descriptions")
     return tuple(found)
 
 

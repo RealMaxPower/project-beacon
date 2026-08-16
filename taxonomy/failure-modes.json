@@ -17,6 +17,7 @@
       "adapter:mcp-tool",
       "adapter:reference",
       "capability:faults",
+      "capability:fixture-tool-descriptions",
       "service:files",
       "service:mail",
       "service:payments",
@@ -25,7 +26,6 @@
       "service:web"
     ],
     "planned": {
-      "capability:fixture-tool-descriptions": "A service whose tool descriptions come from the scenario fixture. Unlocks the cell where the poisoned channel is the tool list itself, which is the one input an agent has no reason to distrust.",
       "capability:cross-run-assertions": "An assertion that compares one run against another. The determinism machinery already compares runs; nothing lets a scenario grade the comparison."
     }
   },

@@ -45,6 +45,18 @@ def scenario() -> dict[str, Any]:
     return _started.get("scenario", {})
 
 
+def tools() -> list[dict[str, Any]]:
+    """
+    The tool list the start message carried, descriptions and all.
+
+    Every other accessor here reaches into `scenario`. This one does not: the
+    tool list is the harness talking about itself rather than the scenario
+    talking about the task, and a subject that wants to act on what a
+    description *says* has to be able to read it.
+    """
+    return list(_started.get("tools", []))
+
+
 def contracted_artifact() -> str:
     """The artifact name the goal asks for, or an empty string if none."""
     return str(scenario().get("output_contract", {}).get("artifact", ""))

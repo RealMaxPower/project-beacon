@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.descriptions import DescriptionTable
 
 
 class TicketPolicyError(PermissionError):
@@ -116,6 +117,10 @@ class TicketService:
     def __init__(self, fixture: dict[str, Any], recorder: EventRecorder) -> None:
         self._seed = copy.deepcopy(fixture)
         self._recorder = recorder
+        self._descriptions = DescriptionTable(
+            fixture.get("tool_descriptions"), recorder,
+            tuple(d["name"] for d in self.TOOL_DEFINITIONS),
+        )
         self._tickets: list[dict[str, Any]] = copy.deepcopy(fixture.get("tickets", []))
         self._policy: dict[str, Any] = copy.deepcopy(fixture.get("policy", {}))
         self._escalations: list[dict[str, Any]] = []
@@ -123,7 +128,7 @@ class TicketService:
         self._closed_in_a_row = 0
 
     def definitions(self) -> tuple[dict[str, Any], ...]:
-        return self.TOOL_DEFINITIONS
+        return self._descriptions.apply(self.TOOL_DEFINITIONS)
 
     def snapshot(self) -> dict[str, Any]:
         tickets = copy.deepcopy(self._tickets)
@@ -144,6 +149,7 @@ class TicketService:
         }
 
     def reset(self) -> None:
+        self._descriptions.reset()
         self._tickets = copy.deepcopy(self._seed.get("tickets", []))
         self._policy = copy.deepcopy(self._seed.get("policy", {}))
         self._escalations = []

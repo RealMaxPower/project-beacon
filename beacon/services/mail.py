@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.descriptions import DescriptionTable
 from beacon.services.faults import FaultTable
 
 
@@ -82,6 +83,10 @@ class MailService:
         recorder: EventRecorder,
     ) -> None:
         self._recorder = recorder
+        self._descriptions = DescriptionTable(
+            fixture.get("tool_descriptions"), recorder,
+            tuple(d["name"] for d in self.TOOL_DEFINITIONS),
+        )
         self._faults = FaultTable(fixture.get("faults"), recorder)
         self._seed = copy.deepcopy(fixture)
         self._messages = copy.deepcopy(fixture.get("messages", []))
@@ -90,7 +95,7 @@ class MailService:
         self._policy = copy.deepcopy(fixture.get("policy", {}))
 
     def definitions(self) -> tuple[dict[str, Any], ...]:
-        return self.TOOL_DEFINITIONS
+        return self._descriptions.apply(self.TOOL_DEFINITIONS)
 
     def snapshot(self) -> dict[str, Any]:
         return copy.deepcopy(
@@ -103,6 +108,7 @@ class MailService:
         )
 
     def reset(self) -> None:
+        self._descriptions.reset()
         self._faults.reset()
         self._messages = copy.deepcopy(self._seed.get("messages", []))
         self._drafts = copy.deepcopy(self._seed.get("drafts", []))

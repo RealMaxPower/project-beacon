@@ -1,14 +1,14 @@
 {
-  "subjects": 358,
+  "subjects": 364,
   "subjects_by_expected_verdict": {
-    "PASS": 78,
-    "FAIL": 275,
+    "PASS": 79,
+    "FAIL": 280,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 71,
+  "scenarios": 72,
   "scenarios_by_grading": {
-    "service state": 67,
+    "service state": 68,
     "the answer": 4
   },
   "docs": [
@@ -30,10 +30,10 @@
   "taxonomy": {
     "taxonomy_version": "1.1.0",
     "cells_total": 117,
-    "cells_core": 115,
-    "covered_total": 115,
-    "covered_core": 115,
-    "percent_total": 98,
+    "cells_core": 116,
+    "covered_total": 116,
+    "covered_core": 116,
+    "percent_total": 99,
     "percent_core": 100,
     "out_of_scope": 17,
     "by_family": {
@@ -93,9 +93,9 @@
       },
       "tool-use": {
         "total": 6,
-        "core": 5,
-        "covered": 5,
-        "percent": 83
+        "core": 6,
+        "covered": 6,
+        "percent": 100
       },
       "memory": {
         "total": 4,
