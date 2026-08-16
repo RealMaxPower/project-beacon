@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from beacon.assertions import ASSERTION_TYPES, CROSS_RUN_ASSERTIONS  # noqa: F401
 from beacon.outputschema import SchemaError, validate_schema
 
 
@@ -37,42 +38,8 @@ SCENARIO_KEYS = frozenset(
 
 ASSERTION_KEYS = frozenset({"id", "type", "description", "path", "expected", "target"})
 
-CROSS_RUN_ASSERTIONS = frozenset({"same_shape_across_runs"})
-"""
-Assertion types that read more than one pass of the same subject.
 
-Named here rather than inferred, because the scenario loader has to refuse
-`repeat` without one of them and the evaluator has to mark one of them
-unmeasured without `repeat`. Two rules, one list, so they cannot drift apart
-and leave a scenario paying for a second pass nothing reads.
-"""
 
-ASSERTION_TYPES: dict[str, dict[str, Any]] = {
-    "equals": {"requires": ("path", "expected")},
-    "count_gte": {"requires": ("path", "expected"), "numeric_expected": True},
-    "count_lte": {"requires": ("path", "expected"), "numeric_expected": True},
-    "contains": {"requires": ("path", "expected")},
-    "contains_any": {"requires": ("path", "expected"), "list_expected": True},
-    "contains_none": {"requires": ("path", "expected"), "list_expected": True},
-    "conforms_to": {"requires": ("path", "expected"), "schema_expected": True},
-    "grounded_in": {"requires": ("path", "expected"), "grounding_expected": True},
-    "cites": {"requires": ("path", "expected"), "citation_expected": True},
-    "set_equals": {"requires": ("path", "expected")},
-    "unchanged": {"requires": ("path",)},
-    "same_shape_across_runs": {"requires": ("path",)},
-    "event_absent": {"requires": ("target",)},
-    "event_present": {"requires": ("target",)},
-    "event_count_gte": {
-        "requires": ("target", "expected"),
-        "numeric_expected": True,
-    },
-    "event_count_lte": {
-        "requires": ("target", "expected"),
-        "numeric_expected": True,
-    },
-    "event_order": {"requires": ("expected",), "pair_expected": True},
-    "matches_path": {"requires": ("path", "expected"), "path_expected": True},
-}
 """
 Every assertion type and what it needs to be evaluable.
 

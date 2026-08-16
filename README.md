@@ -290,8 +290,9 @@ beacon/
   protocols/      MCP and A2A protocol clients
   services/       Synthetic stateful services and tool router
   baseline.py     Pass-rate baselines and regression detection
+  assertions.py   Every assertion type, and how each one is graded
   cli.py          Dependency-free command-line interface
-  evaluation.py   Deterministic assertion engine
+  evaluation.py   Assertion dispatch, the measured/unmeasured rule, and verdicts
   evidence.py     JSON and Markdown evidence output
   outputschema.py Output-shape checking for `conforms_to`
   runner.py       Scenario lifecycle orchestration

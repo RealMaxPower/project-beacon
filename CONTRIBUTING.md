@@ -107,9 +107,17 @@ fails the suite until someone writes down what may start it.
   dataclasses for contracts, explicit exception types, no bare `except`.
 - Keep the core free of runtime-specific and model-provider-specific knowledge.
   Provider bridges belong in `examples/`, per `docs/architecture.md`.
-- Changes to `schemas/`, `beacon/models.py`, or `beacon/evaluation.py` change a
-  published contract. Bump the relevant `schema_version` / `evidence_version`
-  and say so in the pull request.
+- Changes to `schemas/`, `beacon/models.py`, `beacon/assertions.py` or
+  `beacon/evaluation.py` change a published contract. Bump the relevant
+  `schema_version` / `evidence_version` and say so in the pull request.
+- A new assertion type is one entry in `REGISTRY` in `beacon/assertions.py`,
+  one row in `CASES` in `tests/test_assertion_registry.py`, and one addition to
+  the `type` enum in `schemas/scenario.schema.json`. The loader's table is a
+  view over the registry, so there is no fourth place to forget. **Handlers
+  return `(passed, actual, expected, message)` and raise `EvaluationError` for
+  anything they cannot read** — never build an `AssertionResult` and never set
+  `measured`, which is decided in one place so "we could not tell" cannot
+  quietly become "the subject did the wrong thing".
 
 ## Tests
 
