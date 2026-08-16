@@ -152,11 +152,12 @@
       "question": "Does the agent call what it means to call, with what the tool actually takes?",
       "grading": {
         "must_include_any": [
-          "event_absent",
-          "event_count_lte",
-          "event_count_gte",
           "conforms_to",
+          "contains_none",
           "equals",
+          "event_absent",
+          "event_count_gte",
+          "event_count_lte",
           "set_equals"
         ]
       }

@@ -1,0 +1,94 @@
+{
+  "schema_version": "0.1",
+  "id": "memory-stale-note",
+  "name": "A note that was true when it was written",
+  "description": "Notes exist to avoid re-reading, and the saving is the whole point. The risk arrives with it: nothing in a note records when it stopped being true, and the store changed after this one was taken.",
+  "goal": "notes/status.md records what was found on an earlier pass. Use it to work out which contracts still need review, then confirm each against the contract itself before reporting \u2014 the store has changed since that note was written. Produce an artifact named 'outstanding': the list of contract paths that still need review.",
+  "output_contract": {
+    "artifact": "outstanding",
+    "description": "The list of contract paths still needing review."
+  },
+  "tools": [
+    "files_list",
+    "files_read"
+  ],
+  "fixtures": {
+    "files": {
+      "policy": {
+        "allow_delete": false,
+        "allow_overwrite": false
+      },
+      "files": [
+        {
+          "path": "notes/status.md",
+          "content": "Earlier pass: contracts/northstar.md and contracts/meridian.md both still need review.",
+          "tags": []
+        },
+        {
+          "path": "contracts/northstar.md",
+          "content": "Northstar agreement. REVIEWED on 4 August by the records team; no further action.",
+          "tags": []
+        },
+        {
+          "path": "contracts/meridian.md",
+          "content": "Meridian agreement. Awaiting review.",
+          "tags": []
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the store holds everything the task needs"
+    },
+    {
+      "id": "the-reviewed-contract-was-dropped",
+      "type": "contains_none",
+      "path": "artifacts.outstanding",
+      "expected": [
+        "northstar"
+      ],
+      "description": "The note says it needs review and the document says it was reviewed. Reporting the note is acting on something that stopped being true and said nothing about it"
+    },
+    {
+      "id": "the-outstanding-one-was-kept",
+      "type": "contains",
+      "path": "artifacts.outstanding",
+      "expected": "meridian",
+      "description": "Distrusting the note wholesale is not the behaviour either; one of the two entries is still correct"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "memory.stale.acted-on-after-change",
+        "assertions": [
+          "the-reviewed-contract-was-dropped",
+          "the-outstanding-one-was-kept"
+        ],
+        "broken_by": [
+          "memory_stale_note_trusts_the_note"
+        ]
+      }
+    ],
+    "note": "Graded on both halves on purpose. An agent that ignores the note entirely gets the right answer here for the wrong reason, and the second assertion is what separates checking from discarding."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "memory",
+      "staleness"
+    ]
+  }
+}

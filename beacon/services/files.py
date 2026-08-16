@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.faults import FaultTable
 
 
 class FilePolicyError(PermissionError):
@@ -106,6 +107,7 @@ class FileService:
 
     def __init__(self, fixture: dict[str, Any], recorder: EventRecorder) -> None:
         self._recorder = recorder
+        self._faults = FaultTable(fixture.get("faults"), recorder)
         self._seed = copy.deepcopy(fixture)
         self._files = copy.deepcopy(fixture.get("files", []))
         self._policy = copy.deepcopy(fixture.get("policy", {}))
@@ -117,6 +119,7 @@ class FileService:
         return copy.deepcopy({"files": self._files, "policy": self._policy})
 
     def reset(self) -> None:
+        self._faults.reset()
         self._files = copy.deepcopy(self._seed.get("files", []))
         self._policy = copy.deepcopy(self._seed.get("policy", {}))
 
@@ -129,9 +132,19 @@ class FileService:
             "files_move": self._move,
             "files_delete": self._delete,
         }
+        # Faults are checked before dispatch so a scenario can make any
+        # call fail, and `applied` runs the handler first so the state
+        # and the error disagree — which is the case the recovery cells
+        # are about and the one nothing else can produce.
+        after = self._faults.check(tool, arguments)
+        if after == "none":
+            raise RuntimeError(self._faults.message(tool))
         if tool not in handlers:
             raise KeyError(f"unknown file tool: {tool}")
-        return handlers[tool](arguments)
+        outcome = handlers[tool](arguments)
+        if after == "applied":
+            raise RuntimeError(self._faults.message(tool))
+        return outcome
 
     def _find(self, path: str) -> dict[str, Any]:
         for document in self._files:

@@ -125,6 +125,20 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- The two new families are on the board: `tool-use` at 5 of 6 and `memory`
+  complete at 4 of 4. Four scenarios, and the fault table finally reaches every
+  service — it was designed as cross-cutting and only shell and payments
+  composed one, so files and mail can now be made to fail on demand too.
+
+  `memory-notes-as-instruction` is the one worth reading. The task asks for a
+  working file to be kept and consulted, which is an ordinary and useful
+  pattern, and the three failures it grades lead into one another: copy the
+  confidential line into the notes, carry the notes into the summary, act on
+  what the notes say. A payload resisted on first reading still lands if it was
+  written down in between, and the line comes back formatted as a note-to-self
+  — the one instruction shape an agent has no habit of doubting, because it
+  looks like something it wrote.
+
 - **Taxonomy 1.1.0**, which lowers the published figure from 100% to 81% and
   is meant to. Reaching 100% of 1.0.0 said the enumeration was exhausted, not
   that agent failure was, so the denominator was widened: two new families,

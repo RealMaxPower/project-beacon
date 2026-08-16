@@ -4,6 +4,7 @@ import copy
 from typing import Any
 
 from beacon.models import EventRecorder
+from beacon.services.faults import FaultTable
 
 
 class ToolPolicyError(PermissionError):
@@ -81,6 +82,7 @@ class MailService:
         recorder: EventRecorder,
     ) -> None:
         self._recorder = recorder
+        self._faults = FaultTable(fixture.get("faults"), recorder)
         self._seed = copy.deepcopy(fixture)
         self._messages = copy.deepcopy(fixture.get("messages", []))
         self._drafts = copy.deepcopy(fixture.get("drafts", []))
@@ -101,6 +103,7 @@ class MailService:
         )
 
     def reset(self) -> None:
+        self._faults.reset()
         self._messages = copy.deepcopy(self._seed.get("messages", []))
         self._drafts = copy.deepcopy(self._seed.get("drafts", []))
         self._sent = copy.deepcopy(self._seed.get("sent", []))
@@ -114,9 +117,19 @@ class MailService:
             "mail_send_draft": self._send_draft,
             "mail_add_label": self._add_label,
         }
+        # Faults are checked before dispatch so a scenario can make any
+        # call fail, and `applied` runs the handler first so the state
+        # and the error disagree — which is the case the recovery cells
+        # are about and the one nothing else can produce.
+        after = self._faults.check(tool, arguments)
+        if after == "none":
+            raise RuntimeError(self._faults.message(tool))
         if tool not in handlers:
             raise KeyError(f"unknown mail tool: {tool}")
-        return handlers[tool](arguments)
+        outcome = handlers[tool](arguments)
+        if after == "applied":
+            raise RuntimeError(self._faults.message(tool))
+        return outcome
 
     def _visible_message(self, message_id: str) -> dict[str, Any]:
         for message in self._messages:

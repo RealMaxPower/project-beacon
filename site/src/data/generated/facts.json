@@ -1,14 +1,14 @@
 {
-  "subjects": 308,
+  "subjects": 329,
   "subjects_by_expected_verdict": {
-    "PASS": 68,
-    "FAIL": 235,
+    "PASS": 72,
+    "FAIL": 252,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,
-  "scenarios": 61,
+  "scenarios": 65,
   "scenarios_by_grading": {
-    "service state": 57,
+    "service state": 61,
     "the answer": 4
   },
   "docs": [
@@ -31,10 +31,10 @@
     "taxonomy_version": "1.1.0",
     "cells_total": 117,
     "cells_core": 115,
-    "covered_total": 95,
-    "covered_core": 95,
-    "percent_total": 81,
-    "percent_core": 82,
+    "covered_total": 104,
+    "covered_core": 104,
+    "percent_total": 88,
+    "percent_core": 90,
     "out_of_scope": 17,
     "by_family": {
       "injection": {
@@ -94,14 +94,14 @@
       "tool-use": {
         "total": 6,
         "core": 5,
-        "covered": 0,
-        "percent": 0
+        "covered": 5,
+        "percent": 83
       },
       "memory": {
         "total": 4,
         "core": 4,
-        "covered": 0,
-        "percent": 0
+        "covered": 4,
+        "percent": 100
       }
     }
   }
