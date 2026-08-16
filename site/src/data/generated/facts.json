@@ -28,14 +28,14 @@
     "hosted-mcp-survey.md"
   ],
   "taxonomy": {
-    "taxonomy_version": "1.0.0",
-    "cells_total": 95,
-    "cells_core": 95,
+    "taxonomy_version": "1.1.0",
+    "cells_total": 117,
+    "cells_core": 115,
     "covered_total": 95,
     "covered_core": 95,
-    "percent_total": 100,
-    "percent_core": 100,
-    "out_of_scope": 10,
+    "percent_total": 81,
+    "percent_core": 82,
+    "out_of_scope": 17,
     "by_family": {
       "injection": {
         "total": 35,
@@ -44,52 +44,64 @@
         "percent": 100
       },
       "grounding": {
-        "total": 11,
-        "core": 11,
+        "total": 14,
+        "core": 14,
         "covered": 11,
-        "percent": 100
+        "percent": 78
       },
       "write-boundary": {
-        "total": 12,
-        "core": 12,
+        "total": 13,
+        "core": 13,
         "covered": 12,
-        "percent": 100
+        "percent": 92
       },
       "read-boundary": {
-        "total": 9,
-        "core": 9,
+        "total": 10,
+        "core": 10,
         "covered": 9,
-        "percent": 100
+        "percent": 90
       },
       "contract": {
-        "total": 8,
-        "core": 8,
+        "total": 10,
+        "core": 9,
         "covered": 8,
-        "percent": 100
+        "percent": 80
       },
       "deferral": {
-        "total": 7,
-        "core": 7,
+        "total": 8,
+        "core": 8,
         "covered": 7,
-        "percent": 100
+        "percent": 87
       },
       "long-horizon": {
-        "total": 5,
-        "core": 5,
+        "total": 7,
+        "core": 7,
         "covered": 5,
-        "percent": 100
+        "percent": 71
       },
       "delegation": {
-        "total": 4,
-        "core": 4,
+        "total": 5,
+        "core": 5,
         "covered": 4,
-        "percent": 100
+        "percent": 80
       },
       "cost": {
+        "total": 5,
+        "core": 5,
+        "covered": 4,
+        "percent": 80
+      },
+      "tool-use": {
+        "total": 6,
+        "core": 5,
+        "covered": 0,
+        "percent": 0
+      },
+      "memory": {
         "total": 4,
         "core": 4,
-        "covered": 4,
-        "percent": 100
+        "covered": 0,
+        "percent": 0
       }
     }
   }

@@ -163,28 +163,30 @@ of what Beacon is and is not ready to be trusted with.
 ## Coverage of a published taxonomy
 
 Beacon enumerates the failure modes it intends to measure in
-[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 95 cells across
-nine families, each with the reason it is in scope and the capability it needs.
+[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 117 cells across
+eleven families, each with the reason it is in scope and the capability it needs.
 The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
 not a measurement.
 
-The scenarios that ship cover 95 of the 95 cells this harness can grade today
-(100%), and 95 of 95 overall (100%). Neither figure is typed into that sentence:
+The scenarios that ship cover 95 of the 115 cells this harness can grade today
+(82%), and 95 of 117 overall (81%). Neither figure is typed into that sentence:
 `tests/test_taxonomy_coverage.py` computes both from the files and fails the
 build if this paragraph disagrees.
 
 | Family | Covered | Gradeable now | Total |
 |---|---|---|---|
 | `injection` — does read text become an instruction | 35 | 35 | 35 |
-| `grounding` — does it assert what no source supports | 11 | 11 | 11 |
-| `write-boundary` — does it change more than it was asked | 12 | 12 | 12 |
-| `read-boundary` — does it reach or leak what it should not | 9 | 9 | 9 |
-| `contract` — does the result keep its promised shape | 8 | 8 | 8 |
-| `deferral` — does it stop and ask when it should | 7 | 7 | 7 |
-| `long-horizon` — does it still obey the brief later | 5 | 5 | 5 |
-| `delegation` — is another agent's output data or truth | 4 | 4 | 4 |
-| `cost` — does it finish inside its budget | 4 | 4 | 4 |
+| `grounding` — does it assert what no source supports | 11 | 14 | 14 |
+| `write-boundary` — does it change more than it was asked | 12 | 13 | 13 |
+| `read-boundary` — does it reach or leak what it should not | 9 | 10 | 10 |
+| `contract` — does the result keep its promised shape | 8 | 9 | 10 |
+| `deferral` — does it stop and ask when it should | 7 | 8 | 8 |
+| `long-horizon` — does it still obey the brief later | 5 | 7 | 7 |
+| `delegation` — is another agent's output data or truth | 4 | 5 | 5 |
+| `cost` — does it finish inside its budget | 4 | 5 | 5 |
+| `tool-use` — does it call what it means to call | 0 | 5 | 6 |
+| `memory` — does what it wrote come back as an order | 0 | 4 | 4 |
 
 "Gradeable now" is computed, not declared: a cell is gradeable when everything
 it requires exists in this build. Every cell is gradeable as of the ledger
@@ -197,11 +199,13 @@ subject in the manifest is **observed making that assertion fail** when run, and
 another subject passes it. `beacon taxonomy --uncovered` lists the gradeable
 cells nobody has built yet.
 
-**Full coverage of this list is not full coverage of the problem.** Every
-cell in taxonomy 1.0.0 now has a scenario, which says the enumeration is
-complete — not that agent failure is. The honest reading of 100% is that
-the denominator has stopped doing work and should be widened; the next
-taxonomy version will lower this figure, and that is what it is for.
+**This number went down on purpose.** Taxonomy 1.0.0 reached 100%, which
+said the enumeration was exhausted rather than that agent failure was — so
+1.1.0 widened it: two new families, twenty-two new cells, and seven more
+rejected candidates. Two of the new cells need capability this build does
+not have, which is why the gradeable column is smaller than the total for
+the first time. Figures are comparable only within a `taxonomy_version`,
+and 81% of 1.1.0 is a stronger claim than 100% of 1.0.0 was.
 
 **What the number does not mean.** Covered means probed once, not solved — one
 payload, one configuration, one synthetic world, and resistance in a cell is not

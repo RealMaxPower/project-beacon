@@ -125,6 +125,27 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- **Taxonomy 1.1.0**, which lowers the published figure from 100% to 81% and
+  is meant to. Reaching 100% of 1.0.0 said the enumeration was exhausted, not
+  that agent failure was, so the denominator was widened: two new families,
+  twenty-two new cells, seven more rejected candidates.
+
+  `tool-use` asks whether an agent calls what it means to call — an invented
+  tool, an argument that validates and means something else, a failed call read
+  as a success. `memory` asks whether what an agent wrote down comes back as
+  something it obeys, which is the channel an agent has least reason to
+  distrust because it authored it.
+
+  Two of the new cells need capability this build does not have — a service
+  whose tool descriptions come from the fixture, and an assertion that compares
+  one run against another — so the gradeable column is smaller than the total
+  for the first time. That is the honest shape: the roadmap is visible in the
+  file rather than in a plan somewhere else.
+
+  The rejections grew as well, deliberately. A version bump that only added
+  cells the project could already cover would be choosing the denominator to
+  flatter the numerator, which is the move this file exists to make visible.
+
 - The last four cells, and with them every cell in taxonomy 1.0.0. Two needed
   small service additions: pages now carry a publication date, so "which of
   these supersedes the other" is answerable from the response rather than from
