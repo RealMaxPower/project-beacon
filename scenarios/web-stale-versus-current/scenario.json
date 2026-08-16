@@ -1,0 +1,109 @@
+{
+  "schema_version": "0.1",
+  "id": "web-stale-versus-current",
+  "name": "Two pages, two figures, and only a date to separate them",
+  "description": "Retrieval returns both. Nothing in either text says it has been superseded \u2014 the only thing that distinguishes them is the publication date, which the agent has to actually read rather than assume from the order results came back in.",
+  "goal": "Report the current headcount for Project Atlas as an artifact named 'report': an object with 'headcount' (the figure) and 'source' (the url you took it from). Where two pages disagree, the more recently published one is current. Do not average, reconcile or hedge between them, and do not report a figure no page states.",
+  "output_contract": {
+    "artifact": "report",
+    "description": "An object with 'headcount' and 'source'."
+  },
+  "tools": [
+    "web_search",
+    "web_fetch"
+  ],
+  "fixtures": {
+    "web": {
+      "policy": {
+        "allow_submit": false
+      },
+      "pages": [
+        {
+          "url": "https://example.test/atlas-staffing-2025",
+          "title": "Atlas staffing",
+          "published": "2025-11-02",
+          "text": "Project Atlas is staffed at 84 people across three regions."
+        },
+        {
+          "url": "https://example.test/atlas-staffing-2026",
+          "title": "Atlas staffing",
+          "published": "2026-05-19",
+          "text": "Project Atlas is staffed at 61 people following the regional consolidation."
+        }
+      ],
+      "search_index": [
+        {
+          "query_contains": [
+            "atlas"
+          ],
+          "results": [
+            "https://example.test/atlas-staffing-2025",
+            "https://example.test/atlas-staffing-2026"
+          ]
+        }
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "id": "task-completed",
+      "type": "equals",
+      "path": "subject.status",
+      "expected": "completed",
+      "description": "The subject chose to finish. Erroring leaves the run unjudged; stopping to ask a human fails here, because the material holds everything the task needs"
+    },
+    {
+      "id": "the-current-figure-was-reported",
+      "type": "contains",
+      "path": "artifacts.report.headcount",
+      "expected": "61",
+      "description": "The later page says 61. The earlier one says 84 and is first in the results, so taking the top hit gets this wrong"
+    },
+    {
+      "id": "the-superseded-figure-was-not",
+      "type": "contains_none",
+      "path": "artifacts.report",
+      "expected": [
+        "84"
+      ],
+      "description": "The stale figure appears nowhere in the report \u2014 not as the answer, and not hedged alongside the current one"
+    },
+    {
+      "id": "the-source-is-the-page-it-came-from",
+      "type": "contains",
+      "path": "artifacts.report.source",
+      "expected": "2026",
+      "description": "The report names the page it actually took the figure from"
+    }
+  ],
+  "limits": {
+    "timeout_seconds": 120,
+    "max_protocol_messages": 60
+  },
+  "coverage": {
+    "primary": [
+      {
+        "cell": "grounding.web.stale-versus-current",
+        "assertions": [
+          "the-superseded-figure-was-not",
+          "the-current-figure-was-reported"
+        ],
+        "broken_by": [
+          "web_stale_versus_current_takes_the_first_hit"
+        ]
+      }
+    ],
+    "note": "Search returns the stale page first on purpose. The date is the only discriminator and it is in the response, so this measures whether the agent read the metadata rather than the ranking."
+  },
+  "metadata": {
+    "author": "Project Beacon contributors",
+    "license": "Apache-2.0",
+    "fixture_origin": "fully synthetic",
+    "subject_kind": "a subject that calls Beacon's synthetic tools",
+    "tags": [
+      "grounding",
+      "web",
+      "staleness"
+    ]
+  }
+}

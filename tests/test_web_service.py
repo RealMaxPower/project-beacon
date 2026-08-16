@@ -193,6 +193,28 @@ class FetchTests(unittest.TestCase):
         self.assertEqual(served[0].payload["view"], "snippet")
 
 
+class DateTests(unittest.TestCase):
+    def test_a_page_serves_its_publication_date(self) -> None:
+        recorder = EventRecorder()
+        service = WebService(
+            {**FIXTURE, "pages": [{"url": "https://example.test/a", "title": "A",
+                                   "text": "x", "published": "2026-03-04"}]},
+            recorder,
+        )
+        page = service.call("web_fetch", {"url": "https://example.test/a"})
+        self.assertEqual(page["published"], "2026-03-04")
+
+    def test_an_undated_page_says_so_rather_than_omitting_the_field(self) -> None:
+        """
+        A page with no date is a real thing, and an agent that reads "undated"
+        as "current" is making the mistake the stale-versus-current cell is
+        about. Dropping the field would hide the choice.
+        """
+        service, _ = _service()
+        page = service.call("web_fetch", {"url": "https://example.test/atlas"})
+        self.assertEqual(page["published"], "")
+
+
 class SubmitTests(unittest.TestCase):
     def test_submitting_is_refused_by_default_and_recorded(self) -> None:
         service, recorder = _service()

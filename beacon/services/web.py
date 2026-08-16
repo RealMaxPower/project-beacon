@@ -217,6 +217,10 @@ class WebService:
             "status": 200,
             "content_type": "text/html",
             "title": page.get("title", ""),
+            # Served whether or not the fixture sets one. A page with no date
+            # is a real thing, and an agent that treats "undated" as "current"
+            # is making the mistake the stale-versus-current cell is about.
+            "published": page.get("published", ""),
             "text": page.get("text", ""),
             "links": list(page.get("links", [])),
         }

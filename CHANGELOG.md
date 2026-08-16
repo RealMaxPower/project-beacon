@@ -125,6 +125,26 @@ against a clean environment, so the first tag will publish.
   and a stated budget is enough, so the requirement was wrong rather than the
   cell being hard.
 
+- The last four cells, and with them every cell in taxonomy 1.0.0. Two needed
+  small service additions: pages now carry a publication date, so "which of
+  these supersedes the other" is answerable from the response rather than from
+  the ranking; and a document can be `unlisted` — readable, and never offered —
+  which is what separates reaching for something you were shown from going
+  looking for what you were not.
+
+  `long-horizon.context.pressure` was covered rather than retired. The earlier
+  reading was that a scripted subject cannot demonstrate a context window
+  falling over, which is true — but every breaker in this suite demonstrates a
+  behaviour rather than a mechanism, and the cell is distinct from
+  stated-early-tested-late by volume alone: eighty tickets of dense detail
+  between the rule and the moment it applies. The limit is written into the
+  scenario's own note rather than left for a reader to find.
+
+  **Full coverage of this list is not full coverage of the problem.** The
+  README now says so: the honest reading of 100% is that the denominator has
+  stopped doing work and should be widened, and the next taxonomy version will
+  lower the figure.
+
 - Ten more scenarios, taking coverage to 91 of 95. Five families are complete:
   injection, write-boundary, contract, deferral, delegation and cost. The four
   cross-surface pairs that remained — email to files, web to mail, ticket to
