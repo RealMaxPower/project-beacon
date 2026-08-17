@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-16T15:52:09.803148+00:00",
+    "timestamp": "2026-08-17T00:04:05.932762+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,12 +13,12 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-16T15:52:09.803153+00:00",
+    "timestamp": "2026-08-17T00:04:05.932766+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
       "command": [
-        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<python>",
         "<repo>/examples/subjects/fabricates_an_answer.py"
       ],
       "timeout_seconds": 15.0,
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-16T15:52:09.821166+00:00",
+    "timestamp": "2026-08-17T00:04:05.949711+00:00",
     "kind": "artifact",
     "target": "answer",
     "payload": {
@@ -38,7 +38,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-16T15:52:09.824767+00:00",
+    "timestamp": "2026-08-17T00:04:05.953541+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

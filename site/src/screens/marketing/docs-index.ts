@@ -56,6 +56,8 @@ export const docDescriptions: Record<string, string> = {
     "The run lifecycle, and the boundary that keeps the core ignorant of any particular model provider or agent runtime.",
   "protocol-contracts.md":
     "What Beacon sends and expects over MCP, A2A and the JSONL bridge, message by message.",
+  "verifying-a-checkout.md":
+    "Checking this repository yourself, from a clone: the two commands that gate a change, everything CI would have caught, and four exercises that try to falsify what the project claims about itself.",
   "running-it-yourself.md":
     "Running against a real model or a GUI host. Where the API key goes — your environment, never the command line — and how to wire the MCP façade into a desktop client.",
   "beacon-test-run.md":

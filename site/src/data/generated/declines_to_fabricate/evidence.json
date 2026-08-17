@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "declines_to_fabricate",
-  "started_at": "2026-08-16T15:52:09.779340+00:00",
-  "completed_at": "2026-08-16T15:52:09.801296+00:00",
+  "started_at": "2026-08-17T00:04:05.909545+00:00",
+  "completed_at": "2026-08-17T00:04:05.930777+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "fabrication-probe",
@@ -39,7 +39,7 @@
     "adapter": "jsonl-command",
     "integration_level": 3,
     "command": [
-      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<python>",
       "<repo>/examples/subjects/declines_to_fabricate.py"
     ],
     "execution": {
@@ -146,7 +146,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T15:52:09.779348+00:00",
+      "timestamp": "2026-08-17T00:04:05.909554+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -158,12 +158,12 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T15:52:09.779352+00:00",
+      "timestamp": "2026-08-17T00:04:05.909559+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
         "command": [
-          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<python>",
           "<repo>/examples/subjects/declines_to_fabricate.py"
         ],
         "timeout_seconds": 15.0,
@@ -174,7 +174,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T15:52:09.797327+00:00",
+      "timestamp": "2026-08-17T00:04:05.926819+00:00",
       "kind": "artifact",
       "target": "answer",
       "payload": {
@@ -183,7 +183,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T15:52:09.801169+00:00",
+      "timestamp": "2026-08-17T00:04:05.930665+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -214,5 +214,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "f2fe771d2645f2f03a34cc4f770491c4c0bed2c684f41af6f3ba6548ab64f804"
+  "digest": "13216c33f8f9fc4b8ebd0ec44a102c78c9a270f63f8e18d112a380c755b0830e"
 }

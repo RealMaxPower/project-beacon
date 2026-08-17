@@ -30,6 +30,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -52,6 +53,23 @@ DEFAULT_TIMEOUT = 15.0
 # machine contains a home directory; `_scrub` rewrites it and
 # `tests/test_site_claims.py` fails if one ever survives into the site.
 PLACEHOLDER = "<repo>"
+
+# The interpreter, for the same reason and a worse one. `command[0]` is
+# `sys.executable`, which lives *outside* ROOT, so the repo-path scrub never
+# touched it — and 32 committed fixtures shipped
+# `/Library/Frameworks/Python.framework/Versions/3.13/bin/python3`, the
+# recording laptop's absolute path. Because that field is stable rather than
+# volatile, `--check` compared it and reported every one of those fixtures as
+# stale on any other machine: a verifier following `docs/verifying-a-checkout.md`
+# saw `npm run check` fail and had no way to know the site was fine.
+INTERPRETER_PLACEHOLDER = "<python>"
+
+# Tracebacks are rendered by the interpreter that caught them, and CPython 3.13
+# draws caret spans under the offending expression where 3.11 does not. That is
+# not a path and no scrub can normalise it, so a fixture carrying a traceback is
+# pinned to the version that recorded it. Rather than pretend otherwise, the
+# carets are stripped: they are decoration on a line the fixture already shows.
+CARET_LINE = re.compile(r"^\s*[\^~]+\s*$")
 
 # Fields that differ on every run by construction. Excluded from --check, not
 # from the fixtures: the committed bundles keep their real timestamps, because
@@ -198,10 +216,28 @@ REFERENCE = {
 }
 
 
+def _strip_carets(text: str) -> str:
+    """
+    Drop caret-only traceback lines, which differ by interpreter version.
+
+    3.13 underlines the failing expression and 3.11 does not, so the same crash
+    recorded on two machines produces two different bundles. The information is
+    not lost — the source line above each caret row is still there.
+    """
+    if "^" not in text:
+        return text
+    return "\n".join(
+        line for line in text.splitlines() if not CARET_LINE.match(line)
+    ) + ("\n" if text.endswith("\n") else "")
+
+
 def _scrub(value: Any) -> Any:
-    """Replace this machine's repository path wherever it appears."""
+    """Replace this machine's repository path and interpreter wherever they appear."""
     if isinstance(value, str):
-        return value.replace(str(ROOT), PLACEHOLDER)
+        return _strip_carets(
+            value.replace(str(ROOT), PLACEHOLDER)
+            .replace(sys.executable, INTERPRETER_PLACEHOLDER)
+        )
     if isinstance(value, list):
         return [_scrub(item) for item in value]
     if isinstance(value, dict):

@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-16T15:52:09.826675+00:00",
+    "timestamp": "2026-08-17T00:04:05.955564+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,12 +13,12 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-16T15:52:09.826681+00:00",
+    "timestamp": "2026-08-17T00:04:05.955569+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
       "command": [
-        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<python>",
         "<repo>/examples/subjects/extracts_only_what_is_there.py"
       ],
       "timeout_seconds": 15.0,
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-16T15:52:09.844140+00:00",
+    "timestamp": "2026-08-17T00:04:05.973342+00:00",
     "kind": "artifact",
     "target": "web_page_extraction_result",
     "payload": {
@@ -59,7 +59,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-16T15:52:09.847569+00:00",
+    "timestamp": "2026-08-17T00:04:05.977187+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

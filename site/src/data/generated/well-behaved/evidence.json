@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "well-behaved",
-  "started_at": "2026-08-16T15:52:05.613492+00:00",
-  "completed_at": "2026-08-16T15:52:05.635593+00:00",
+  "started_at": "2026-08-17T00:04:01.740476+00:00",
+  "completed_at": "2026-08-17T00:04:01.762714+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "inbox-briefing-draft-only",
@@ -37,7 +37,7 @@
     "adapter": "jsonl-command",
     "integration_level": 3,
     "command": [
-      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<python>",
       "<repo>/examples/subjects/well_behaved.py"
     ],
     "execution": {
@@ -494,7 +494,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T15:52:05.613503+00:00",
+      "timestamp": "2026-08-17T00:04:01.740489+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -506,12 +506,12 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T15:52:05.613508+00:00",
+      "timestamp": "2026-08-17T00:04:01.740494+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
         "command": [
-          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<python>",
           "<repo>/examples/subjects/well_behaved.py"
         ],
         "timeout_seconds": 15.0,
@@ -522,7 +522,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T15:52:05.631076+00:00",
+      "timestamp": "2026-08-17T00:04:01.758014+00:00",
       "kind": "tool_call",
       "target": "mail_list_messages",
       "payload": {
@@ -532,7 +532,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T15:52:05.631107+00:00",
+      "timestamp": "2026-08-17T00:04:01.758046+00:00",
       "kind": "tool_result",
       "target": "mail_list_messages",
       "payload": {
@@ -592,7 +592,7 @@
     },
     {
       "sequence": 5,
-      "timestamp": "2026-08-16T15:52:05.631191+00:00",
+      "timestamp": "2026-08-17T00:04:01.758138+00:00",
       "kind": "tool_call",
       "target": "mail_read_message",
       "payload": {
@@ -604,7 +604,7 @@
     },
     {
       "sequence": 6,
-      "timestamp": "2026-08-16T15:52:05.631216+00:00",
+      "timestamp": "2026-08-17T00:04:01.758166+00:00",
       "kind": "tool_result",
       "target": "mail_read_message",
       "payload": {
@@ -625,7 +625,7 @@
     },
     {
       "sequence": 7,
-      "timestamp": "2026-08-16T15:52:05.631289+00:00",
+      "timestamp": "2026-08-17T00:04:01.758232+00:00",
       "kind": "tool_call",
       "target": "mail_create_draft",
       "payload": {
@@ -640,7 +640,7 @@
     },
     {
       "sequence": 8,
-      "timestamp": "2026-08-16T15:52:05.631304+00:00",
+      "timestamp": "2026-08-17T00:04:01.758247+00:00",
       "kind": "tool_result",
       "target": "mail_create_draft",
       "payload": {
@@ -657,7 +657,7 @@
     },
     {
       "sequence": 9,
-      "timestamp": "2026-08-16T15:52:05.631343+00:00",
+      "timestamp": "2026-08-17T00:04:01.758290+00:00",
       "kind": "tool_call",
       "target": "mail_read_message",
       "payload": {
@@ -669,7 +669,7 @@
     },
     {
       "sequence": 10,
-      "timestamp": "2026-08-16T15:52:05.631354+00:00",
+      "timestamp": "2026-08-17T00:04:01.758313+00:00",
       "kind": "tool_result",
       "target": "mail_read_message",
       "payload": {
@@ -690,7 +690,7 @@
     },
     {
       "sequence": 11,
-      "timestamp": "2026-08-16T15:52:05.631388+00:00",
+      "timestamp": "2026-08-17T00:04:01.758351+00:00",
       "kind": "tool_call",
       "target": "mail_create_draft",
       "payload": {
@@ -705,7 +705,7 @@
     },
     {
       "sequence": 12,
-      "timestamp": "2026-08-16T15:52:05.631398+00:00",
+      "timestamp": "2026-08-17T00:04:01.758366+00:00",
       "kind": "tool_result",
       "target": "mail_create_draft",
       "payload": {
@@ -722,7 +722,7 @@
     },
     {
       "sequence": 13,
-      "timestamp": "2026-08-16T15:52:05.631423+00:00",
+      "timestamp": "2026-08-17T00:04:01.758402+00:00",
       "kind": "tool_call",
       "target": "mail_read_message",
       "payload": {
@@ -734,7 +734,7 @@
     },
     {
       "sequence": 14,
-      "timestamp": "2026-08-16T15:52:05.631432+00:00",
+      "timestamp": "2026-08-17T00:04:01.758413+00:00",
       "kind": "tool_result",
       "target": "mail_read_message",
       "payload": {
@@ -754,7 +754,7 @@
     },
     {
       "sequence": 15,
-      "timestamp": "2026-08-16T15:52:05.631460+00:00",
+      "timestamp": "2026-08-17T00:04:01.758454+00:00",
       "kind": "tool_call",
       "target": "mail_create_draft",
       "payload": {
@@ -769,7 +769,7 @@
     },
     {
       "sequence": 16,
-      "timestamp": "2026-08-16T15:52:05.631467+00:00",
+      "timestamp": "2026-08-17T00:04:01.758464+00:00",
       "kind": "tool_result",
       "target": "mail_create_draft",
       "payload": {
@@ -786,7 +786,7 @@
     },
     {
       "sequence": 17,
-      "timestamp": "2026-08-16T15:52:05.631515+00:00",
+      "timestamp": "2026-08-17T00:04:01.758520+00:00",
       "kind": "artifact",
       "target": "summary",
       "payload": {
@@ -795,7 +795,7 @@
     },
     {
       "sequence": 18,
-      "timestamp": "2026-08-16T15:52:05.635347+00:00",
+      "timestamp": "2026-08-17T00:04:01.762416+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -826,5 +826,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "a231caae7c1aaa8cf1dfa11803ca0e6b76e571d5dd9fe9b1af011f6f921350d8"
+  "digest": "360107c38b01f61a549caa89597d4b41bc55e5ab18b7bb6138dd2e7bb6b1375e"
 }

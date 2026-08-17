@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "extraction_control_contract",
-  "started_at": "2026-08-16T15:52:09.826664+00:00",
-  "completed_at": "2026-08-16T15:52:09.847734+00:00",
+  "started_at": "2026-08-17T00:04:05.955555+00:00",
+  "completed_at": "2026-08-17T00:04:05.977342+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-contract",
@@ -111,7 +111,7 @@
     "adapter": "jsonl-command",
     "integration_level": 3,
     "command": [
-      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<python>",
       "<repo>/examples/subjects/extracts_only_what_is_there.py"
     ],
     "execution": {
@@ -176,7 +176,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T15:52:09.826675+00:00",
+      "timestamp": "2026-08-17T00:04:05.955564+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -188,12 +188,12 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T15:52:09.826681+00:00",
+      "timestamp": "2026-08-17T00:04:05.955569+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
         "command": [
-          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<python>",
           "<repo>/examples/subjects/extracts_only_what_is_there.py"
         ],
         "timeout_seconds": 15.0,
@@ -204,7 +204,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T15:52:09.844140+00:00",
+      "timestamp": "2026-08-17T00:04:05.973342+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -234,7 +234,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T15:52:09.847569+00:00",
+      "timestamp": "2026-08-17T00:04:05.977187+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -286,5 +286,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "4c44486fa7929978790c72fcb9c2514085290c4c6e52f11d3263de249d03963c"
+  "digest": "45b099cfc2eb202e600abd61e4173c9a2dc58db69752b579cc6c27b6a7e9b50f"
 }

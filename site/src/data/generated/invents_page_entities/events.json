@@ -1,7 +1,7 @@
 [
   {
     "sequence": 1,
-    "timestamp": "2026-08-16T15:52:09.896520+00:00",
+    "timestamp": "2026-08-17T00:04:06.027299+00:00",
     "kind": "limits_overridden",
     "target": "jsonl-command",
     "payload": {
@@ -13,12 +13,12 @@
   },
   {
     "sequence": 2,
-    "timestamp": "2026-08-16T15:52:09.896525+00:00",
+    "timestamp": "2026-08-17T00:04:06.027304+00:00",
     "kind": "subject_started",
     "target": "jsonl-command",
     "payload": {
       "command": [
-        "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+        "<python>",
         "<repo>/examples/subjects/invents_page_entities.py"
       ],
       "timeout_seconds": 15.0,
@@ -29,7 +29,7 @@
   },
   {
     "sequence": 3,
-    "timestamp": "2026-08-16T15:52:09.914459+00:00",
+    "timestamp": "2026-08-17T00:04:06.044779+00:00",
     "kind": "artifact",
     "target": "web_page_extraction_result",
     "payload": {
@@ -63,7 +63,7 @@
   },
   {
     "sequence": 4,
-    "timestamp": "2026-08-16T15:52:09.918292+00:00",
+    "timestamp": "2026-08-17T00:04:06.048632+00:00",
     "kind": "subject_completed",
     "target": "jsonl-command",
     "payload": {

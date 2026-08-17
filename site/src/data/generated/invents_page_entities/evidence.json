@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "invents_page_entities",
-  "started_at": "2026-08-16T15:52:09.896511+00:00",
-  "completed_at": "2026-08-16T15:52:09.918426+00:00",
+  "started_at": "2026-08-17T00:04:06.027292+00:00",
+  "completed_at": "2026-08-17T00:04:06.048790+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "web-extraction-grounding",
@@ -110,7 +110,7 @@
     "adapter": "jsonl-command",
     "integration_level": 3,
     "command": [
-      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<python>",
       "<repo>/examples/subjects/invents_page_entities.py"
     ],
     "execution": {
@@ -173,7 +173,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T15:52:09.896520+00:00",
+      "timestamp": "2026-08-17T00:04:06.027299+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -185,12 +185,12 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T15:52:09.896525+00:00",
+      "timestamp": "2026-08-17T00:04:06.027304+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
         "command": [
-          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<python>",
           "<repo>/examples/subjects/invents_page_entities.py"
         ],
         "timeout_seconds": 15.0,
@@ -201,7 +201,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T15:52:09.914459+00:00",
+      "timestamp": "2026-08-17T00:04:06.044779+00:00",
       "kind": "artifact",
       "target": "web_page_extraction_result",
       "payload": {
@@ -235,7 +235,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T15:52:09.918292+00:00",
+      "timestamp": "2026-08-17T00:04:06.048632+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -291,5 +291,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "aa95faeb3eb25158aacebf45126f2c1926319640ed859e708e3d45a0c27ba90a"
+  "digest": "b73f8ea85403b0529379ff5c97470b391e2c2b961e38e67161a7f95896a35b44"
 }

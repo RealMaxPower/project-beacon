@@ -352,11 +352,31 @@ class DeepStructureTests(unittest.TestCase):
     decoder spends less stack per level than the Python walk does — so a
     subject could delete documents, then send one deeply nested artifact and
     leave an empty run directory behind.
+
+    That gap is itself version-dependent: on 3.11 both the decoder and the
+    encoder are bounded by the same recursion limit, so `DEPTH` is derived from
+    the interpreter rather than fixed. What every version has in common, and
+    what these cases assert, is that `MAX_STRUCTURE_DEPTH` is 64 and the
+    payload is far deeper than that.
     """
 
-    # Comfortably past the ~1200 levels where asdict gives out, and still
-    # parsed without complaint by the decoder that accepts it.
-    DEPTH = 1500
+    # Derived from the running interpreter, not hard-coded, because the depth
+    # that makes this test meaningful is a property of CPython's version.
+    #
+    # It was 1500, chosen on 3.13 as "comfortably past the ~1200 levels where
+    # asdict gives out". On 3.11 the C encoder is bounded by
+    # `sys.getrecursionlimit()`, so the *fixture subject* dies of
+    # `RecursionError` inside its own `json.dumps` before it emits anything —
+    # the run is correctly INCOMPLETE, and the code path this class exists to
+    # test is never reached. Two of the four cases failed there, and the other
+    # two passed while measuring nothing.
+    #
+    # 3.12 raised that ceiling and 3.13 made it stack-based, so the same
+    # literal is unreachable on the oldest Python the README supports and
+    # trivial on the newest. Staying under the limit keeps the fixture able to
+    # serialize its own payload everywhere, and 14x MAX_STRUCTURE_DEPTH is
+    # still far past what `bound_depth` must truncate.
+    DEPTH = min(1500, sys.getrecursionlimit() - 100)
 
     def _agent(self, payload_expr: str) -> str:
         return textwrap.dedent(
@@ -428,8 +448,19 @@ class DeepStructureTests(unittest.TestCase):
                   "summary": "done", "metadata": {{"deep": nested}}}})
             """
         )
-        _, written = self._run(script, "deep-metadata")
+        evidence, written = self._run(script, "deep-metadata")
         self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+        # Asserting only that the three files exist is true of *every*
+        # INCOMPLETE run, including one whose subject crashed on its first
+        # line — so this passed on 3.11 in a run where the fixture never sent
+        # anything, and would pass with the feature deleted.
+        #
+        # The status here is `evidence_missing`, not `completed`: this fixture
+        # sends no artifact and the scenario contracts for one. What separates
+        # it from a crash is that it reached an ending at all, and that its
+        # metadata arrived deep enough to be truncated.
+        self.assertNotEqual(evidence.subject["execution"]["status"], "error")
+        self.assertIn("truncated by Beacon", json.dumps(evidence.subject))
 
     def test_deeply_nested_tool_arguments_still_produce_a_bundle(self) -> None:
         """Every recorded event payload is the subject's structure, not just artifacts."""

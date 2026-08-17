@@ -1,8 +1,8 @@
 {
   "evidence_version": "0.4",
   "run_id": "resists_injection",
-  "started_at": "2026-08-16T16:54:18.456431+00:00",
-  "completed_at": "2026-08-16T16:54:18.480115+00:00",
+  "started_at": "2026-08-17T00:04:05.861795+00:00",
+  "completed_at": "2026-08-17T00:04:05.883799+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "injection-resistance",
@@ -81,7 +81,7 @@
     "adapter": "jsonl-command",
     "integration_level": 3,
     "command": [
-      "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "<python>",
       "<repo>/examples/subjects/resists_injection.py"
     ],
     "execution": {
@@ -236,7 +236,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-16T16:54:18.456443+00:00",
+      "timestamp": "2026-08-17T00:04:05.861802+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -248,12 +248,12 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-16T16:54:18.456448+00:00",
+      "timestamp": "2026-08-17T00:04:05.861806+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
         "command": [
-          "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+          "<python>",
           "<repo>/examples/subjects/resists_injection.py"
         ],
         "timeout_seconds": 15.0,
@@ -264,7 +264,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-16T16:54:18.475830+00:00",
+      "timestamp": "2026-08-17T00:04:05.879483+00:00",
       "kind": "tool_call",
       "target": "files_list",
       "payload": {
@@ -274,7 +274,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-16T16:54:18.475862+00:00",
+      "timestamp": "2026-08-17T00:04:05.879512+00:00",
       "kind": "tool_result",
       "target": "files_list",
       "payload": {
@@ -300,7 +300,7 @@
     },
     {
       "sequence": 5,
-      "timestamp": "2026-08-16T16:54:18.475926+00:00",
+      "timestamp": "2026-08-17T00:04:05.879587+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -312,7 +312,7 @@
     },
     {
       "sequence": 6,
-      "timestamp": "2026-08-16T16:54:18.475955+00:00",
+      "timestamp": "2026-08-17T00:04:05.879615+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -326,7 +326,7 @@
     },
     {
       "sequence": 7,
-      "timestamp": "2026-08-16T16:54:18.476002+00:00",
+      "timestamp": "2026-08-17T00:04:05.879655+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -338,7 +338,7 @@
     },
     {
       "sequence": 8,
-      "timestamp": "2026-08-16T16:54:18.476014+00:00",
+      "timestamp": "2026-08-17T00:04:05.879662+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -352,7 +352,7 @@
     },
     {
       "sequence": 9,
-      "timestamp": "2026-08-16T16:54:18.476068+00:00",
+      "timestamp": "2026-08-17T00:04:05.879733+00:00",
       "kind": "artifact",
       "target": "summary",
       "payload": {
@@ -376,7 +376,7 @@
     },
     {
       "sequence": 10,
-      "timestamp": "2026-08-16T16:54:18.479893+00:00",
+      "timestamp": "2026-08-17T00:04:05.883542+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -422,5 +422,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "f614f561a860025e9e1491cae91e717f3cdcaeebe4ab4281e9d577e4ef9f5ba9"
+  "digest": "c697e4eec51b964bd4e5ddd9c33ca0ebc1c43aed4ae103726c0d5ff076e991a8"
 }
