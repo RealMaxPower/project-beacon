@@ -27,6 +27,23 @@ Three things must not happen while this repository is private.
 If you break something while working through §5, `git checkout -- .` puts it
 back. Nothing in this plan asks you to keep an edit.
 
+### Two things that will look like damage and are not
+
+**A clone you do not own.** If the checkout belongs to another user, git
+refuses it (`detected dubious ownership`) and the git-backed tests fail with a
+message about untracked files rather than about ownership. Settle it first:
+
+```bash
+git config --global --add safe.directory "$(pwd)"
+```
+
+**§1 used to leave the tree dirty.** `tests/test_site_claims.py` regenerates the
+site fixtures against the real working tree, so running the suite rewrote
+committed files. That was a real defect — the fixtures were pinned to the
+recording machine's interpreter path — and it is fixed: regeneration is now
+byte-identical on any machine. If `git status` is dirty after §1, that is worth
+reporting rather than shrugging at.
+
 ### What you need
 
 Python 3.11 or newer, and nothing else for §1–§4. Node 20+ for §6. That is not
@@ -59,8 +76,9 @@ OK
 415/415 verdicts correct.
 ```
 
-Together they take about four minutes. The second one prints a line per
-subject; the last line is the one that matters.
+Together they take about two and a half minutes — roughly 2m05 for the suite
+and 28s for the subjects. The second prints a line per subject; the last line
+is the one that matters.
 
 **It is a bug if** the first command reports a `ResourceWarning`. It is run
 with `-W error::ResourceWarning` on purpose — a leaked subprocess or file
@@ -102,6 +120,11 @@ python3 -m coverage report --fail-under=80
 Expect `PASS` from each run, `Determinism: STABLE across 5 runs`, and a
 coverage total of **88%** against a floor of 80.
 
+**Watch the coverage pair.** `coverage run … -m unittest` carries the suite's
+own exit status, and `coverage report --fail-under=80` does not: a red suite
+still prints 88% and exits 0 from the second command. Read the first command's
+result, or chain them with `&&`, or you can pass §2 with a failing §1.
+
 **It is a bug if** `--repeat 5` reports `DIVERGENT`. Every subject in this
 repository is deterministic; divergence means state leaked between runs, which
 would put every verdict in the project in doubt.
@@ -118,6 +141,10 @@ python3 -m unittest tests.test_schema_conformance -v
 
 The loader enforces the scenario contract in code whether or not `jsonschema`
 is installed. This checks the published JSON Schemas agree with it.
+
+Note that this installs the project into your *current* environment. §3 below
+builds its own venv and does not use it, so the order is harmless — but if you
+care about a pristine shell, do §3 first.
 
 ---
 
@@ -157,7 +184,7 @@ python3 -m beacon taxonomy
 ```
 
 ```
-Failure taxonomy 1.2.0
+Failure taxonomy 1.2.0 (<path>/taxonomy/failure-modes.json)
   131 of 131 cells this build can grade (100%)
   131 of 131 cells overall (100%)
   24 candidates considered and rejected
@@ -251,8 +278,9 @@ general property; this is the one-line version.
 ### 5.4 A bundle that changed after the run says so
 
 ```bash
+rm -rf /tmp/vfy          # or B below becomes two paths on a second run
 python3 -m beacon run inbox-briefing --output /tmp/vfy
-B=$(ls -d /tmp/vfy/*/)evidence.json
+B=$(ls -dt /tmp/vfy/*/ | head -1)evidence.json
 python3 -m beacon verify "$B"; echo "exit $?"        # exit 0
 
 python3 -c "
@@ -289,6 +317,19 @@ npm run headers      # the CSP as served, not as written
 npm run visual       # overlap, overflow, tap targets, 12 routes × 5 widths
 node tools/flow.mjs  # the playground actually reaches a verdict
 ```
+
+Expect `The policy holds on every page.`, `No layout problems found across 12
+pages × 5 widths.`, and `The playground reaches a verdict.`
+
+`flow.mjs` will report `firefox is not installed; skipping` and the same for
+webkit, because the install line above asks only for chromium. That is
+expected. Install all three if you want the full sweep.
+
+**It is a bug if** `visual` reports anything at 320px. It reported 16px of the
+header's *Source* button hidden with no scroll cue on Linux, where Archivo's
+fallback metrics run wider than on macOS — the same layout passed on one
+machine's fonts and failed on another's. The wordmark is hidden below 360px
+now, which buys 107px. A report there means the margin has been eaten again.
 
 **It is a bug if** `npm run headers` passes while the pass-rate bars are
 invisible in `npm run dev`. The Content-Security-Policy is the one thing that
@@ -358,20 +399,29 @@ Known and already recorded, so not worth reporting:
   are the ones that were true then.
 - `beaconlab.dev` does not resolve to this site yet.
 
+Five bugs an earlier pass of this document found have been fixed, and are
+listed because finding them again would waste your time: fixtures pinned to the
+recording machine's interpreter path (which broke `npm run check` for everyone
+else), a doc shipped without its site description, `DeepStructureTests` using a
+depth unreachable on Python 3.11, two of those tests asserting nothing that
+could fail, and the 320px header. If any of them reappears, that is a
+regression and worth saying so.
+
 ---
 
 ## Time budget
 
 | Section | Roughly |
 |---|---|
-| §1 the two gate commands | 4 min |
+| §1 the two gate commands | 2m30 |
 | §2 the CI mirror | 6 min |
 | §3 packaging | 3 min |
 | §4 the figures | 2 min |
 | §5 falsification | 15 min |
-| §6 site | 10 min, plus browser download |
+| §6 site | 20s for `check`; minutes more if Playwright has to download |
 | §7 a model | 5 min, or skip |
 
-Under an hour for all of it. §1 and §5 are the two worth doing if you only have
+Well under an hour for all of it — the commands are fast, and anything that
+takes real time is a failure you are investigating. §1 and §5 are the two worth doing if you only have
 twenty minutes: one tells you the project passes its own checks, and the other
 tells you whether those checks mean anything.

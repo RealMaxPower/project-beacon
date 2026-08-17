@@ -235,7 +235,18 @@ export function Header({ route }: { route: BResolved }) {
             className="hit-target flex flex-none items-center gap-2.5 pr-2 text-b-text"
           >
             <Mark />
-            <span className="font-b-display text-[15.5px] font-semibold tracking-[-0.02em]">
+            {/*
+              Hidden below 360px, where the wordmark is the difference between
+              a header that fits and one that clips its own Source button.
+              Measured on macOS the row ends 20px short of a 320px viewport —
+              and a verifier on Linux, where Archivo's fallback metrics run
+              wider, saw `visual` report 16px of Source hidden with no scroll
+              cue on every route. A 20px margin is not a margin; it is the
+              same layout passing on one machine's fonts. The mark still
+              identifies the site, and 360px is above every viewport in
+              `tools/visual.mjs` except the 320 that found this.
+            */}
+            <span className="font-b-display text-[15.5px] font-semibold tracking-[-0.02em] max-[359px]:hidden">
               Project Beacon
             </span>
           </a>
