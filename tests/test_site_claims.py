@@ -1547,5 +1547,39 @@ class PrivacyPolicyTests(unittest.TestCase):
                     )
 
 
+class BuiltSiteGuardTests(unittest.TestCase):
+    """
+    A test that reads the built site must say so when it is not there.
+
+    `site/dist/` is gitignored, so it does not exist in a clone. One test read
+    `dist/index.html` with no guard while its nine siblings skipped cleanly,
+    and `docs/verifying-a-checkout.md` runs the suite before it builds the
+    site — so a fresh clone errored for every verifier following the document
+    in order, and the failure was invisible to anyone whose checkout had ever
+    been built, which always includes whoever wrote the test.
+
+    A proxy rather than a parse: any test module that reaches for `dist` has to
+    carry the skip reason somewhere. That is cheap and it would have caught the
+    original, which is the bar a guard has to clear.
+    """
+
+    REASON = "has not been built"
+
+    def test_every_module_that_reads_the_built_site_can_skip_without_it(self) -> None:
+        for path in sorted((ROOT / "tests").glob("test_*.py")):
+            source = path.read_text(encoding="utf-8")
+            reaches = '/ "dist"' in source or "DIST = " in source
+            if not reaches or path.name == "test_site_claims.py":
+                continue
+            # assertTrue rather than assertIn: the latter prints the haystack,
+            # and the haystack here is an entire test module.
+            with self.subTest(module=path.name):
+                self.assertTrue(
+                    self.REASON in source,
+                    f"{path.name} reads site/dist but never skips when it is "
+                    f"absent; a fresh clone will error instead of skipping",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -369,6 +369,13 @@ Any verdict is a valid result here, including INCOMPLETE — a small local model
 failing to hold an output contract is a finding, not a broken harness. What you
 are checking is that the wiring works end to end.
 
+That wiring has been exercised against a stub endpoint on the author's machine:
+the command shape above produced an artifact under the contracted name, carried
+the reported token counts into the bundle, and reached a real verdict. **What
+nobody has verified from outside is this section with an actual model behind
+it** — every other section of this document has been walked on a second machine
+and this one has not. If you run it, that gap is worth closing.
+
 The paid path needs a key in your environment, never on the command line:
 
 ```bash
@@ -410,13 +417,29 @@ Known and already recorded, so not worth reporting:
   are the ones that were true then.
 - `beaconlab.dev` does not resolve to this site yet.
 
-Five bugs an earlier pass of this document found have been fixed, and are
-listed because finding them again would waste your time: fixtures pinned to the
-recording machine's interpreter path (which broke `npm run check` for everyone
-else), a doc shipped without its site description, `DeepStructureTests` using a
-depth unreachable on Python 3.11, two of those tests asserting nothing that
-could fail, and the 320px header. If any of them reappears, that is a
-regression and worth saying so.
+Seven bugs that earlier passes of this document found have been fixed, and are
+listed because finding them again would waste your time. If any reappears, it
+is a regression rather than a discovery, and worth saying so.
+
+1. Fixtures pinned to the recording machine — its interpreter path in
+   `command[0]`, and a traceback rendered differently by each CPython version.
+   Broke `npm run check` for everyone who was not the author.
+2. A doc shipped without its site description, so the docs page would have
+   rendered a fallback blurb.
+3. `DeepStructureTests` at a depth unreachable on Python 3.11, where the
+   fixture died before reaching the code under test.
+4. Two of those tests asserting only that files exist — true of every
+   INCOMPLETE run, including one that crashed on its first line.
+5. The 320px header, which clipped its own *Source* button wherever the font
+   rendered a few pixels wider.
+6. A test reading `site/dist/index.html` with no skip guard. This is the most
+   likely of the seven to recur: `site/dist/` is gitignored, §1 runs before §6
+   builds it, and the error is invisible to anyone whose checkout has ever been
+   built — which always includes whoever wrote the test.
+   `tests/test_site_claims.py` now fails if a module reads the built site
+   without being able to skip when it is absent.
+7. A 29 MB tarball committed to history by a `git add -A` that swept up a
+   sandbox working folder. `_to_delete/` is gitignored for that reason.
 
 ---
 
