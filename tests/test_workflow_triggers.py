@@ -14,7 +14,11 @@ WORKFLOWS = sorted(WORKFLOWS_DIR.glob("*.yml"))
 # failure this guards against is a new workflow arriving with a trigger nobody
 # thought about.
 ALLOWED_TRIGGERS = {
-    "ci.yml": {"workflow_dispatch"},
+    # Restored on publication, which is when Actions became free and the
+    # 104-billed-minute matrix stopped mattering. The site job is the one that
+    # has to run unattended: `vercel.json` deploys to production on push, and
+    # a pull request can edit it.
+    "ci.yml": {"workflow_dispatch", "push", "pull_request"},
     "release.yml": {"workflow_dispatch", "push"},
     "conformance.yml": {"workflow_dispatch"},
 }
@@ -215,10 +219,9 @@ class MatrixCoverageTests(unittest.TestCase):
 
 class LocalEquivalentTests(unittest.TestCase):
     """
-    CI is started by hand while this repository is private, so the local
-    commands are not a first pass — they are the only pass until a maintainer
-    dispatches the matrix. That is exactly why they have to be written down:
-    they are the fast answer while you are working, and the two things the
+    CI runs on a pull request again, which makes the local commands a first
+    pass rather than the only pass. They still have to be written down: they
+    are the fast answer while you are working, and the two things the
     pull-request template asks you to tick.
     """
 

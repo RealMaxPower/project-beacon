@@ -285,10 +285,11 @@ failure it describes. `tests/test_documented_claims.py` holds the figure to
 within a third of the real count and never above it, which is a band rather
 than a promise: it stops the sentence being wildly wrong, not slightly stale.
 
-CI covers Linux, macOS and Windows on Python 3.11–3.13. It is started by hand
-while the repository is private, because Actions minutes are billed there and
-macOS bills at 10x; the push and pull-request triggers return on publication.
-The two commands above are the local equivalent and take about a minute.
+CI covers Linux, macOS and Windows on Python 3.11–3.13, and runs on every push
+to `main` and every pull request. It was manual while the repository was
+private, because Actions minutes are billed there and macOS bills at 10x — free
+on a public repository, so that reason is gone. The two commands above are the
+local equivalent and are still the faster answer while you are working.
 
 The second command runs an adversarial suite: 415 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
