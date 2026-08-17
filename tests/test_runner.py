@@ -479,8 +479,17 @@ class DeepStructureTests(unittest.TestCase):
             send({{"type": "complete", "status": "completed", "summary": "done"}})
             """
         )
-        _, written = self._run(script, "deep-tool-args")
+        evidence, written = self._run(script, "deep-tool-args")
         self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+        # Same hollowness as the metadata case: three files existing is true of
+        # every INCOMPLETE run, including one whose subject crashed before
+        # sending anything. This test's docstring is about tool *arguments*, so
+        # the marker has to be inside a recorded `tool_call` — anywhere in the
+        # events would also be satisfied by an unrelated truncation.
+        self.assertNotEqual(evidence.subject["execution"]["status"], "error")
+        calls = [e for e in evidence.events if e.get("kind") == "tool_call"]
+        self.assertTrue(calls, "no tool_call recorded, so nothing was measured")
+        self.assertIn("truncated by Beacon", json.dumps(calls))
 
 
 class ReportInjectionTests(unittest.TestCase):

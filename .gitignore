@@ -54,3 +54,7 @@ coverage.xml
 
 # The Vercel CLI, if anyone links the site locally.
 site/.vercel/
+
+# Scratch space for moving the repo into a sandbox. Never committed: a
+# 29 MB tarball of the repo reached history once through `git add -A`.
+_to_delete/

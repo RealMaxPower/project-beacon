@@ -39,10 +39,21 @@ git config --global --add safe.directory "$(pwd)"
 
 **§1 used to leave the tree dirty.** `tests/test_site_claims.py` regenerates the
 site fixtures against the real working tree, so running the suite rewrote
-committed files. That was a real defect — the fixtures were pinned to the
-recording machine's interpreter path — and it is fixed: regeneration is now
-byte-identical on any machine. If `git status` is dirty after §1, that is worth
-reporting rather than shrugging at.
+committed files. The fixtures were pinned to the machine that recorded them —
+the interpreter's absolute path in `command[0]`, and a traceback rendered
+differently by each CPython version. Both are gone, so a regeneration here
+should reproduce what was committed there.
+
+The property that matters is **cross-machine**: regenerate on your machine,
+compare against what the repository committed. Same-machine idempotence — run
+the builder twice, get the same bytes — held even while this was broken, so it
+is not evidence of anything. If `git status` is dirty after §1, that is the
+real check failing, and it is worth reporting.
+
+**§1 also depends on §6 having been run at least once.** Ten checks that read
+the built site skip on a fresh clone, and the suite reports `OK (skipped=10)`
+rather than naming them. That is expected; building the site in §6 and
+re-running §1 turns them on.
 
 ### What you need
 
@@ -69,7 +80,7 @@ Expect:
 
 ```
 Ran 868 tests in ~115s
-OK
+OK                        # or OK (skipped=10) before §6 has built the site
 ```
 
 ```

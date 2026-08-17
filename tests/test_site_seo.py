@@ -211,6 +211,15 @@ class HostRoutingTests(unittest.TestCase):
         scripts = json.loads((SITE / "package.json").read_text(encoding="utf-8"))["scripts"]
         self.assertIn("prerender", scripts["build"])
 
+    # The only test in this file that reads a *built* artifact, and it was the
+    # only one without the guard for it. `site/dist/` is gitignored, so on a
+    # fresh clone this errored while its siblings skipped cleanly — and
+    # `docs/verifying-a-checkout.md` runs the suite (§1) before it builds the
+    # site (§6), so every verifier following the document in order met it. It
+    # was invisible to anyone whose checkout had ever been built.
+    @unittest.skipUnless(
+        (SITE / "dist").is_dir(), "the site has not been built in this checkout"
+    )
     def test_every_resource_the_page_links_has_a_directive_that_allows_it(self) -> None:
         """
         `default-src 'none'` means every resource type has to be named.

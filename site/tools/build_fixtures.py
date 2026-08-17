@@ -64,12 +64,23 @@ PLACEHOLDER = "<repo>"
 # saw `npm run check` fail and had no way to know the site was fine.
 INTERPRETER_PLACEHOLDER = "<python>"
 
-# Tracebacks are rendered by the interpreter that caught them, and CPython 3.13
-# draws caret spans under the offending expression where 3.11 does not. That is
-# not a path and no scrub can normalise it, so a fixture carrying a traceback is
-# pinned to the version that recorded it. Rather than pretend otherwise, the
-# carets are stripped: they are decoration on a line the fixture already shows.
-CARET_LINE = re.compile(r"^\s*[\^~]+\s*$")
+# Tracebacks are rendered by the interpreter that caught them, and no scrub
+# reaches the difference. Stripping caret rows was the first attempt and was
+# necessary without being sufficient: 3.13 also renders the *whole* multi-line
+# statement — the argument lines and the closing paren — where 3.11 renders
+# only the first line of it. Any normalisation of a rendered traceback is a
+# guess about the next CPython release.
+#
+# So it is dropped. The `error` field beside it already carries the entire
+# informational content — `CommandAdapterError: subject exceeded 4s timeout` —
+# and nothing on the site reads the traceback. Version-stable by construction
+# rather than by prediction, and the bundle says it was edited.
+TRACEBACK_NOTICE = (
+    "A Python traceback recorded by the subject was removed before "
+    "publication: its rendering differs between CPython versions, which made "
+    "this fixture reproduce only on the machine that recorded it. The `error` "
+    "field carries the same message."
+)
 
 # Fields that differ on every run by construction. Excluded from --check, not
 # from the fixtures: the committed bundles keep their real timestamps, because
@@ -216,27 +227,33 @@ REFERENCE = {
 }
 
 
-def _strip_carets(text: str) -> str:
-    """
-    Drop caret-only traceback lines, which differ by interpreter version.
-
-    3.13 underlines the failing expression and 3.11 does not, so the same crash
-    recorded on two machines produces two different bundles. The information is
-    not lost — the source line above each caret row is still there.
-    """
-    if "^" not in text:
-        return text
-    return "\n".join(
-        line for line in text.splitlines() if not CARET_LINE.match(line)
-    ) + ("\n" if text.endswith("\n") else "")
+def _drop_tracebacks(value: Any) -> tuple[Any, bool]:
+    """Remove any `traceback` key, and say whether one was there."""
+    dropped = False
+    if isinstance(value, list):
+        out = []
+        for item in value:
+            cleaned, hit = _drop_tracebacks(item)
+            dropped = dropped or hit
+            out.append(cleaned)
+        return out, dropped
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            if key == "traceback":
+                dropped = True
+                continue
+            out[key], hit = _drop_tracebacks(item)
+            dropped = dropped or hit
+        return out, dropped
+    return value, dropped
 
 
 def _scrub(value: Any) -> Any:
     """Replace this machine's repository path and interpreter wherever they appear."""
     if isinstance(value, str):
-        return _strip_carets(
-            value.replace(str(ROOT), PLACEHOLDER)
-            .replace(sys.executable, INTERPRETER_PLACEHOLDER)
+        return value.replace(str(ROOT), PLACEHOLDER).replace(
+            sys.executable, INTERPRETER_PLACEHOLDER
         )
     if isinstance(value, list):
         return [_scrub(item) for item in value]
@@ -245,7 +262,7 @@ def _scrub(value: Any) -> Any:
     return value
 
 
-def _reseal(evidence: dict[str, Any]) -> dict[str, Any]:
+def _reseal(evidence: dict[str, Any], *, dropped_traceback: bool = False) -> dict[str, Any]:
     """
     Re-digest a bundle after the recording machine's path has been scrubbed.
 
@@ -269,6 +286,8 @@ def _reseal(evidence: dict[str, Any]) -> dict[str, Any]:
         f"byte-identical to the one the run wrote. Its digest was recomputed "
         f"over the published document."
     )
+    if dropped_traceback:
+        limitations.append(TRACEBACK_NOTICE)
     sealed["limitations"] = limitations
     sealed["digest"] = ""
     sealed["digest"] = canonical_digest(sealed)
@@ -349,9 +368,11 @@ def _record(spec: dict[str, str], into: Path) -> dict[str, Any]:
     run_dir = into / spec["key"]
     for name in ("evidence.json", "events.json"):
         path = run_dir / name
-        document = _scrub(json.loads(path.read_text(encoding="utf-8")))
+        document, dropped = _drop_tracebacks(
+            _scrub(json.loads(path.read_text(encoding="utf-8")))
+        )
         if name == "evidence.json":
-            document = _reseal(document)
+            document = _reseal(document, dropped_traceback=dropped)
         path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     report = run_dir / "report.md"
     report.write_text(_scrub(report.read_text(encoding="utf-8")), encoding="utf-8")
