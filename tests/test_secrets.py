@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -403,6 +405,77 @@ class ExampleEnvironmentFileTests(unittest.TestCase):
         for variable in sorted(named):
             with self.subTest(variable=variable):
                 self.assertIn(variable, sources)
+
+
+class RepositorySecretTests(unittest.TestCase):
+    """
+    Nothing credential-shaped is committed to this repository.
+
+    Everything else in this file checks that a secret handed to a *run* stays
+    out of the evidence it writes. That is the harness behaving. It says
+    nothing about the repository itself, and the repository is the thing about
+    to be made public — so a key pasted into a fixture, a token in an example,
+    or a private key committed by accident would have passed every test here.
+
+    Deliberate fixture credentials are exempt by the convention already in use
+    above: a value that ends `-DO-NOT-SHIP` is one this suite planted on
+    purpose. That keeps the allowance narrow and visible in the value itself,
+    rather than in a list of paths that grows quietly.
+    """
+
+    #: Shapes that are credentials wherever they appear. Deliberately not
+    #: "high entropy string", which flags every digest and base64 fixture in a
+    #: project built on both.
+    SHAPES = (
+        ("Anthropic key", r"sk-ant-[A-Za-z0-9_\-]{16,}"),
+        ("OpenAI key", r"sk-[A-Za-z0-9]{24,}"),
+        ("GitHub token", r"gh[pousr]_[A-Za-z0-9]{20,}"),
+        ("GitHub fine-grained token", r"github_pat_[A-Za-z0-9_]{20,}"),
+        ("AWS access key id", r"AKIA[0-9A-Z]{16}"),
+        ("Google API key", r"AIza[0-9A-Za-z_\-]{30,}"),
+        ("Slack token", r"xox[baprs]-[A-Za-z0-9\-]{10,}"),
+        ("private key", r"BEGIN (?:RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY"),
+        ("PEM certificate key", r"BEGIN ENCRYPTED PRIVATE KEY"),
+    )
+
+    #: Values this suite plants on purpose carry this marker.
+    DELIBERATE = "DO-NOT-SHIP"
+
+    def _tracked(self) -> list[Path]:
+        listing = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        )
+        return [ROOT / name for name in listing.stdout.split("\0") if name]
+
+    def test_no_tracked_file_carries_a_credential(self) -> None:
+        patterns = [(name, re.compile(shape)) for name, shape in self.SHAPES]
+        scanned = 0
+        for path in self._tracked():
+            # This file states every shape it looks for, so it matches itself.
+            if path.name == Path(__file__).name or not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue  # a font or an image cannot carry a pasted key
+            scanned += 1
+            for number, line in enumerate(text.splitlines(), start=1):
+                if self.DELIBERATE in line:
+                    continue
+                for name, pattern in patterns:
+                    if pattern.search(line):
+                        self.fail(
+                            f"{path.relative_to(ROOT)}:{number} looks like a "
+                            f"{name}. If it is a fixture, end the value "
+                            f"'-{self.DELIBERATE}'; if it is real, it must not "
+                            f"be committed, and rotating it comes before "
+                            f"removing it from history."
+                        )
+
+        # A scan that read nothing passes, and reports the same green as one
+        # that read everything.
+        self.assertGreater(scanned, 100, "the scan read almost nothing")
 
 
 if __name__ == "__main__":
