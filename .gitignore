@@ -58,3 +58,10 @@ site/.vercel/
 # Scratch space for moving the repo into a sandbox. Never committed: a
 # 29 MB tarball of the repo reached history once through `git add -A`.
 _to_delete/
+
+# Archives, wherever they land. The 29 MB blob that reached history was a
+# tarball in the repo root swept up by `git add -A`; ignoring the folder it
+# happened to sit in only covers the name it happened to use.
+*.tar.gz
+*.tgz
+*.zip

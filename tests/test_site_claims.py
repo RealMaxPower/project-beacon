@@ -1565,12 +1565,22 @@ class BuiltSiteGuardTests(unittest.TestCase):
 
     REASON = "has not been built"
 
+    #: Every shape a module can reach for the built site by. The first version
+    #: of this was the substring `/ "dist"`, which let quoting style decide
+    #: whether a module was inspected at all: `SITE / 'dist'` and
+    #: `SITE.joinpath("dist")` both walked past it. Nothing in this repository
+    #: normalises quotes — no formatter, no lint config, no pre-commit hook —
+    #: and single-quoted strings already appear under `tests/`, so that was a
+    #: live gap rather than a tidy one.
+    REACHES = re.compile(r"""["']dist["']|\bDIST\b""")
+
     def test_every_module_that_reads_the_built_site_can_skip_without_it(self) -> None:
+        inspected = 0
         for path in sorted((ROOT / "tests").glob("test_*.py")):
             source = path.read_text(encoding="utf-8")
-            reaches = '/ "dist"' in source or "DIST = " in source
-            if not reaches or path.name == "test_site_claims.py":
+            if not self.REACHES.search(source) or path.name == "test_site_claims.py":
                 continue
+            inspected += 1
             # assertTrue rather than assertIn: the latter prints the haystack,
             # and the haystack here is an entire test module.
             with self.subTest(module=path.name):
@@ -1579,6 +1589,14 @@ class BuiltSiteGuardTests(unittest.TestCase):
                     f"{path.name} reads site/dist but never skips when it is "
                     f"absent; a fresh clone will error instead of skipping",
                 )
+
+        # A guard that inspected nothing passes, and reports the same green as
+        # one that inspected everything. That is the shape the whole project is
+        # about — silence scored as a pass — so the no-op is made loud here
+        # rather than left to be discovered by whoever changes the pattern.
+        self.assertGreater(
+            inspected, 0, "this guard matched no modules, so it checked nothing"
+        )
 
 
 if __name__ == "__main__":
