@@ -65,3 +65,12 @@ _to_delete/
 *.tar.gz
 *.tgz
 *.zip
+
+# Review correspondence. Verification passes, retests and findings reports are
+# working notes between a maintainer and a reviewer: useful while the work is
+# happening, stale within a release, and not documentation anyone cloning this
+# needs. What they established lives in CHANGELOG.md, in the commit messages,
+# and in the guards those passes produced.
+*FINDINGS*.md
+retest-*.md
+validation-*.md
