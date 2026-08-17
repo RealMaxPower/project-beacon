@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -164,7 +165,29 @@ class GeneratedSourceCompilesTests(unittest.TestCase):
     contains the sequence, so this stays honest without a Windows runner.
     """
 
-    AWKWARD = (r"C:\Users", r"D:\new", r"E:\x123", r"F:\Nope", r"G:\Ugly")
+    #: Directory names that embed a Windows-shaped path.
+    #:
+    #: On POSIX these are legal directory *names*, which is what lets this
+    #: class reproduce a Windows bug without a Windows runner — the point of
+    #: the class, and stated in the docstring above.
+    #:
+    #: On Windows they are not names at all. `:` is forbidden in a filename
+    #: there, and `C:\Users` is an absolute path — so `root / name` discards
+    #: the temporary directory and `mkdir(parents=True)` tries to create
+    #: `C:\Users`, which exists. Every Windows leg errored on that, and it went
+    #: unseen for as long as the workflow was manual: a platform bug that only
+    #: one runner can catch is a bug nobody catches while that runner is the
+    #: one not running. This was the first thing CI found when the triggers
+    #: came back.
+    #:
+    #: Windows needs no synthetic name anyway. Its temporary root is already
+    #: `D:\a\project-beacon\...`, so every path the scaffold embeds carries
+    #: backslashes for free, which is the production condition the bug needs.
+    AWKWARD = (
+        ("case-a", "case-b", "case-c", "case-d", "case-e")
+        if os.name == "nt"
+        else (r"C:\Users", r"D:\new", r"E:\x123", r"F:\Nope", r"G:\Ugly")
+    )
 
     def setUp(self) -> None:
         self.root = Path(tempfile.mkdtemp())
@@ -183,7 +206,7 @@ class GeneratedSourceCompilesTests(unittest.TestCase):
                         self.fail(f"{path.name} does not compile: {error}")
 
     def test_the_generated_service_compiles_too(self) -> None:
-        target = self.root / r"C:\Users\runner"
+        target = self.root / self.AWKWARD[0] / "runner"
         target.mkdir(parents=True)
         scaffold("probe", target, service="notes")
         service = target / "probe" / "service.py"
@@ -195,7 +218,7 @@ class GeneratedSourceCompilesTests(unittest.TestCase):
         rather than the whole file, since a generated shell example ends its
         lines with a legitimate backslash continuation.
         """
-        target = self.root / r"C:\Users"
+        target = self.root / self.AWKWARD[0]
         target.mkdir(parents=True)
         scaffold("probe", target)
         for path in (target / "probe").rglob("*"):
