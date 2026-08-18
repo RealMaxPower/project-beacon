@@ -129,8 +129,9 @@
    * The light ladder runs the other way: paper's raised surfaces go toward
    * white, so its band goes *down* into a deeper cream instead. Held at
    * #ece8dd because the accents are the binding constraint here rather than
-   * the greys — `--paper-src` measures 4.56 on it, and a step further down
-   * puts it under AA.
+   * the greys — `--paper-src` measures 5.09 on it, and a step further down
+   * puts it under AA. (It measured 4.56 until `--paper-src` was darkened to
+   * clear AA on its own tint; the band has more room now, not less.)
    */
   --paper-band: #ece8dd;
   --paper-band-raised: #faf8f2;
@@ -144,12 +145,40 @@
   --paper-muted: #4e5661; /* 6.58 paper-bg */
   --paper-faint: #616873; /* 4.98 paper-bg */
 
-  --paper-src: #00737f; /* 4.95 paper-bg */
-  --paper-review: #9a5300; /* 5.16 paper-bg */
-  --paper-ok: #00753f; /* 5.15 paper-bg */
-  --paper-bad: #b5341d; /* 5.36 paper-bg */
+  /*
+   * Two figures each, and the second one is the binding constraint.
+   *
+   * These were chosen against `--paper-bg` and every one cleared AA on it. But
+   * a verdict badge does not sit on the page background: it sits on
+   * `color-mix(in oklab, <the same accent> 12%, --b-bg)`, a tint made *from*
+   * the accent, which is therefore always darker than the ground the token was
+   * validated on. Three of the four cleared 4.5 on paper and failed on their
+   * own tint — `src` at 4.21, `ok` at 4.37, `review` at 4.39 — at 10.5px and
+   * 12px, neither of which is WCAG large text, so 4.5 applies.
+   *
+   * An external audit found `review` because the INCOMPLETE badge is the only
+   * one reachable on the page it tested. The other two are the same defect on
+   * badges that appear far more often. The pair is never written down as a
+   * pair anywhere, which is exactly why a stylesheet-level palette check could
+   * not see it, and why `auditTintContrast` in `tools/lint.tsx` now computes
+   * the mix rather than trusting either number below.
+   *
+   * `bad` is left alone: it clears at 4.53, which is thin but real, and it is
+   * the most recognisable colour on the site.
+   *
+   * The tint figure sits after an em dash rather than a `·` on purpose.
+   * `ContrastTests` in `tests/test_site_claims.py` recomputes every ratio these
+   * comments publish and can only measure against a colour *declared* in this
+   * block — a `color-mix` result is not one, which is precisely why that guard
+   * could never have caught this. `·` would make it try and fail; `—` marks it
+   * as a note, and `auditTintContrast` verifies it instead.
+   */
+  --paper-src: #006b77; /* 5.53 paper-bg — 4.65 on its own 12% tint */
+  --paper-review: #964f00; /* 5.45 paper-bg — 4.61 on its own 12% tint */
+  --paper-ok: #00703b; /* 5.51 paper-bg — 4.64 on its own 12% tint */
+  --paper-bad: #b5341d; /* 5.36 paper-bg — 4.53 on its own 12% tint */
 
-  --paper-on-accent: #ffffff; /* 5.59 paper-src */
+  --paper-on-accent: #ffffff; /* 6.23 paper-src */
 
   --b-display: clamp(38px, 5.4vw, 72px);
   --b-h2: clamp(30px, 3.9vw, 54px);

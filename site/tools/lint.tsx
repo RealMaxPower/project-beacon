@@ -576,9 +576,127 @@ for (const [name, render] of screens) {
   }
 }
 
+/*
+ * An accent must clear AA against the tint made out of it.
+ *
+ * `tokens-b.css` records a contrast figure beside every accent, measured
+ * against the page background. A verdict badge is not on the page background.
+ * It is on `color-mix(in oklab, <that same accent> 12%, --b-bg)` — a tint mixed
+ * *from* the accent, and therefore always closer to it than the ground the
+ * token was validated on. Three of the four light accents cleared 4.5 on paper
+ * and failed on their own tint.
+ *
+ * `auditColourNeverAlone` above could not have caught it: that asks whether a
+ * colour travels with a word, not whether the two colours can be told apart.
+ * Nor could a stylesheet-level palette check, because the pair is never written
+ * down as a pair — one side is a token, the other is produced by a `color-mix`
+ * at render time. So the mix is computed here rather than read.
+ *
+ * OKLab in about thirty lines, checked against the browser's own answer on six
+ * pairs across both themes before being trusted — every one matched to the
+ * byte. Chromium resolves `color-mix(in oklab, #00703b 12%, #f4f1ea)` to
+ * `#dae1d4`, and `color-mix(in oklab, #5bdd93 12%, #0e1116)` to `#182524`; so
+ * does this. Recomputing rather than shelling out to a browser is what lets it
+ * run inside `npm run check`, and therefore in CI.
+ */
+type RGB = [number, number, number];
+
+function parseHex(value: string): RGB {
+  const h = value.trim().replace("#", "");
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as RGB;
+}
+
+const toLinear = (c: number) => {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+};
+const toSrgb = (v: number) => {
+  const c = v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(c * 255)));
+};
+
+function toOklab([r, g, b]: RGB): RGB {
+  const [lr, lg, lb] = [toLinear(r), toLinear(g), toLinear(b)];
+  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function fromOklab([L, a, bb]: RGB): RGB {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * bb) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * bb) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * bb) ** 3;
+  return [
+    toSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    toSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    toSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+  ];
+}
+
+/** `color-mix(in oklab, accent <pct>%, ground)`, opaque on both sides. */
+function mixOklab(accent: string, ground: string, pct: number): RGB {
+  const a = toOklab(parseHex(accent));
+  const g = toOklab(parseHex(ground));
+  return fromOklab(a.map((v, i) => v * pct + g[i] * (1 - pct)) as RGB);
+}
+
+function contrast(a: RGB, b: RGB): number {
+  const lum = ([r, g, bl]: RGB) =>
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(bl);
+  const [x, y] = [lum(a), lum(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+function auditTintContrast() {
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "src-b", "tokens-b.css"), "utf8");
+  const token = (name: string) => {
+    const found = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(css);
+    if (!found) report("tokens-b.css", "token not found", `--${name}`);
+    return found?.[1] ?? "";
+  };
+
+  // The badges are 10.5px and 12px at weight 500. Neither is WCAG large text,
+  // so the 4.5 threshold applies rather than 3.0.
+  const AA = 4.5;
+  const TINT = 0.12;
+  let checked = 0;
+
+  for (const [theme, ground, accents] of [
+    ["light", "paper-bg", ["paper-ok", "paper-bad", "paper-review", "paper-src"]],
+    ["dark", "ink-bg", ["ink-ok", "ink-bad", "ink-review", "ink-src"]],
+  ] as const) {
+    const bg = token(ground);
+    for (const name of accents) {
+      const accent = token(name);
+      if (!accent || !bg) continue;
+      const tint = mixOklab(accent, bg, TINT);
+      const ratio = contrast(parseHex(accent), tint);
+      checked += 1;
+      if (ratio < AA) {
+        report(
+          `tokens-b.css · ${theme}`,
+          "an accent fails AA against the tint made from it",
+          `--${name} ${accent} on ${TINT * 100}% tint = ${ratio.toFixed(2)}:1, needs ${AA}`,
+        );
+      }
+    }
+  }
+
+  if (checked < 8) {
+    report("tokens-b.css", "the contrast sweep read almost nothing", `${checked} pairs`);
+  }
+  console.log(`  ${checked} accent/tint pairs checked for AA contrast`);
+}
+
 auditInspector();
 auditPanelFidelity();
 auditStripping();
+auditTintContrast();
 
 console.log();
 if (problems > 0) {

@@ -13,6 +13,38 @@ statements it cannot back.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Three light-theme accents failed AA against the tint made out of them.**
+  `tokens-b.css` records a contrast figure beside every accent, measured against
+  the page background, and all four cleared it. A verdict badge does not sit on
+  the page background: it sits on `color-mix(in oklab, <that same accent> 12%,
+  --b-bg)`, a tint mixed *from* the accent and therefore always closer to it.
+  On their own tints, `src` measured 4.21, `ok` 4.37 and `review` 4.39, at
+  10.5px and 12px weight 500 — neither is WCAG large text, so 4.5 applies.
+  Darkened to 4.65, 4.64 and 4.61, hue and chroma unchanged; `bad` clears at
+  4.53 and is left alone. Dark theme was never affected (5.99 to 9.23).
+
+  An external audit found `review`, because the INCOMPLETE badge is the only one
+  reachable on the page it could test. The other two are the same defect on
+  badges that appear far more often, and were found by computing the mix for
+  every accent rather than by walking pages.
+
+  Neither existing guard could have caught it. `auditColourNeverAlone` asks
+  whether a colour travels with a word, not whether two colours can be told
+  apart; `ContrastTests` recomputes every ratio the comments publish but can
+  only measure against a colour *declared* in the same block, and a `color-mix`
+  result is not one. So the pair was never written down as a pair anywhere.
+
+### Added
+
+- `auditTintContrast` in `site/tools/lint.tsx`: every accent against the tint
+  derived from it, both themes, failing the build under 4.5. It reimplements
+  OKLab mixing in about thirty lines so it runs in `npm run check` and therefore
+  in CI, rather than needing a browser — checked against Chromium's own
+  `color-mix` output on six pairs across both themes, matching to the byte.
+
+
 ## [0.2.0] — 2026-08-18
 
 A minor rather than a patch, because two assertion types stopped accepting
