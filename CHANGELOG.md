@@ -15,6 +15,30 @@ statements it cannot back.
 
 ### Fixed
 
+- **A credential passed with `--env-secret` was redacted from the first pass of
+  a `repeat` scenario and published in full from every later one.** §7 of the
+  verification document says it is a bug if the key appears anywhere in
+  `evidence.json`. It appeared five times, in a bundle that simultaneously
+  recorded `secret_redaction: {replacements: 16}` — so it asserted a property it
+  did not have, in the one place a reader is told to trust. That is worse than
+  no redaction, because it turns caution into misplaced confidence.
+
+  The list of fields to redact was maintained by hand, and its docstring claimed
+  to cover "every field of the bundle that can carry text the subject
+  influenced". `repeat` carries a full `artifacts` and `subject` for each
+  additional pass and had never been added; `limitations` was the same omission
+  one field along. The list is now inverted — the seven fields the harness
+  writes itself are named, everything else is derived from `fields(Evidence)`
+  and redacted — so a field added later is protected by default rather than by
+  memory. An allowlist of what to protect fails silently; an allowlist of what
+  needs no protection fails loudly.
+
+  The existing canary test greps the whole written bundle for the key and its
+  url-encoded and base64 forms, and has passed since it was written: it runs
+  `inbox-briefing`, whose `repeat` is 0, so the field that leaked was always
+  empty. The path was never taken rather than covered. Reported by an external
+  code review against the 0.1.2 sdist; reproduced here before being fixed.
+
 - **The eighty-three scenario pages were about no scenario in particular.** The
   site prerenders a page per scenario and gave each a unique title, description
   and sitemap entry; the bodies were another matter. Stripped of head and

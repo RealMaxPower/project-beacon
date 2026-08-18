@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import traceback
 import uuid
@@ -24,28 +25,75 @@ from beacon.state import state_diff
 from beacon.usage import REPORTED_NOTICE, UsageRecorder
 
 
-REDACTED_EVIDENCE_FIELDS = (
-    "scenario",
-    "subject",
-    "assertions",
-    "state",
-    "state_diff",
-    "events",
-    "artifacts",
-    "usage",
+UNREDACTED_EVIDENCE_FIELDS = frozenset(
+    {
+        "evidence_version",
+        "run_id",
+        "started_at",
+        "completed_at",
+        "result",
+        "reset_verified",
+        "digest",
+    }
 )
 """
-Every field of the bundle that can carry text the subject influenced.
+The fields the harness writes itself, which no subject can put text into.
 
-Tool arguments and results, artifacts, the subject's stderr as it reaches
-`subject.execution.error`, and the command line itself have all reached
-evidence.json verbatim, so redaction runs over the whole document rather than
-at each capture point.
+This list is inverted on purpose, and the inversion is the fix for a real leak.
+It used to name the fields to redact, its docstring claimed to cover "every
+field of the bundle that can carry text the subject influenced", and it did
+not: `repeat` carries a full `artifacts` and `subject` for each additional
+pass, and was never added. A run with `--env-secret` redacted the key from
+pass 1 and published it in full from pass 2, while `subject.secret_redaction`
+reported a count of replacements - a bundle asserting a property it did not
+have, which is worse than no redaction because §7 tells readers to trust it.
 
-`usage` is here because `UsageRecorder` stores a `target` per call - the agent
-URL for an A2A subject, the server URL for an MCP one - and a credential passed
-in a query string would otherwise survive in the one field the pass skipped.
+An allowlist of things to protect fails silently every time someone adds a
+field and forgets. An allowlist of things that need no protection fails loudly:
+a new field is redacted by default, and `test_secret_redaction.py` asserts that
+these two sets account for every field of `Evidence`, so a field that is
+neither is a test failure rather than a leak.
+
+`digest` is here because it is computed in `finalize()` from the redacted
+document; redacting it would hash something that was never published.
+
+Everything else is a container the subject reaches: tool arguments and results,
+artifacts, the subject's stderr as it lands in `subject.execution.error`, the
+command line, and `usage`, which stores a per-call `target` - the agent URL for
+an A2A subject, the server URL for an MCP one - where a credential in a query
+string would otherwise survive.
 """
+
+
+def redacted_evidence_fields() -> tuple[str, ...]:
+    """Every `Evidence` field that is not harness-generated, in declared order."""
+    return tuple(
+        field.name
+        for field in dataclasses.fields(Evidence)
+        if field.name not in UNREDACTED_EVIDENCE_FIELDS
+    )
+
+
+def redact_evidence(evidence: Evidence, secrets: Any) -> None:
+    """
+    Remove every registered secret from the bundle, in place.
+
+    A function rather than a loop inside `run_scenario` so that a test can hand
+    it a bundle with a secret planted in every field and check that none
+    survives. While this lived inline, the only way to exercise it was a full
+    run, so the one field it skipped was the one nobody thought to run.
+    """
+    if not secrets.active:
+        return
+    for name in redacted_evidence_fields():
+        setattr(evidence, name, secrets.redact(getattr(evidence, name)))
+    # Appended after the pass, so the notice itself is never scanned. It
+    # contains no subject text, and redacting it would only cost a walk.
+    evidence.limitations.append(REDACTION_NOTICE)
+    evidence.subject["secret_redaction"] = {
+        "names": list(secrets.names),
+        "replacements": secrets.redaction_count,
+    }
 
 DEFAULT_LIMITATIONS = [
     "This run evaluates behavior in a synthetic environment; it is not a safety certification.",
@@ -351,15 +399,7 @@ def run_scenario(
     # Redact before finalize(), never inside write_evidence(): the digest must
     # be taken over the document that is actually published, or it will not
     # verify against the file on disk.
-    secrets = context.secrets
-    if secrets.active:
-        for name in REDACTED_EVIDENCE_FIELDS:
-            setattr(evidence, name, secrets.redact(getattr(evidence, name)))
-        evidence.limitations.append(REDACTION_NOTICE)
-        evidence.subject["secret_redaction"] = {
-            "names": list(secrets.names),
-            "replacements": secrets.redaction_count,
-        }
+    redact_evidence(evidence, context.secrets)
 
     evidence.finalize()
     json_path, markdown_path = write_evidence(evidence, run_dir)

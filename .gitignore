@@ -77,7 +77,14 @@ _to_delete/
 # untracked and unignored where any `git add -A` would have taken it. These are
 # unanchored for that reason — the report is the same kind of file whatever it
 # is called, and the pattern should not depend on remembering the convention.
+#
+# `*-review.md` is here for a sharper reason than staleness. The code review it
+# was added for reproduces a credential leak, so it quotes a key-shaped literal
+# four times. The key is fabricated, but a public repository is a poor place to
+# find that out, and history is expensive to rewrite. A reviewer's reproduction
+# of a secrets bug is exactly the file that must never be committed by accident.
 *FINDINGS*.md
 *retest-*.md
 *validation-*.md
 *-audit.md
+*-review.md

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import json
 import os
 import re
@@ -14,10 +15,16 @@ from unittest import mock
 
 from beacon.adapters import A2ASubjectAdapter, JSONLCommandAdapter
 from beacon.cli import main
-from beacon.models import Scenario
-from beacon.runner import run_scenario
+from beacon.models import EVIDENCE_VERSION, Evidence, Scenario
+from beacon.runner import (
+    UNREDACTED_EVIDENCE_FIELDS,
+    redact_evidence,
+    redacted_evidence_fields,
+    run_scenario,
+)
 from beacon.secrets import (
     MINIMUM_SECRET_LENGTH,
+    REDACTION_NOTICE,
     SecretError,
     SecretRegistry,
     looks_like_a_secret,
@@ -144,10 +151,11 @@ class A2ACredentialTests(unittest.TestCase):
     environment, and the command line is written into evidence verbatim.
 
     Two holes met here. `--authorization` was never registered as a secret, so
-    nothing knew the value to remove; and `usage` was absent from
-    `REDACTED_EVIDENCE_FIELDS` while `UsageRecorder` stores a `target` per
-    call, so an agent URL carrying the same token in a query string survived in
-    the one field the redaction pass skipped.
+    nothing knew the value to remove; and `usage` was not redacted while
+    `UsageRecorder` stores a `target` per call, so an agent URL carrying the
+    same token in a query string survived in the one field the redaction pass
+    skipped. `repeat` was a third instance of that same shape, which is why the
+    list is now inverted — see `EvidenceFieldCoverageTests`.
     """
 
     TOKEN = "a2a-fixture-token-91b7c4e2-DO-NOT-SHIP"
@@ -498,6 +506,256 @@ class RepositorySecretTests(unittest.TestCase):
         # A scan that read nothing passes, and reports the same green as one
         # that read everything.
         self.assertGreater(scanned, 100, "the scan read almost nothing")
+
+
+class CanaryRepeatTests(unittest.TestCase):
+    """
+    The canary run again, with a second pass — which is the whole bug.
+
+    `CanaryTests` above greps the written bundle for the secret and its encoded
+    forms, and has passed since it was written. It runs `inbox-briefing`, whose
+    `repeat` is 0, so the one field that leaked was always empty. A suite this
+    careful stayed green because the leaking path was never taken, not because
+    it was covered.
+
+    So this is the same subject, the same scenario and the same assertions,
+    with one thing changed. `repeat` is set on the loaded object rather than in
+    the file: the loader refuses `repeat` without a cross-run assertion, and
+    adding one to a shipped scenario to reach a redaction bug would change what
+    that scenario grades.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.directory = tempfile.TemporaryDirectory()
+        scenario = dataclasses.replace(Scenario.load(SCENARIO), repeat=2)
+        with mock.patch.dict(os.environ, {"BEACON_CANARY_SECRET": SECRET_VALUE}):
+            cls.outcome = run_scenario(
+                scenario,
+                JSONLCommandAdapter(
+                    [sys.executable, str(CANARY)],
+                    timeout_seconds=15,
+                    env_secrets=["BEACON_CANARY_SECRET"],
+                ),
+                output_dir=cls.directory.name,
+                run_id="canary-repeat",
+            )
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.directory.cleanup()
+
+    def test_a_second_pass_was_actually_recorded(self) -> None:
+        """Without this, everything below passes on an empty list."""
+        self.assertTrue(
+            self.outcome.evidence.repeat,
+            "no repeat pass was recorded, so this class proves nothing",
+        )
+        self.assertIn(SECRET_VALUE, os.environ.get("BEACON_CANARY_SECRET", SECRET_VALUE))
+
+    def test_the_secret_reached_none_of_the_written_files(self) -> None:
+        run_dir = self.outcome.json_path.parent
+        for name in ("evidence.json", "report.md", "events.json"):
+            with self.subTest(file=name):
+                text = (run_dir / name).read_text(encoding="utf-8")
+                self.assertNotIn(SECRET_VALUE, text)
+                self.assertNotIn(urllib.parse.quote(SECRET_VALUE, safe=""), text)
+                self.assertNotIn(base64.b64encode(SECRET_VALUE.encode()).decode(), text)
+
+    def test_the_later_pass_was_redacted_rather_than_merely_absent(self) -> None:
+        """
+        The placeholder has to be *in* `repeat`.
+
+        Asserting only that the raw value is gone would also pass if a future
+        change dropped the field, which would hide the evidence instead of
+        cleaning it.
+        """
+        self.assertIn("[redacted:BEACON_CANARY_SECRET]", json.dumps(self.outcome.evidence.repeat))
+
+    def test_the_digest_still_verifies(self) -> None:
+        """Redaction of a larger document must still precede finalize()."""
+        from beacon.models import canonical_digest
+
+        document = json.loads(
+            (self.outcome.json_path).read_text(encoding="utf-8")
+        )
+        published = dict(document)
+        published["digest"] = ""
+        self.assertEqual(document["digest"], canonical_digest(published))
+
+
+class EvidenceFieldCoverageTests(unittest.TestCase):
+    """
+    Every field of the bundle, not the ones somebody remembered.
+
+    `run --env-secret` redacted the key from pass 1 and published it in full
+    from pass 2. The list of fields to redact was maintained by hand, its
+    docstring claimed to cover "every field of the bundle that can carry text
+    the subject influenced", and `repeat` — which carries a whole `artifacts`
+    and `subject` per additional pass — was never added. `limitations` was the
+    same omission, one field along.
+
+    Worse than the leak: the bundle still recorded `secret_redaction` with a
+    count of replacements, so it asserted a property it did not have, in the
+    one place §7 tells a reader to trust.
+
+    The list is inverted now — the harness's own scalars are named, everything
+    else is redacted — so the next field added to `Evidence` is protected by
+    default. These tests are the reason that inversion can be relied on: one
+    checks the classification is total, one plants a secret in every field and
+    looks for survivors, and neither can be satisfied by remembering something.
+
+    The planted value is this module's existing canary rather than a second
+    credential-shaped literal, which also keeps `RepositorySecretTests` happy:
+    it ends in the marker that class requires of a deliberate fixture.
+    """
+
+    def _planted(self) -> Evidence:
+        """A bundle with the canary in every field a subject can reach."""
+        value = SECRET_VALUE
+        return Evidence(
+            evidence_version=EVIDENCE_VERSION,
+            run_id="field-coverage",
+            started_at="2026-01-01T00:00:00Z",
+            completed_at="2026-01-01T00:00:01Z",
+            scenario={"id": "planted", "goal": f"goal mentioning {value}"},
+            subject={"name": "planted", "command": ["run", f"--key={value}"]},
+            result="PASS",
+            assertions=[{"id": "a", "passed": True, "message": f"saw {value}"}],
+            state={"before": {"note": value}, "after": {"note": value}},
+            state_diff={"changed": [{"path": "note", "after": value}]},
+            events=[{"type": "tool_call", "arguments": {"body": value}}],
+            artifacts={"summary": f"Debug: token={value}"},
+            usage={"calls": [{"target": f"https://api.example/v1?key={value}"}]},
+            reset_verified=True,
+            limitations=[f"subject stderr: request to https://api.example/?key={value}"],
+            repeat=[
+                {
+                    "pass": 2,
+                    "artifacts": {"summary": f"the key is {value}"},
+                    "subject": {"summary": f"done {value}"},
+                }
+            ],
+        )
+
+    @staticmethod
+    def _registry() -> SecretRegistry:
+        registry = SecretRegistry()
+        registry.register("BEACON_CANARY_SECRET", SECRET_VALUE)
+        return registry
+
+    def test_the_classification_accounts_for_every_evidence_field(self) -> None:
+        """
+        The guard that would have caught the original bug.
+
+        A field is redacted or it is declared harness-generated. A field that is
+        neither fails here, at the moment it is added, rather than by leaking
+        later — which is the whole difference between an allowlist of things to
+        protect and an allowlist of things that need no protection.
+        """
+        declared = {field.name for field in dataclasses.fields(Evidence)}
+        self.assertGreater(len(declared), 0, "no Evidence fields found to classify")
+        redacted = set(redacted_evidence_fields())
+
+        self.assertEqual(
+            declared - redacted - UNREDACTED_EVIDENCE_FIELDS,
+            set(),
+            "an Evidence field is neither redacted nor declared harness-generated",
+        )
+        self.assertEqual(
+            redacted & UNREDACTED_EVIDENCE_FIELDS,
+            set(),
+            "a field is claimed as both redacted and harness-generated",
+        )
+        # The fields the leak was found in, named so a future edit that drops
+        # them has to argue with this line rather than with a set operation.
+        for field_name in ("repeat", "limitations", "usage"):
+            self.assertIn(field_name, redacted, f"{field_name} must be redacted")
+
+    def test_no_field_of_the_bundle_keeps_the_secret(self) -> None:
+        """
+        Planted everywhere, then looked for everywhere.
+
+        Reported per field, because the failure that mattered was one field out
+        of ten and a whole-document check says only that something leaked.
+        """
+        evidence = self._planted()
+        # The plant has to be real, or this passes on a bundle it never filled.
+        before = [
+            name
+            for name in redacted_evidence_fields()
+            if SECRET_VALUE in json.dumps(getattr(evidence, name), default=str)
+        ]
+        self.assertEqual(
+            sorted(before),
+            sorted(redacted_evidence_fields()),
+            "the fixture failed to plant the canary in every redacted field",
+        )
+
+        redact_evidence(evidence, self._registry())
+
+        leaked = [
+            name
+            for name in dataclasses.fields(Evidence)
+            if SECRET_VALUE in json.dumps(getattr(evidence, name.name), default=str)
+        ]
+        self.assertEqual(
+            [name.name for name in leaked],
+            [],
+            "these fields published the secret in full",
+        )
+
+    def test_the_whole_document_is_clean_including_its_encodings(self) -> None:
+        """
+        What §7 actually promises: the key appears nowhere in `evidence.json`.
+
+        Checked over the serialised document rather than field by field, and
+        over the url-encoded and base64 forms too, since a subject that puts a
+        credential in a query string or a Basic header emits neither verbatim.
+        """
+        evidence = self._planted()
+        redact_evidence(evidence, self._registry())
+        document = json.dumps(dataclasses.asdict(evidence), default=str)
+
+        for label, form in (
+            ("raw", SECRET_VALUE),
+            ("url-encoded", urllib.parse.quote(SECRET_VALUE, safe="")),
+            ("base64", base64.b64encode(SECRET_VALUE.encode()).decode()),
+        ):
+            with self.subTest(form=label):
+                self.assertNotIn(form, document, f"the {label} form survived")
+
+    def test_the_reported_count_is_not_a_claim_the_bundle_contradicts(self) -> None:
+        """
+        The record and the act have to agree.
+
+        The leaking bundle carried the key *and* a `secret_redaction` block
+        reporting three replacements. A count beside a surviving secret is worse
+        than no redaction at all, because it converts a reader's caution into
+        misplaced confidence.
+        """
+        evidence = self._planted()
+        planted = json.dumps(dataclasses.asdict(evidence), default=str).count(SECRET_VALUE)
+        self.assertGreater(planted, 1, "the fixture planted too little to be worth counting")
+
+        redact_evidence(evidence, self._registry())
+        record = evidence.subject["secret_redaction"]
+
+        self.assertEqual(record["names"], ["BEACON_CANARY_SECRET"])
+        self.assertGreaterEqual(
+            record["replacements"],
+            planted,
+            f"the bundle reports {record['replacements']} replacements for "
+            f"{planted} planted occurrences",
+        )
+
+    def test_an_inactive_registry_leaves_the_bundle_alone(self) -> None:
+        """No secrets declared means no notice, no record, and no walk."""
+        evidence = self._planted()
+        redact_evidence(evidence, SecretRegistry())
+        self.assertNotIn("secret_redaction", evidence.subject)
+        self.assertNotIn(REDACTION_NOTICE, evidence.limitations)
+        self.assertIn(SECRET_VALUE, json.dumps(evidence.repeat))
 
 
 if __name__ == "__main__":
