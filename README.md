@@ -125,6 +125,9 @@ python3 -m beacon scenarios            # the eighty-three that ship
 python3 -m beacon run inbox-briefing   # run one, get an evidence bundle
 python3 -m beacon init my-first-probe  # scaffold your own
 python3 -m beacon taxonomy             # the coverage figure, computed
+
+# which of your scenario's assertions can actually fail
+python3 -m beacon prove scenarios/<your-scenario>/scenario.json
 ```
 
 `validate` checks a scenario without running it, `adapters` lists the subject
@@ -137,6 +140,14 @@ satisfies every assertion, and one that violates exactly one. **The second is
 meant to fail.** Watching it fail is the only proof the assertion measures
 anything. Add `--service notes` for a scenario graded on the state of a
 simulated service rather than on the answer.
+
+`prove` is that rule as a command. It runs every subject in `subjects/` against
+the scenario and names each assertion none of them broke — because an assertion
+nobody has watched fail is a claim your evidence does not support, and
+`report.md` prints its description as a finding either way. It exits non-zero
+while anything is unproven, so it belongs in CI beside `run`. Beacon has held
+its own eighty-three scenarios to this since the first release; this is the same
+check, pointed at yours.
 
 ## What you get from a run
 
@@ -300,7 +311,7 @@ private, because Actions minutes are billed there and macOS bills at 10x — fre
 on a public repository, so that reason is gone. The two commands above are the
 local equivalent and are still the faster answer while you are working.
 
-The second command runs an adversarial suite: 415 subjects that behave in a
+The second command runs an adversarial suite: 417 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](https://github.com/RealMaxPower/project-beacon/blob/main/examples/subjects/README.md).

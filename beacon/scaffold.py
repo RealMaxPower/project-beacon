@@ -6,6 +6,7 @@ from string import Template
 from typing import Any
 
 from beacon.models import SCENARIO_ID_PATTERN, ScenarioError
+from beacon.services import is_service
 
 
 """
@@ -457,7 +458,25 @@ $run_commands
 The first subject satisfies every assertion. The second violates exactly one,
 and **that is the point**: an assertion nobody has ever seen fail is a claim
 your evidence does not support. Beacon's own starter scenario shipped two of
-those. Whenever you add an assertion here, add the subject that breaks it.
+those.
+
+## Check that every assertion can fail
+
+```bash
+python3 -m beacon prove $scenario_path$service_flag
+```
+
+It runs every subject in `subjects/` and names each assertion none of them
+broke. **Expect it to be red here, and expect that to stay useful.** This
+scenario ships more assertions than `violating.py` breaks — deliberately, since
+that subject violates exactly one — so the rest are unproven the moment it is
+generated. That is the state the paragraph above warns about, made visible
+instead of left to be noticed. Run it to see which ones.
+
+Red is the same signal as `violating.py` failing: it is how you know the check
+is doing something. Close the gap by writing a subject per assertion, and
+`prove` goes green. Exit status is 1 while anything is unproven, so it works as
+a CI gate once it is.
 
 ## Point it at your real agent
 
@@ -538,6 +557,20 @@ def scaffold(
             f"service name must be a valid Python identifier, since it "
             f"prefixes the tool names — got {service!r}"
         )
+    # A builtin name is accepted by every check downstream and then collides at
+    # run time: the generated module registers a second service under a name
+    # Beacon already owns, and `--service-module` fails with "a different
+    # service is already registered as 'files'". The scaffold's own README
+    # carried that command, so `init --service files` produced a scenario whose
+    # printed instructions could not be run. Refused here, where the name is
+    # still a choice the caller can change.
+    if service is not None and is_service(service):
+        raise ScenarioError(
+            f"'{service}' is already a Beacon service, so a scenario generated "
+            f"under that name cannot load — pick a name of your own (for "
+            f"example 'notes' or 'archive'), or omit --service to grade the "
+            f"answer text instead of service state"
+        )
 
     directory = root / scenario_id
     scenario_path = directory / "scenario.json"
@@ -577,8 +610,8 @@ def scaffold(
             "ground truth.\n"
             "2. Point `systems-grounded` at the field your agent actually "
             "returns.\n"
-            "3. Add an assertion, then edit `subjects/violating.py` until it "
-            "fails that one\n   and only that one."
+            "3. Add an assertion, then add the subject that breaks it — and run "
+            "`beacon prove`\n   until it stops naming it."
         )
     else:
         scenario = _service_scenario(scenario_id, service)

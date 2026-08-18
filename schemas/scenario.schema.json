@@ -113,6 +113,15 @@
           "expected": {},
           "target": {
             "type": "string"
+          },
+          "falsifiable": {
+            "description": "Whether a subject is expected to be able to make this assertion fail. Defaults to true. Set it to false only where the harness itself enforces the property, so no subject could break it, and say why in falsifiable_reason. `project-beacon prove` reports every assertion no subject broke.",
+            "type": "boolean"
+          },
+          "falsifiable_reason": {
+            "description": "Why no subject can make this assertion fail. Required when falsifiable is false, and refused otherwise. An exemption nobody justified is how a guarantee becomes a list of excuses.",
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false

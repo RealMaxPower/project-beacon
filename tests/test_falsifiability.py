@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from beacon.falsifiability import unfalsifiable_by_construction
 from beacon.models import Scenario
 
 import sys as _sys
@@ -21,19 +22,20 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
 
 
-HARNESS_ASSERTIONS = frozenset(
-    {
-        # Enforced by the usage recorder, which has its own tests. A subject
-        # cannot exceed a budget the harness stops it from exceeding.
-        "within-call-budget",
-    }
-)
 """
-Assertions exempt from needing a subject that breaks them.
+Exemptions are declared in the scenarios now, not listed here.
 
-Kept deliberately short and explicit. The temptation with a check like this is
-to widen the exemption until it passes, which converts a real guarantee into a
-list of excuses.
+This module held a `HARNESS_ASSERTIONS` frozenset naming the assertions no
+subject can break because Beacon itself enforces them. That was the right idea
+in the wrong place: the fact belongs to the assertion, and a reader of the
+scenario could not see it. It is `"falsifiable": false` with a required
+`falsifiable_reason` on the assertion, which `beacon prove` reads too — so a
+user's own scenario gets the same mechanism rather than a list only this file
+has.
+
+The list is not gone, only moved: `test_the_exemption_list_is_not_quietly_growing`
+still pins every exemption by name, because widening one is how a guarantee
+turns into a formality and it should show up in review.
 
 It held three names until `task-completed` and `answered-at-all` stopped
 qualifying. Both were exempt on the grounds that no badly-behaved subject could
@@ -84,8 +86,10 @@ class FalsifiabilityTests(unittest.TestCase):
     def test_every_behavioural_assertion_has_a_subject_that_breaks_it(self) -> None:
         for path in sorted(self.broken):
             scenario = Scenario.load(ROOT / path)
-            declared = {item.id for item in scenario.assertions}
-            unproven = sorted(declared - self.broken[path] - HARNESS_ASSERTIONS)
+            behavioural = {
+                item.id for item in scenario.assertions if item.falsifiable
+            }
+            unproven = sorted(behavioural - self.broken[path])
             with self.subTest(scenario=scenario.id):
                 self.assertEqual(
                     unproven,
@@ -93,6 +97,31 @@ class FalsifiabilityTests(unittest.TestCase):
                     f"{scenario.id}: no subject makes these fail, so the "
                     f"report states them without having tested them",
                 )
+
+    def test_no_assertion_is_unfalsifiable_by_construction(self) -> None:
+        """
+        Some assertions cannot fail whatever a subject does.
+
+        `count_gte path 0` is satisfied by every list including the empty one,
+        so it has no failing case at all — it can only ever come back
+        *unmeasured*, by the path being absent. Running more subjects will never
+        resolve that, which is why it is a separate check from the one above and
+        why it needs no subjects to answer.
+
+        `contract-empty-result` shipped exactly that, and the loose definition of
+        proof is what hid it: subjects that omitted the field were counted as
+        having broken the assertion.
+        """
+        broken: list[str] = []
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            scenario = Scenario.load(path)
+            for spec in scenario.assertions:
+                if not spec.falsifiable:
+                    continue
+                why = unfalsifiable_by_construction(spec)
+                if why:
+                    broken.append(f"{scenario.id}/{spec.id}: {why}")
+        self.assertEqual(broken, [], "\n".join(broken))
 
     def test_every_shipped_scenario_is_covered_by_the_manifest(self) -> None:
         """
@@ -214,14 +243,35 @@ class FalsifiabilityTests(unittest.TestCase):
         doing the work and then stopping to ask a question it did not need to
         ask, and the exemption stopped being earned.
         """
-        self.assertEqual(HARNESS_ASSERTIONS, frozenset({"within-call-budget"}))
+        exempt = {
+            spec.id
+            for path in (ROOT / "scenarios").glob("*/scenario.json")
+            for spec in Scenario.load(path).assertions
+            if not spec.falsifiable
+        }
+        self.assertEqual(exempt, {"within-call-budget"})
 
-    def test_each_exempt_assertion_really_is_a_harness_property(self) -> None:
-        """An exemption is only honest if the assertion exists somewhere."""
-        declared: set[str] = set()
-        for path in (ROOT / "scenarios").glob("*/scenario.json"):
-            declared |= {item.id for item in Scenario.load(path).assertions}
-        self.assertEqual(HARNESS_ASSERTIONS - declared, set())
+    def test_each_exemption_says_why(self) -> None:
+        """
+        An exemption is only honest if somebody wrote down the reason.
+
+        The loader refuses `falsifiable: false` without one, so this is checking
+        that the reasons are real sentences rather than a character someone typed
+        to get past the validator.
+        """
+        checked = 0
+        for path in sorted((ROOT / "scenarios").glob("*/scenario.json")):
+            for spec in Scenario.load(path).assertions:
+                if spec.falsifiable:
+                    continue
+                checked += 1
+                with self.subTest(scenario=path.parent.name, assertion=spec.id):
+                    self.assertGreater(
+                        len((spec.falsifiable_reason or "").split()),
+                        5,
+                        "an exemption needs a reason a reader can evaluate",
+                    )
+        self.assertGreater(checked, 0, "no exemptions found; this guard read nothing")
 
 
 class CitationDesignTests(unittest.TestCase):

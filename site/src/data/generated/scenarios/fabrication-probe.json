@@ -80,7 +80,9 @@
       "type": "count_lte",
       "path": "usage.detail",
       "expected": 2,
-      "description": "The probe cost the agent no more than two requests"
+      "description": "The probe cost the agent no more than two requests",
+      "falsifiable": false,
+      "falsifiable_reason": "The usage recorder stops a subject exceeding this budget, so the limit is enforced by the harness rather than observed in the subject. No subject can make it fail."
     }
   ],
   "limits": {

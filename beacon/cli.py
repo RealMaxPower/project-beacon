@@ -27,6 +27,8 @@ from beacon.baseline import (
     save_baseline,
 )
 from beacon.determinism import compare_runs, repeat_run_ids
+from beacon.falsifiability import Subject, discover_subjects
+from beacon.falsifiability import prove as prove_scenario
 from beacon.models import Evidence, Scenario, ScenarioError, canonical_digest
 from beacon.protocols import (
     MINIMUM_TOKEN_LENGTH,
@@ -203,6 +205,50 @@ def build_parser() -> argparse.ArgumentParser:
             "Import this module first, so a service it registers is "
             "recognised rather than reported as a plain data fixture."
         ),
+    )
+
+    prove = subparsers.add_parser(
+        "prove",
+        help="Check that every assertion in a scenario has a subject that makes it fail.",
+        description=(
+            "An assertion nobody has watched fail is a claim the evidence does "
+            "not support, and report.md prints its description as a finding "
+            "either way. This runs your subjects against the scenario and names "
+            "every assertion none of them broke."
+        ),
+    )
+    prove.add_argument(
+        "scenario",
+        type=Path,
+        help="Path to a scenario file, or the name of a built-in scenario.",
+    )
+    prove.add_argument(
+        "--subject",
+        action="append",
+        default=[],
+        metavar="PATH",
+        type=Path,
+        help=(
+            "A subject to run. Repeatable. Omit to use every `subjects/*.py` "
+            "beside the scenario, which is what `init` scaffolds."
+        ),
+    )
+    prove.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="Per-subject timeout. Omit to use the scenario's own limit.",
+    )
+    prove.add_argument(
+        "--service-module",
+        action="append",
+        default=[],
+        metavar="MODULE",
+        help="Import this module first, so a service it registers is recognised.",
+    )
+    prove.add_argument(
+        "--json", action="store_true", help="Emit the report as JSON."
     )
 
     verify = subparsers.add_parser(
@@ -579,6 +625,55 @@ def _verify(path: Path) -> int:
         "it, or that the run happened."
     )
     return 0
+
+
+def _prove(args: argparse.Namespace) -> int:
+    """
+    Run the subjects and report what each assertion's falsifiability rests on.
+
+    Exit 1 rather than 2 when something is unproven: it is a finding about the
+    scenario, not an error in the invocation, and `run` already draws that line
+    the same way so this is usable as a CI gate without special-casing.
+    """
+    for module in args.service_module:
+        import_service_module(module)
+    scenario_path = resolve_scenario(args.scenario)
+    scenario = Scenario.load(scenario_path)
+
+    if args.subject:
+        subjects = [Subject.from_script(Path(p), args.timeout) for p in args.subject]
+    else:
+        subjects = discover_subjects(scenario_path, args.timeout)
+
+    if not subjects:
+        # Saying "0 unproven" here would be the vacuous pass this command exists
+        # to find, so it is an error rather than a green result.
+        print(
+            f"error: no subjects found for {scenario.id}. Looked in "
+            f"{scenario_path.parent / 'subjects'}; pass --subject to name them.",
+            file=sys.stderr,
+        )
+        return 2
+
+    report = prove_scenario(scenario, subjects)
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "scenario": report.scenario_id,
+                    "subjects": report.subjects_run,
+                    "ok": report.ok,
+                    "broken_by": {k: v for k, v in sorted(report.by_assertion.items())},
+                    "exempt": report.exempt,
+                    "unfalsifiable": report.impossible,
+                    "unproven": list(report.unproven),
+                },
+                indent=2,
+            )
+        )
+    else:
+        print(report.summary())
+    return 0 if report.ok else 1
 
 
 def _validate(path: Path, service_modules: Sequence[str] = ()) -> int:
@@ -961,6 +1056,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command_name == "validate":
             return _validate(args.scenario, args.service_module)
+        if args.command_name == "prove":
+            return _prove(args)
         if args.command_name == "verify":
             return _verify(args.evidence)
         if args.command_name == "init":

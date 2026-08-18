@@ -13,6 +13,66 @@ statements it cannot back.
 
 ## [Unreleased]
 
+### Added
+
+- **`project-beacon prove` — the falsifiability check, for your scenarios.** The
+  README calls it load-bearing: "An assertion nobody has watched fail is a claim
+  the evidence does not support." Beacon has enforced that across its own
+  eighty-three scenarios since the first release, and shipped nothing that let
+  anyone ask it of theirs. `validate` checks structure; nothing in the package
+  reasoned about falsifiability at all. A user with five assertions got no signal
+  that three could never fail, and `report.md` printed each one as a finding.
+
+  `prove` runs every subject in `subjects/` beside the scenario — which is what
+  `init` already scaffolds — and names each assertion none of them broke. Exit 1
+  while anything is unproven, so it works as a CI gate. `--subject` overrides the
+  convention, `--json` for machines.
+
+  The scaffold's README already told the author to do this by hand: *"Add an
+  assertion, then edit `subjects/violating.py` until it fails that one and only
+  that one."* It now points at the command instead, and says plainly that a fresh
+  scaffold is red — `violating.py` breaks exactly one assertion by design, so the
+  rest are unproven from the moment it is generated. That is the state the
+  scaffold warned about while committing it.
+
+- `falsifiable` and `falsifiable_reason` on an assertion, for the few that no
+  subject can break because the harness itself enforces them. Declared in the
+  scenario, where a reader sees it, with the reason required — the same reasoning
+  that put `allow_empty` there in 0.2.0. Beacon's own `within-call-budget`
+  exemption moved out of a frozenset in the test suite and into the four
+  scenarios that declare it, so Beacon uses the mechanism it ships.
+
+### Fixed
+
+- **Beacon's own falsifiability guard counted a crashed run as proof.** It
+  collected `not passed` with no `measured` check, so a subject that died
+  established the falsifiability of every assertion in its scenario — the
+  worst-behaved possible subject certifying the most.
+  `examples/subjects/crashes_midrun.py` was supplying false proof for four. This
+  is the distinction 0.2.0 threaded through the determinism signature, the
+  baseline denominator and the repeat set, arriving last in the guard whose whole
+  job is to establish that somebody watched a failure.
+
+  Tightening it exposed two scenarios, and one of them was worse than a missing
+  subject. `contract-empty-result`'s `the-search-actually-happened` was
+  `count_gte artifacts.result.matches 0` — satisfied by every list including the
+  empty one, so it had no failing case at all and stated that the search happened
+  without ever checking. It now reads the event log for three `files_read` calls,
+  which is what its name always claimed, with a subject that reports "no matches"
+  having opened nothing. `web-encoded-and-alt-injection` needed only the missing
+  subject: one that reads the pages and then briefs none of it.
+
+  `prove` also carries the static half, because no number of subjects would have
+  found that one: a `count_gte`/`length_gte`/`event_count_gte` floor at or below
+  zero is unfalsifiable by construction and is reported as such.
+
+- **`beacon init --service files` generated a scenario whose own README could not
+  run.** The name collides with a Beacon service, so the `--service-module`
+  command the scaffold printed failed with "a different service is already
+  registered as 'files'". A builtin name is now refused at generation, where it
+  is still a choice. Found by pointing `prove` at the scaffold.
+
+
 ### Fixed
 
 - **Three light-theme accents failed AA against the tint made out of them.**

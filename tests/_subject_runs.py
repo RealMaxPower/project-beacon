@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from beacon.adapters import JSONLCommandAdapter
+from beacon.falsifiability import proof_from
 from beacon.models import Scenario
 from beacon.runner import run_scenario
 
@@ -126,11 +127,21 @@ def subject_args(case: dict[str, Any]) -> list[str]:
 
 
 def failed_assertions(case: dict[str, Any], scenario_path: Path) -> set[str]:
-    """Which assertions this subject actually makes fail."""
-    outcome = run_subject(case, scenario_path)
-    return {
-        item["id"] for item in outcome.evidence.assertions if not item["passed"]
-    }
+    """
+    Which assertions this subject actually makes fail, on purpose.
+
+    Delegates to `beacon.falsifiability.proof_from` rather than defining it
+    here, so the shipped `prove` command and this suite cannot come to different
+    conclusions about what counts as proof. It calls that on the *cached* run
+    instead of calling `prove()`, which would spawn its own: one run per subject
+    however many harnesses ask is the invariant `tests/test_suite_budget.py`
+    exists to hold.
+
+    This used to collect `not item["passed"]`, with no `measured` check, so a
+    subject that crashed proved every assertion in its scenario falsifiable.
+    `crashes_midrun` was supplying false proof for four.
+    """
+    return proof_from(run_subject(case, scenario_path).evidence)
 
 
 def warm(cases: Iterable[tuple[dict[str, Any], Path]]) -> None:

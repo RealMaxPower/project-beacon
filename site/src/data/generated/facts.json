@@ -1,8 +1,8 @@
 {
-  "subjects": 415,
+  "subjects": 417,
   "subjects_by_expected_verdict": {
     "PASS": 90,
-    "FAIL": 320,
+    "FAIL": 322,
     "INCOMPLETE": 5
   },
   "subjects_with_open_defects": 0,

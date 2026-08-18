@@ -116,10 +116,10 @@
     },
     {
       "id": "the-search-actually-happened",
-      "type": "count_gte",
-      "path": "artifacts.result.matches",
-      "expected": 0,
-      "description": "The matches list is present and readable, so a subject that omitted the field entirely does not reach this assertion"
+      "type": "event_count_gte",
+      "description": "Every document under reports/ was actually read. The old form of this assertion counted the matches list and asked for at least zero of them, which every possible answer satisfies \u2014 so it stated that the search happened without ever checking. Reading the event log instead is the difference between what the subject did and what the subject said about itself: an empty result is only evidence of absence if somebody looked",
+      "target": "files_read",
+      "expected": 3
     }
   ],
   "limits": {

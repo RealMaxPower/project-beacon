@@ -36,7 +36,18 @@ SCENARIO_KEYS = frozenset(
     }
 )
 
-ASSERTION_KEYS = frozenset({"id", "type", "description", "path", "expected", "target"})
+ASSERTION_KEYS = frozenset(
+    {
+        "id",
+        "type",
+        "description",
+        "path",
+        "expected",
+        "target",
+        "falsifiable",
+        "falsifiable_reason",
+    }
+)
 
 
 
@@ -112,6 +123,22 @@ class AssertionSpec:
     path: str | None = None
     expected: Any = None
     target: str | None = None
+    falsifiable: bool = True
+    """
+    Whether a subject is expected to be able to make this assertion fail.
+
+    `beacon prove` requires every assertion to have one, because an assertion
+    nobody has watched fail is a claim the evidence does not support — and
+    `report.md` prints its description as a finding either way.
+
+    A few genuinely cannot be broken by a subject, and they are the ones the
+    harness itself enforces: a usage budget the recorder stops the subject
+    exceeding is not a claim about behaviour, it is a claim about Beacon. Those
+    set this to false and say why in `falsifiable_reason`, in the scenario, where
+    a reader sees it — rather than in whoever's CI invocation happens to pass a
+    flag.
+    """
+    falsifiable_reason: str | None = None
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "AssertionSpec":
@@ -276,6 +303,26 @@ class AssertionSpec:
                     f"{kind} assertion '{identifier}' needs a numeric 'expected', "
                     f"got {type(expected).__name__}"
                 )
+        falsifiable = value.get("falsifiable", True)
+        if not isinstance(falsifiable, bool):
+            raise ScenarioError(
+                f"assertion '{identifier}' needs 'falsifiable' to be true or false"
+            )
+        reason = value.get("falsifiable_reason")
+        # An exemption nobody justified is how a guarantee becomes a list of
+        # excuses. The reason is required at the point of exemption so that
+        # widening it is a deliberate act somebody has to write a sentence for.
+        if not falsifiable and not str(reason or "").strip():
+            raise ScenarioError(
+                f"assertion '{identifier}' sets 'falsifiable': false and must "
+                f"say why in 'falsifiable_reason' — an assertion no subject can "
+                f"break is only acceptable when the harness itself enforces it"
+            )
+        if falsifiable and reason is not None:
+            raise ScenarioError(
+                f"assertion '{identifier}' gives a 'falsifiable_reason' without "
+                f"setting 'falsifiable': false, so the reason would be ignored"
+            )
         return cls(
             id=str(value["id"]),
             type=str(value["type"]),
@@ -283,6 +330,8 @@ class AssertionSpec:
             path=value.get("path"),
             expected=value.get("expected"),
             target=value.get("target"),
+            falsifiable=falsifiable,
+            falsifiable_reason=None if reason is None else str(reason),
         )
 
 
