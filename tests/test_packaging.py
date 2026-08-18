@@ -318,5 +318,76 @@ class BadgeFactTests(unittest.TestCase):
         self.assertEqual(claimed.group(1), enforced.group(1))
 
 
+class RepositoryContentsTests(unittest.TestCase):
+    """
+    Only the markdown this repository means to ship is tracked at its root.
+
+    Reviewer correspondence — verification passes, audits, retests, model-run
+    write-ups — is working notes between a maintainer and a reviewer. `.gitignore`
+    has patterns for it, and the patterns lost: two reports were committed by a
+    `git add -A` whose staged file list nobody read, each riding into a commit
+    about something entirely unrelated. A 217-line report on model testing landed
+    in a commit about HTML closing tags.
+
+    A pattern list cannot win that race, because it has to predict what a
+    reviewer will name a file. An allowlist can: anything new at the root has to
+    be added here deliberately, by someone who has thought about whether it
+    belongs in a public repository, rather than slipping in behind a wildcard
+    nobody wrote yet.
+
+    Scoped to the root because that is where these land — they are written
+    against the checkout as a whole, not filed into `docs/`.
+    """
+
+    #: The markdown this project publishes at its root. Everything else is
+    #: either correspondence or belongs in `docs/`.
+    SHIPPED_ROOT_MARKDOWN = frozenset({
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "SECURITY.md",
+    })
+
+    def test_no_review_correspondence_is_committed(self) -> None:
+        import subprocess
+
+        try:
+            listed = subprocess.run(
+                ["git", "ls-files", "--full-name", "*.md"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.split()
+        except (OSError, subprocess.CalledProcessError):
+            self.skipTest("not a git checkout, so there is no index to read")
+
+        # Vacuity: a `git ls-files` that returned nothing would pass silently.
+        self.assertGreater(len(listed), 5, "the index listed almost no markdown")
+
+        at_root = {name for name in listed if "/" not in name}
+        unexpected = sorted(at_root - self.SHIPPED_ROOT_MARKDOWN)
+        self.assertEqual(
+            unexpected,
+            [],
+            "these are tracked at the repository root and are not on the "
+            "shipped list. If one is documentation, add it here and say why; "
+            "if it is a reviewer's report, it belongs in .gitignore: "
+            f"{unexpected}",
+        )
+
+    def test_the_allowlist_is_not_stale(self) -> None:
+        """
+        The other direction. An allowlist naming files that no longer exist
+        stops describing the repository and starts describing its past, and
+        would quietly re-admit a name someone reused.
+        """
+        missing = sorted(
+            name for name in self.SHIPPED_ROOT_MARKDOWN if not (ROOT / name).is_file()
+        )
+        self.assertEqual(missing, [], f"the allowlist names files that are gone: {missing}")
+
+
 if __name__ == "__main__":
     unittest.main()

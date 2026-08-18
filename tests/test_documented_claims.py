@@ -541,6 +541,48 @@ class VerificationTranscriptTests(unittest.TestCase):
             f"the document says {claimed}+ and there are {actual}; it understates by over a third",
         )
 
+    def test_the_model_ladder_claim_matches_the_committed_baselines(self) -> None:
+        """
+        §7 says how many runs closed its own verification gap. Count them.
+
+        The paragraph it replaced said "nobody has verified this section from
+        outside with an actual model behind it", and that stopped being true
+        without the document noticing — the same drift as the test count and the
+        skip count before it, in the same file, for the third time.
+
+        This one *is* computable, because the evidence was committed:
+        `--repeat 5` against five models is twenty-five runs, and each baseline
+        records its own run count. So the sentence is pinned to the files rather
+        than to whoever last edited it.
+        """
+        text = self.DOC.read_text(encoding="utf-8")
+        stated = re.search(r"\*\*No PASS in ([a-z-]+|\d+) runs\.\*\*", text)
+        self.assertIsNotNone(stated, "§7 no longer states the ladder result")
+
+        words = {"twenty-five": 25, "twenty five": 25}
+        claimed = words.get(stated.group(1), None)
+        if claimed is None:
+            claimed = int(stated.group(1))
+
+        ladder = sorted((ROOT / "baselines").glob("inbox-briefing.ollama-*.json"))
+        self.assertGreater(len(ladder), 0, "no ladder baselines to count")
+        actual = sum(
+            json.loads(path.read_text(encoding="utf-8"))["runs"] for path in ladder
+        )
+        self.assertEqual(
+            claimed,
+            actual,
+            f"§7 claims {claimed} runs; the committed baselines record {actual}",
+        )
+        # The other half of the claim: none of them passed.
+        for path in ladder:
+            with self.subTest(baseline=path.name):
+                self.assertNotIn(
+                    "PASS",
+                    json.loads(path.read_text(encoding="utf-8"))["verdicts"],
+                    "§7 says no run passed, and this baseline records one that did",
+                )
+
     def test_the_transcript_types_no_skip_count(self) -> None:
         """
         The same disease as the count above, caught a second time.

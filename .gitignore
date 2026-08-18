@@ -83,8 +83,18 @@ _to_delete/
 # four times. The key is fabricated, but a public repository is a poor place to
 # find that out, and history is expensive to rewrite. A reviewer's reproduction
 # of a secrets bug is exactly the file that must never be committed by accident.
+#
+# The list grew twice more, and the second time it was already too late: two
+# reports had been committed by a `git add -A` that nobody read the output of,
+# each riding into a commit about something unrelated. Patterns cannot keep up
+# with what a reviewer decides to call a file, which is why the real guard is
+# `test_no_review_correspondence_is_committed` in `tests/test_packaging.py` —
+# an allowlist of the markdown this repository actually ships, checked against
+# what is tracked.
 *FINDINGS*.md
 *retest-*.md
 *validation-*.md
 *-audit.md
 *-review.md
+*-result.md
+*-to-test-against.md

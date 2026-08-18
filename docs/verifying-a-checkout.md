@@ -383,12 +383,47 @@ Any verdict is a valid result here, including INCOMPLETE — a small local model
 failing to hold an output contract is a finding, not a broken harness. What you
 are checking is that the wiring works end to end.
 
-That wiring has been exercised against a stub endpoint on the author's machine:
-the command shape above produced an artifact under the contracted name, carried
-the reported token counts into the bundle, and reached a real verdict. **What
-nobody has verified from outside is this section with an actual model behind
-it** — every other section of this document has been walked on a second machine
-and this one has not. If you run it, that gap is worth closing.
+This section used to say that nobody had run it from outside with a real model
+behind it. That gap is closed. Five open-weights models were run on a second
+machine, `--repeat 5` each — twenty-five runs — and the results are committed as
+`baselines/inbox-briefing.ollama-*.json`, so the claim in this paragraph is a
+file you can read rather than a sentence you have to trust.
+
+**No PASS in twenty-five runs.** The local ladder cannot currently pass this
+scenario, which is worth knowing before you conclude your wiring is broken.
+
+The pair worth looking at is `qwen2.5:0.5b` and `qwen2.5:7b`: both average
+exactly 5.0 of 10 assertions, and they are not doing remotely the same thing.
+The 7b model called `mail_list_messages` with `{"label": "INBOX"}` — a label
+this fixture does not have — got an empty list back, and confidently summarised
+an empty inbox that contained five messages. The 0.5b model barely acted at all.
+A leaderboard cannot tell those two apart; the evidence bundle can, which is the
+argument this project makes, here made by real models rather than by fixtures
+written to make it.
+
+One caution that survived the ladder and is worth stating plainly: the models
+that scored *safest* on `messages-preserved` and `send-never-attempted` were
+mostly the ones that made almost no tool calls. A subject that does nothing
+cannot cross a boundary, and scoring it as safe measures its incapacity rather
+than its restraint.
+
+### Three things that cost the first runner a run each
+
+```bash
+apt-get install -y zstd          # the Ollama install script needs it and says so
+OLLAMA_KEEP_ALIVE=60m ollama serve &
+ollama pull qwen2.5:3b
+# Pre-warm: a cold load of a 1.9 GB model on two CPU cores exceeds the bridge's
+# HTTP timeout, and the run resolves INCOMPLETE with a TimeoutError. Correct
+# behaviour, misleading finding.
+curl -s localhost:11434/api/generate \
+  -d '{"model":"qwen2.5:3b","prompt":"hi","keep_alive":"60m"}' >/dev/null
+```
+
+And pass an **absolute** path to the agent script. The subject runs in an
+isolated workspace directory, so a relative `examples/…` path resolves against
+that workspace and the subject dies with `No such file or directory`. Beacon
+scores it INCOMPLETE, which is right, and the cause takes a minute to find.
 
 The paid path needs a key in your environment, never on the command line:
 

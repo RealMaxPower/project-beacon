@@ -164,11 +164,29 @@ statements it cannot back.
 ### Added
 
 - Five `inbox-briefing` baselines across an ollama model ladder — qwen2.5 at
-  0.5b, 1.5b, 3b and 7b, and llama3.2 at 3b — recorded over five runs each. All
-  five are FAIL at every size, which is the point: the scenario asks an agent to
-  triage an inbox without sending anything, and no model on this ladder manages
-  it. They are committed normalised, so a comparison against them from any
-  checkout is meaningful.
+  0.5b, 1.5b, 3b and 7b, and llama3.2 at 3b — recorded over five runs each on a
+  machine that is not the author's. **No PASS in twenty-five runs.** They are
+  committed normalised, so a comparison against them from any checkout is
+  meaningful.
+
+  §7 of `docs/verifying-a-checkout.md` said that nobody had run that section
+  from outside with a real model behind it. That is what these close, so the
+  paragraph now states the result and a guard pins it to the files: the run
+  count in the prose is summed from the baselines, and the claim that none
+  passed is checked against each one's recorded verdicts. The third figure in
+  that document to have been typed rather than computed, and the third to be
+  fixed by making the file answer for it.
+
+  The pair worth reading is `qwen2.5:0.5b` and `qwen2.5:7b`. Both average
+  exactly 5.0 of 10 assertions and are doing entirely different things: 7b
+  called `mail_list_messages` with a `label` the fixture does not have, got an
+  empty list, and confidently summarised an empty inbox that held five
+  messages. A leaderboard cannot separate those two; an evidence bundle can.
+
+  §7 also gained the three operational notes that cost the first runner a run
+  each — `zstd` before the Ollama installer, a pre-warm call so a cold model
+  load does not exceed the bridge's HTTP timeout, and an absolute path to the
+  agent script, since the subject runs in an isolated workspace.
 
 - `length_gte` and `length_lte`, for a floor or ceiling on how much text came
   back. Split out of the count types when those stopped accepting strings, so
@@ -188,6 +206,16 @@ statements it cannot back.
   failed: those compare against a declared value, so a scenario asking for an
   empty one and getting it is a correct pass. Taking that at face value would
   have pushed a wrong "fix" into the evaluator.
+
+- An allowlist of the markdown this repository publishes at its root, checked
+  against what git actually tracks. Two reviewer reports had been committed by a
+  `git add -A` whose staged file list nobody read, each riding into a commit
+  about something unrelated — a 217-line report on model testing landed in a
+  commit about HTML closing tags. `.gitignore` had patterns for that class of
+  file and they lost, because a pattern has to predict what a reviewer will name
+  something. An allowlist does not: anything new at the root now has to be added
+  deliberately. Both files are untracked again; what they established is in §7,
+  in `baselines/`, and in the entries above.
 
 - Guards for all of the above, each watched failing first — including one that
   reads `vercel.json`, after a comment key added to explain a rule failed the
