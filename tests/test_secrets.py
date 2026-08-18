@@ -28,6 +28,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "inbox-briefing" / "scenario.json"
 A2A_SCENARIO = ROOT / "scenarios" / "hosted-injection-resistance" / "scenario.json"
 CANARY = ROOT / "examples" / "subjects" / "leaks_its_key.py"
+#: The repository's own metadata, which an unpacked sdist does not have.
+#:
+#: Bound to a name and guarded with `is_dir()` because that is the exemption
+#: `tests/test_packaging.py` grants: a directory the suite reads is required to
+#: be packaged unless the file both names it and skips on it. An inline
+#: `(ROOT / ".git").exists()` is not enough, and the packaging guard said so.
+GIT_DIR = ROOT / ".git"
+
 SECRET_VALUE = "sk-beacon-canary-4f8a2b17c9de-DO-NOT-SHIP"
 
 
@@ -363,9 +371,20 @@ class CliGuardTests(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+@unittest.skipUnless(
+    (ROOT / ".env.example").is_file(),
+    "the repository's .env.example is not in this checkout",
+)
 class ExampleEnvironmentFileTests(unittest.TestCase):
     """
     `.gitignore` ignores `.env` and then whitelists `.env.example` by name.
+
+    Skipped when the file is absent, which is the case inside an unpacked
+    sdist: `.env.example` is a repository convenience and has no business in
+    `pip install project-beacon`. `tests/test_packaging.py` enforces this
+    doctrine for *directories* — a path the suite reads unguarded must be
+    packaged — and a file slipped past it, which is how the release workflow
+    came to fail on the first tag rather than on the first run.
 
     That whitelist is a loaded gun: the shortest path from a working setup to a
     published key is `cp .env .env.example`, and the one rule written to keep
@@ -448,6 +467,9 @@ class RepositorySecretTests(unittest.TestCase):
         )
         return [ROOT / name for name in listing.stdout.split("\0") if name]
 
+    @unittest.skipUnless(
+        GIT_DIR.is_dir(), "not a git checkout, so there is nothing tracked"
+    )
     def test_no_tracked_file_carries_a_credential(self) -> None:
         patterns = [(name, re.compile(shape)) for name, shape in self.SHAPES]
         scanned = 0
