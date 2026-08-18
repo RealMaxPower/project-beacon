@@ -43,7 +43,15 @@ class MarkdownTwinTests(unittest.TestCase):
     @staticmethod
     def _prose(html: str) -> str:
         body = re.search(r"<body.*?>(.*)</body>", html, re.S)
-        text = re.sub(r"<script.*?</script>", " ", body.group(1) if body else "", flags=re.S)
+        # Both tags, and case-insensitively, because that is what
+        # `site/tools/to-markdown.ts` does when it writes the twin. This used
+        # to strip only `<script>`, in lower case, so a page with an inline
+        # `<style>` would have counted its CSS as prose and disagreed with a
+        # twin that correctly dropped it.
+        text = re.sub(
+            r"<(script|style).*?</\1>", " ", body.group(1) if body else "",
+            flags=re.S | re.I,
+        )
         return " ".join(re.sub(r"<[^>]+>", " ", text).split())
 
     def test_there_are_twins_to_check(self) -> None:
@@ -177,6 +185,33 @@ class NoAudienceSplitTests(unittest.TestCase):
         for name in ("turndown", "html-to-md", "node-html-markdown", "jsdom"):
             self.assertNotIn(name, packaged.get("dependencies", {}))
         self.assertIn("toMarkdown", PRERENDER.read_text(encoding="utf-8"))
+
+
+class TagFilterCaseTests(unittest.TestCase):
+    """
+    The script filter and the check on it shared one blind spot.
+
+    `_prose` strips `<script>` before comparing a page against its markdown
+    twin, and `site/tools/to-markdown.ts` strips it before writing that twin.
+    Both regexes were case-sensitive, so `<SCRIPT>` passed through the stripper
+    *and* through the check written to catch it — a guard that could not fail
+    for the reason it exists.
+
+    No content in this repository uses an uppercase tag, so nothing was
+    leaking. It is worth fixing anyway because of what this project ships:
+    scenarios carrying deliberate injection payloads, at four obfuscation
+    rungs, one of which is markup. Case-variance is the obvious next rung, and
+    the markdown twins are served specifically to language models.
+    """
+
+    def test_the_stripper_does_not_care_about_case(self) -> None:
+        for tag in ("script", "SCRIPT", "ScRiPt", "STYLE"):
+            with self.subTest(tag=tag):
+                html = f"<body>keep<{tag}>alert(1)</{tag}>keep</body>"
+                self.assertNotIn("alert(1)", MarkdownTwinTests._prose(html))
+
+    def test_the_stripper_still_keeps_the_prose(self) -> None:
+        self.assertIn("keep", MarkdownTwinTests._prose("<body>keep</body>"))
 
 
 if __name__ == "__main__":

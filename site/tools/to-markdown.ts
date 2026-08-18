@@ -33,8 +33,8 @@ function decode(value: string): string {
 /** Content a reader is never shown, and a model should not be either. */
 function dropInvisible(html: string): string {
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
     // Icons and rules. Each one is decoration with no text a reader relies on.
     .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/g, "")
     .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/[a-z]+>/g, "")
@@ -50,7 +50,7 @@ function dropInvisible(html: string): string {
  * something a reader could copy.
  */
 function fenceCode(html: string): string {
-  return html.replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/g, (_all, inner: string) => {
+  return html.replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_all, inner: string) => {
     const text = decode(inner.replace(/<[^>]+>/g, ""));
     return `\n\n@@FENCE@@${text.trim()}@@FENCE@@\n\n`;
   });
@@ -76,7 +76,7 @@ export function toMarkdown(html: string): string {
     },
   );
 
-  out = out.replace(/<code\b[^>]*>([\s\S]*?)<\/code>/g, (_all, inner: string) => {
+  out = out.replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, (_all, inner: string) => {
     const text = decode(inner.replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
     return text ? ` \`${text}\` ` : "";
   });

@@ -48,7 +48,7 @@ const POISON = [
 
 function textOf(html: string): string {
   return html
-    .replace(/<script[\s\S]*?<\/script>/g, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z]+;/g, " ");
 }
