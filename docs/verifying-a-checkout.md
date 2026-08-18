@@ -117,7 +117,7 @@ worth apologising for.
 
 ```bash
 # The core imports with nothing installed
-python3 -c "import beacon; print(beacon.__version__)"        # 0.1.1
+python3 -c "import beacon; print(beacon.__version__)"        # 0.1.2
 
 # The CLI vertical slice
 python3 -m beacon validate scenarios/inbox-briefing/scenario.json
@@ -178,7 +178,7 @@ python3 -m venv /tmp/fresh
 /tmp/fresh/bin/pip install dist/*.whl
 mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 
-/tmp/fresh/bin/project-beacon --version      # 0.1.1
+/tmp/fresh/bin/project-beacon --version      # 0.1.2
 /tmp/fresh/bin/project-beacon scenarios      # 83 of them
 /tmp/fresh/bin/project-beacon taxonomy       # 131 of 131
 /tmp/fresh/bin/project-beacon run inbox-briefing

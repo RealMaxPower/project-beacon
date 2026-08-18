@@ -15,6 +15,43 @@ statements it cannot back.
 
 Nothing yet.
 
+## [0.1.2] — 2026-08-18
+
+### Fixed
+
+- **Beacon introduced itself to MCP hosts as 0.1.0, whatever version was
+  installed.** `serverInfo`/`clientInfo` carry the implementation version, and
+  it is where a host's logs and a user's bug report get their version from.
+  Three sites had it typed as a literal, written at 0.1.0 and never bumped, so
+  every 0.1.1 install misreported itself to every host it connected to. All
+  three now read `__version__`.
+
+  The three components with their own names — `beacon-echo-fixture`,
+  `beacon-reference-mcp-host` and the reference inbox agent — keep their own
+  versions, because pinning them to the package would assert something untrue
+  about them.
+
+- **A status badge with the version typed into it.** 0.1.1 bumped
+  `pyproject.toml` and `beacon/__init__.py`, which a test holds together, and
+  the badge beside them, which nothing checked. So 0.1.1's project page
+  announces 0.1.0 — permanently, since a released description cannot be
+  edited. The badge has given up its copy: the computed pypi badge on the line
+  above already prints the version, and prints what was published rather than
+  what was last typed.
+
+### Added
+
+- Five guards, each watched failing before it was kept. No static badge may
+  carry a version number. The interpreter badge must match the classifiers and
+  the coverage badge must match the floor CI enforces — both were correct and
+  unguarded, which is the state the version badge was in before it drifted.
+  The versions printed in `docs/verifying-a-checkout.md` must match the
+  package and the published taxonomy. And nowhere in `beacon/` may name
+  `project-beacon` with a literal version.
+
+  The pattern behind all of them: a fact typed in a second place is a fact
+  nobody will bump, and the second place is the one that reaches the reader.
+
 ## [0.1.1] — 2026-08-18
 
 ### Fixed

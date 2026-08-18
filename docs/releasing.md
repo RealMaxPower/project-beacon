@@ -110,11 +110,17 @@ mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 /tmp/fresh/bin/project-beacon run inbox-briefing
 ```
 
-**The version lives in two files** and nothing but a test keeps them together:
-`pyproject.toml` and `beacon/__init__.py`. `tests/test_builtins.py` asserts
-they agree, and `release.yml` asserts the tag matches `pyproject.toml` — so the
-tag is tied to `__init__.py` only through a test that has to have run. Change
-both, and run the suite, before tagging.
+**The version is typed in three places and derived everywhere else.**
+`pyproject.toml`, `beacon/__init__.py`, and the two `# 0.1.2` comments in
+`docs/verifying-a-checkout.md` that annotate a `--version` command a reader is
+asked to compare against. `tests/test_builtins.py` asserts the first two agree
+and `VerificationTranscriptTests` pins the third, and `release.yml` asserts the
+tag matches `pyproject.toml` — so the tag is tied to the rest only through
+tests that have to have run. Change all three, and run the suite, before
+tagging.
+
+Everywhere else reads `__version__`: the MCP `serverInfo`/`clientInfo` blocks
+did not until 0.1.2, and announced 0.1.0 to every host for two releases.
 
 Documentation that must move in the same commit as the version bump, because
 each one currently states the opposite:
@@ -153,6 +159,17 @@ each one currently states the opposite:
   `tests/test_packaging.py::LongDescriptionTests` enforces this now, so it is a
   build failure rather than something to remember. The entry stays here because
   the reason is not obvious from the test name.
+
+- **No static badge may carry a version number.** 0.1.1 bumped the two files a
+  test holds together and left `status-v0.1.0` beside them, so that release's
+  project page announces the previous version and always will. A static badge
+  is a claim with no mechanism behind it; the computed `pypi/v` badge prints
+  what was actually published rather than what was last typed, so the version
+  belongs there and in no badge beside it.
+
+  `tests/test_packaging.py::LongDescriptionTests` and `BadgeFactTests` enforce
+  this, along with the two badges that were correct by luck — the interpreter
+  list against the classifiers, the coverage floor against `--fail-under`.
 
 - **A PyPI version badge is added *after* the first publish, never before.**
   Added beforehand, it points at a package that does not exist yet, the first
