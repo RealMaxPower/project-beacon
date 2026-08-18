@@ -22,7 +22,7 @@ tag matches the first.
 | Regression-gating an agent in your own CI | **Yes** | Baselines, flakiness rates and a significance test all work; `docs/agent-builders.md` is the path |
 | Probing an agent that might be actively hostile | **Not yet** | The process runner is not a sandbox. A container runner is planned — see *Isolation* |
 | Publishing evidence a third party must trust | **Not yet** | The digest is unsigned and no command verifies one. Both are planned — see *Evidence integrity* |
-| Installing it as a dependency | **Not yet** | Nothing is on PyPI. The release pipeline is built and tested — see *Distribution* |
+| Installing it as a dependency | **Yes** | `pip install project-beacon`, published through trusted publishing — see *Distribution* |
 | Driving a run from a browser | **No, by decision** | The CLI is the interface. See *Decided against* |
 | Approving an agent's actions as it works | **No, by decision** | Scenario policy is the mechanism, and unlike a human it is deterministic. See *Decided against* |
 | Deciding whether an agent is safe to deploy | **No** | A passing report is evidence for one synthetic scenario and one configuration. It is not a safety certification, and never will be |
@@ -131,19 +131,19 @@ is the workflow rather than a file.
 
 ### Distribution
 
-Nothing has been published to PyPI, so `pip install project-beacon` does not
-work. Packaging is in better shape than that implies: the release workflow
-builds an sdist and a wheel, runs `twine check --strict`, installs the wheel
-into a clean virtualenv in an empty directory, exercises the CLI paths a new
-user takes, then unpacks the sdist and runs the shipped test suite out of it.
+`pip install project-beacon` works as of 0.1.0. The release workflow builds an
+sdist and a wheel, runs `twine check --strict`, installs the wheel into a clean
+virtualenv in an empty directory, exercises the CLI paths a new user takes,
+then unpacks the sdist and runs the shipped test suite out of it.
 
 That last step exists because the smoke test used to run only the subset of
 commands that needed no data files, and stayed green for weeks while the sdist
 shipped without `examples/`, `docs/`, `schemas/` or `tests/stubs/` — so the
 suite it did ship could not run.
 
-**What would change it:** tagging `v0.1.0`, which publishes through PyPI
-trusted publishing with no long-lived token in the repository.
+Publication goes through PyPI trusted publishing, so no long-lived token exists
+in this repository. The `pypi` environment binds it to `release.yml`, which is
+what lets a required reviewer stand between a tag and a release.
 
 ### Runtime adapters
 

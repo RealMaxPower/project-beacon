@@ -13,9 +13,16 @@ statements it cannot back.
 
 ## [Unreleased]
 
-Nothing is published yet. `pip install project-beacon` does not work; clone
-the repository. Packaging and the release workflow are in place and verified
-against a clean environment, so the first tag will publish.
+Nothing yet.
+
+## [0.1.0] — 2026-08-17
+
+The first published release. `pip install project-beacon` works from this tag
+forward; everything below was built before anything was installable, which is
+why the entries read as a record of the work rather than as release notes.
+
+Published through PyPI trusted publishing: no long-lived token exists in this
+repository, and the `pypi` environment binds publication to `release.yml`.
 
 ### Fixed
 
