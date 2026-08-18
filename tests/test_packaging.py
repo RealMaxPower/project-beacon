@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import unittest
 from pathlib import Path
+from urllib.parse import unquote
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -273,6 +274,48 @@ class LongDescriptionTests(unittest.TestCase):
             "a static badge cannot know the version; let the pypi badge print "
             f"it: {carrying}",
         )
+
+
+class BadgeFactTests(unittest.TestCase):
+    """
+    The remaining badges assert things with a live source elsewhere.
+
+    A static badge is a claim with no mechanism behind it, and the version one
+    proved what that costs: it went stale at 0.1.1 and froze there. These two
+    are correct today, and were equally unguarded — the interpreter list has a
+    source in the classifiers, and the coverage floor has one in the workflow
+    that enforces it. So they are checked against those rather than trusted.
+    """
+
+    README = (ROOT / "README.md").read_text(encoding="utf-8")
+    WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+
+    def _badge(self, prefix: str) -> str:
+        found = re.search(
+            rf"https://img\.shields\.io/badge/{prefix}-([^-]+)-", self.README
+        )
+        self.assertIsNotNone(found, f"no {prefix} badge in the README to check")
+        return unquote(found.group(1))
+
+    def test_the_interpreter_badge_matches_the_classifiers(self) -> None:
+        claimed = {part.strip() for part in self._badge("python").split("|")}
+        declared = set(
+            re.findall(
+                r"(?m)^\s*\"Programming Language :: Python :: (\d+\.\d+)\"",
+                PYPROJECT.read_text(encoding="utf-8"),
+            )
+        )
+        self.assertTrue(declared, "no versioned classifiers to check against")
+        self.assertEqual(claimed, declared)
+
+    def test_the_coverage_badge_matches_the_floor_ci_enforces(self) -> None:
+        claimed = re.search(r"(\d+)", self._badge("branch%20coverage"))
+        self.assertIsNotNone(claimed, "the coverage badge states no number")
+        enforced = re.search(
+            r"--fail-under=(\d+)", self.WORKFLOW.read_text(encoding="utf-8")
+        )
+        self.assertIsNotNone(enforced, "no --fail-under in the workflow")
+        self.assertEqual(claimed.group(1), enforced.group(1))
 
 
 if __name__ == "__main__":
