@@ -45,6 +45,17 @@ statements it cannot back.
   independently indexable; and step six called one scenario's command "what
   recorded these" above panels drawn from three.
 
+- **The verification document typed a skip count, and this session broke it.**
+  §1 said ten checks skip on a fresh clone and the suite reports
+  `OK (skipped=10)`. That was measured and true at 0.1.2; the twelve site guards
+  added just after it moved a fresh clone to 22. A reader following the
+  document's own instruction — that a disagreeing number means a bug — would
+  have filed one against a suite that was working. Unlike the test count beside
+  it, there is no band to fall back on: a skip count moves in both directions
+  and nothing in the tree computes it, so the figure is gone rather than
+  restated, and a guard keeps it out. What a reader needs is the reason, which
+  stays: the checks that read the built site skip, and §6 turns them on.
+
 - **A script body could have been published as prose.** The markdown twins are
   written by stripping markup from the rendered page, and the filter that takes
   out the invisible parts matched `</script>` exactly. HTML does not require

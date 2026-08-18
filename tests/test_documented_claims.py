@@ -541,6 +541,43 @@ class VerificationTranscriptTests(unittest.TestCase):
             f"the document says {claimed}+ and there are {actual}; it understates by over a third",
         )
 
+    def test_the_transcript_types_no_skip_count(self) -> None:
+        """
+        The same disease as the count above, caught a second time.
+
+        §1 said ten checks skip on a fresh clone and the suite reports
+        `OK (skipped=10)`. That was measured, and true, at 0.1.2. Twelve site
+        guards landed afterwards and a fresh clone reports 22 — so a reader
+        following this document's own instruction, that a disagreeing number
+        means a bug, would file one against a suite that is working.
+
+        There is no band to use here. A test count only grows, so `870+` stays
+        honest; a skip count moves whenever a guard is added, removed, or
+        changes which directory it depends on, and nothing in the tree computes
+        it — the number is only knowable by running the suite in a checkout that
+        has never built the site, which is not a state this suite can observe
+        from inside a checkout that has.
+
+        So the figure is not restated more carefully, it is removed, and this
+        keeps it out. The reason it exists is worth more to a reader than the
+        arithmetic: the checks that read the built site skip, and §6 turns them
+        on.
+        """
+        text = self.DOC.read_text(encoding="utf-8")
+        # Guard the guard: if the transcript block ever stops mentioning skips,
+        # this test is watching a document that no longer says anything.
+        self.assertIn(
+            "skip", text, "§1 no longer mentions skipping at all; see this test's docstring"
+        )
+
+        typed = re.findall(r"skipped\s*=\s*(\d+)|(\b(?:[Tt]en|[Tw]welve|\d+)\b) checks", text)
+        self.assertEqual(
+            [next(g for g in match if g) for match in typed],
+            [],
+            "§1 types a skip count again; nothing computes it, so it will drift "
+            "the way `skipped=10` did between 0.1.2 and the twelve guards after it",
+        )
+
     def test_the_printed_taxonomy_version_is_the_current_one(self) -> None:
         published = json.loads(
             (ROOT / "taxonomy" / "failure-modes.json").read_text(encoding="utf-8")

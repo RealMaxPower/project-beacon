@@ -58,10 +58,16 @@ the builder twice, get the same bytes — held even while this was broken, so it
 is not evidence of anything. If `git status` is dirty after §1, that is the
 real check failing, and it is worth reporting.
 
-**§1 also depends on §6 having been run at least once.** Ten checks that read
-the built site skip on a fresh clone, and the suite reports `OK (skipped=10)`
+**§1 also depends on §6 having been run at least once.** The checks that read
+the built site skip on a fresh clone, and the suite reports them as a count
 rather than naming them. That is expected; building the site in §6 and
 re-running §1 turns them on.
+
+How many there are is deliberately not written here. It was, and it was right
+when it was written, and then it was wrong — every guard added for the site
+moves it, and this document's whole argument is that a figure nobody computes
+drifts away from the thing it describes. A number that must be edited by hand
+whenever unrelated work lands is the disease, not the cure.
 
 ### What you need
 
@@ -88,7 +94,7 @@ Expect:
 
 ```
 Ran 870+ tests in ~115s
-OK                        # or OK (skipped=10) before §6 has built the site
+OK                        # some checks skip until §6 has built the site
 ```
 
 ```
