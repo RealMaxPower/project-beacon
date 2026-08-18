@@ -22,6 +22,7 @@ import { BaselineCompare } from "@/screens/playground/BaselineCompare";
 import { ExportBundle } from "@/screens/playground/ExportBundle";
 import { TimelineEvent } from "@/components/execution/TimelineEvent";
 import { loadAllRuns, evidenceFor, eventsFor, fixtures, offsets, scenarioFor } from "@/data/fixtures";
+import { toMarkdown } from "./to-markdown";
 
 // Every run: these render all of them, and only five are eager.
 await loadAllRuns();
@@ -46,9 +47,21 @@ const POISON = [
   { needle: "Infinity", what: "a division produced Infinity" },
 ];
 
+/**
+ * The text of a render: script bodies gone, then the tags.
+ *
+ * The closing tag tolerates whitespace, because `</script >` closes a script
+ * and `</script>` is merely the spelling React emits. The old pattern matched
+ * the opening tag and missed that closing one, so it deleted both tags and left
+ * the script body sitting in the text — and this function is what decides
+ * whether the poison strings below appear on a page. A script surviving as
+ * prose is a false negative, the one direction a linter must not fail in.
+ *
+ * Neither pass loops; see `stripTags` in `to-markdown.ts` for why.
+ */
 function textOf(html: string): string {
   return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z]+;/g, " ");
 }
@@ -430,6 +443,8 @@ function auditPanelFidelity() {
       report(where, "no panel rendered", file);
       continue;
     }
+    // Tags out before entities in: decoding first would turn an escaped `&lt;`
+    // in the panel text into a `<` that the strip then treats as markup.
     const shown = pre[1]
       .replace(/<[^>]+>/g, "")
       .replaceAll("&lt;", "<")
@@ -457,6 +472,89 @@ function auditPanelFidelity() {
   }
 }
 
+/**
+ * The two claims this repository makes about stripping markup.
+ *
+ * Code scanning raised eleven alerts across the strippers here, in `to-markdown`
+ * and in `test_site_markdown.py`. Three were real and are fixed; the rest are a
+ * true rule applied to a regex it does not hold for. Neither half of that
+ * sentence is worth anything as a comment, so both are checked here.
+ *
+ * The distinction matters because these functions decide what text the site
+ * publishes to models and what text the linter searches for defects. A stripper
+ * that drops the tags and keeps the script body is worse than one that does
+ * nothing, because everything downstream now treats a script as prose.
+ */
+function auditStripping() {
+  let checked = 0;
+
+  /*
+   * 1 and 2. The two inputs, and what Chromium does with each.
+   *
+   * `</script >` closes a script, so the first hides POISON from a reader and
+   * the strippers must hide it too. The second builds no script element at all
+   * — Chromium renders `xript>POISON` as words — so POISON must survive. That
+   * second case is what refuses the looped removal the rule asks for: a loop
+   * would remove the text rather than the script, and there is no script.
+   */
+  for (const [what, input, visible] of [
+    ["a closing tag spelled with a space", "<p>KEEP</p><script >POISON</script >", false],
+    ["markup that only looks like a completed script",
+     "<p>KEEP</p><sc<script>x</script>ript>POISON</script>", true],
+  ] as const) {
+    checked += 1;
+    for (const [where, text] of [
+      ["toMarkdown", toMarkdown(input)],
+      ["textOf", textOf(input)],
+    ] as const) {
+      // Both directions on every input: a stripper returning "" would satisfy
+      // any number of "the poison is gone" assertions.
+      if (!text.includes("KEEP")) {
+        report(`stripping · ${where}`, "ordinary text was dropped", what);
+      }
+      if (text.includes("POISON") !== visible) {
+        report(
+          `stripping · ${where}`,
+          visible ? "text a browser renders was removed" : "a script body survived as prose",
+          what,
+        );
+      }
+    }
+  }
+
+  /*
+   * 3. The generic strip is a fixed point in one pass.
+   *
+   * This is the claim that dismisses eight of the eleven alerts, so it is the
+   * one that has to be true rather than argued. `[^>]+` cannot cross a `>`, so
+   * the leftmost `<` with any `>` after it always starts a match and no `<`
+   * survives for a later `>` to pair with. Every string over the alphabet that
+   * could break it is tried, both replacements, rather than reasoned about.
+   */
+  const alphabet = ["<", ">", "a", " ", "/"];
+  for (let length = 1; length <= 8; length++) {
+    for (let n = 0; n < alphabet.length ** length; n++) {
+      let input = "";
+      for (let i = 0, k = n; i < length; i++, k = Math.floor(k / alphabet.length)) {
+        input += alphabet[k % alphabet.length];
+      }
+      for (const gap of ["", " "]) {
+        const once = input.replace(/<[^>]+>/g, gap);
+        checked += 1;
+        if (once.replace(/<[^>]+>/g, gap) !== once) {
+          report("stripping · /<[^>]+>/g", "a second pass changed the result", JSON.stringify(input));
+        }
+      }
+    }
+  }
+
+  // The vacuity guard this file applies to everything else applies here too.
+  if (checked < 100_000) {
+    report("stripping", "the guard checked almost nothing", `${checked} inputs`);
+  }
+  console.log(`  ${checked.toLocaleString()} stripping inputs checked`);
+}
+
 console.log(`Auditing ${screens.length} rendered screens.\n`);
 for (const [name, render] of screens) {
   try {
@@ -468,6 +566,7 @@ for (const [name, render] of screens) {
 
 auditInspector();
 auditPanelFidelity();
+auditStripping();
 
 console.log();
 if (problems > 0) {

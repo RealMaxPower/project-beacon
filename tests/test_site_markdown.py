@@ -48,11 +48,52 @@ class MarkdownTwinTests(unittest.TestCase):
         # to strip only `<script>`, in lower case, so a page with an inline
         # `<style>` would have counted its CSS as prose and disagreed with a
         # twin that correctly dropped it.
+        #
+        # The closing tag tolerates whitespace before its `>`, because
+        # `</script >` closes a script and `to-markdown.ts` now allows for that.
+        # A comparison between two strippers is only as good as the weaker one:
+        # if this half keeps a script body the twin correctly dropped, the test
+        # reports drift that is its own, and if it drops one the twin kept, it
+        # stays silent about drift that is real.
         text = re.sub(
-            r"<(script|style).*?</\1>", " ", body.group(1) if body else "",
+            r"<(script|style)\b[^>]*>.*?</\1\s*>", " ", body.group(1) if body else "",
             flags=re.S | re.I,
         )
         return " ".join(re.sub(r"<[^>]+>", " ", text).split())
+
+    def test_the_prose_reader_agrees_with_a_browser_about_what_is_script(self) -> None:
+        """
+        The stripper above, on the two inputs code scanning raised it for.
+
+        `py/bad-tag-filter` was right about the first: `</script >` closes a
+        script, the pattern demanded `</script>`, so the filter removed both tags
+        and left the body behind as prose. This function decides whether a twin
+        has drifted, and a stripper that publishes a script body invents drift
+        that is its own rather than the page's.
+
+        The second is the one worth writing down. Remove the inner element of
+        `<sc<script>x</script>ript>POISON</script>` and the text left behind
+        reads `<script>POISON</script>`, which is why the rule wants the removal
+        looped. But Chromium given that markup builds no script element at all
+        and renders `xript>POISON` as ordinary words — checked, not assumed.
+        Looping would delete text a reader can see in order to hide a script
+        that was never there, so the loop is refused and this pins the refusal.
+        """
+        for description, markup, expected in (
+            ("a closing tag spelled with a space",
+             "<p>KEEP</p><script >POISON</script >", False),
+            ("markup that only looks like a completed script",
+             "<p>KEEP</p><sc<script>x</script>ript>POISON</script>", True),
+        ):
+            with self.subTest(case=description):
+                prose = self._prose(f"<body>{markup}</body>")
+                # A stripper returning "" would satisfy every assertNotIn ever
+                # made of it, so both directions are checked on every input.
+                self.assertIn("KEEP", prose, "the prose reader dropped ordinary text")
+                if expected:
+                    self.assertIn("POISON", prose, f"{description}: a browser shows this text")
+                else:
+                    self.assertNotIn("POISON", prose, f"{description}: a script body became prose")
 
     def test_there_are_twins_to_check(self) -> None:
         self.assertGreaterEqual(len(self._twins()), 4)

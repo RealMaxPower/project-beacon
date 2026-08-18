@@ -30,15 +30,54 @@ function decode(value: string): string {
     .replace(/&amp;/g, "&");
 }
 
-/** Content a reader is never shown, and a model should not be either. */
+/**
+ * Every tag, in one pass, because one pass is all this pattern ever needs.
+ *
+ * CodeQL flags each use of it as `js/incomplete-multi-character-sanitization`:
+ * the rule is that a single-pass strip can leave markup behind, since deleting
+ * `<b>` from `<scr<b>ipt>` completes a tag that was not there before. That is a
+ * true statement about strippers in general and a false one about this regex.
+ * `[^>]+` cannot cross a `>`, so the leftmost `<` with any `>` after it always
+ * starts a match — there is no `<` left over for a later `>` to pair with, and
+ * neither replacement introduces a `<` or a `>` to make one.
+ *
+ * Asserted rather than argued: `auditStripping` in `tools/lint.tsx` runs every
+ * string over the alphabet that could defeat it, both replacements, and fails
+ * the build on any input where a second pass changes the result.
+ *
+ * The rule is not wrong about the shape it catches. It is wrong about this
+ * regex.
+ */
+function stripTags(value: string, gap: string): string {
+  return value.replace(/<[^>]+>/g, gap);
+}
+
+/**
+ * Content a reader is never shown, and a model should not be either.
+ *
+ * The closing tags tolerate whitespace before the `>`, because HTML does:
+ * `</script >` ends a script, and `</script>` is only the spelling React
+ * happens to use. A filter that trusts the spelling drops the tags and keeps
+ * the script body, which is the one failure mode where stripping markup badly
+ * is worse than not stripping it at all.
+ *
+ * Deliberately *not* applied to a fixed point, which is the other half of the
+ * same code-scanning rule and the half that is worth arguing with. Removing the
+ * inner element of `<sc<script>x</script>ript>SECRET</script>` leaves the text
+ * `<script>SECRET</script>`, and a second pass would take `SECRET` out — but a
+ * browser handed that markup builds no script element at all and renders
+ * `xript>SECRET` as ordinary words. Looping would delete text a reader can see,
+ * to hide a script that does not exist. This file exists to report what the page
+ * says; matching the parser matters more than satisfying the pattern.
+ */
 function dropInvisible(html: string): string {
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "")
     // Icons and rules. Each one is decoration with no text a reader relies on.
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/g, "")
-    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/[a-z]+>/g, "")
-    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*\/?>/g, "");
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, "")
+    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/[a-z]+\s*>/gi, "")
+    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*\/?>/gi, "");
 }
 
 /**
@@ -51,7 +90,7 @@ function dropInvisible(html: string): string {
  */
 function fenceCode(html: string): string {
   return html.replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_all, inner: string) => {
-    const text = decode(inner.replace(/<[^>]+>/g, ""));
+    const text = decode(stripTags(inner, ""));
     return `\n\n@@FENCE@@${text.trim()}@@FENCE@@\n\n`;
   });
 }
@@ -67,7 +106,7 @@ export function toMarkdown(html: string): string {
       // beside a description span came out as `docs/architecture.mdThe run
       // lifecycle…`, which is a link nobody can read and a filename that does
       // not exist.
-      const text = decode(label.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+      const text = decode(stripTags(label, " ")).replace(/\s+/g, " ").trim();
       if (!text) return "";
       // Padded for the same reason the tag strip below is: React puts no
       // whitespace between two adjacent anchors, so three buttons in a row
@@ -77,7 +116,7 @@ export function toMarkdown(html: string): string {
   );
 
   out = out.replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, (_all, inner: string) => {
-    const text = decode(inner.replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
+    const text = decode(stripTags(inner, "")).replace(/\s+/g, " ").trim();
     return text ? ` \`${text}\` ` : "";
   });
 
@@ -110,7 +149,7 @@ export function toMarkdown(html: string): string {
    * 8/9`. A model reading that gets a token that appears nowhere on the page.
    * The collapse below removes whatever this over-inserts.
    */
-  out = decode(out.replace(/<[^>]+>/g, " "));
+  out = decode(stripTags(out, " "));
 
   /*
    * Whitespace, in two passes that must stay in this order.

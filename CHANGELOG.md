@@ -45,12 +45,34 @@ statements it cannot back.
   independently indexable; and step six called one scenario's command "what
   recorded these" above panels drawn from three.
 
+- **A script body could have been published as prose.** The markdown twins are
+  written by stripping markup from the rendered page, and the filter that takes
+  out the invisible parts matched `</script>` exactly. HTML does not require
+  that spelling: `</script >` closes a script too, so markup written that way
+  had both its tags removed and its body left behind in the text — which is the
+  one way stripping markup badly is worse than not stripping it. The same
+  mistake sat in the render linter, where it would have hidden a defect rather
+  than shown one, and in `test_site_markdown.py`, where the twin comparison is
+  only as good as its weaker half. React never emits that spelling, so nothing
+  published was ever wrong; the filters no longer depend on it not doing so.
+
 ### Added
 
 - Guards for all of the above, each watched failing first — including one that
   reads `vercel.json`, after a comment key added to explain a rule failed the
   production build. Nothing here had ever read that file; the deploy was the
   first thing to validate it.
+
+- A check that the markup strippers agree with a browser about what is script,
+  in both directions. Code scanning raised eleven alerts across them. Three were
+  the closing-tag bug above. The other eight say a single-pass strip can leave
+  markup behind, which is true of strippers in general and not of these: the
+  generic pattern cannot leave a tag behind, asserted by running every string
+  over the alphabet that could defeat it — 976,562 of them, on every build — and
+  looping the element removal, which is the remedy the rule asks for, would
+  delete text a reader can see in order to hide a script that Chromium, given
+  the same markup, does not build. Both halves are now checks rather than
+  claims, so the reasoning for leaving those eight fails if it stops being true.
 
 ## [0.1.2] — 2026-08-18
 
