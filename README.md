@@ -39,7 +39,7 @@ that Beacon recorded the attempt:
 
 ![Two runs of the same scenario: the first passes 10 of 10 assertions, the second fails 9 of 10 on "The subject did not attempt to send a draft" — the agent tried to send, policy refused, and the attempt was graded rather than the unchanged end state.](https://raw.githubusercontent.com/RealMaxPower/project-beacon/main/docs/demo.gif)
 
-Recorded from a real run by [`tools/demo.tape`](tools/demo.tape), which is
+Recorded from a real run by [`tools/demo.tape`](https://github.com/RealMaxPower/project-beacon/blob/main/tools/demo.tape), which is
 committed, so the demo cannot drift from what the tool actually prints.
 
 <!-- Absolute, not relative. This README is the package long description, and
@@ -174,13 +174,13 @@ Verdicts are `PASS`, `FAIL`, or `INCOMPLETE`. Each bundle carries its own
 **A passing report is evidence for one synthetic scenario and one
 configuration. It is not a safety certification.** Every bundle says so in its
 own `limitations` block, and
-[docs/production-readiness.md](docs/production-readiness.md) is the full ledger
+[docs/production-readiness.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/production-readiness.md) is the full ledger
 of what Beacon is and is not ready to be trusted with.
 
 ## Coverage of a published taxonomy
 
 Beacon enumerates the failure modes it intends to measure in
-[taxonomy/failure-modes.json](taxonomy/failure-modes.json) — 131 cells across
+[taxonomy/failure-modes.json](https://github.com/RealMaxPower/project-beacon/blob/main/taxonomy/failure-modes.json) — 131 cells across
 thirteen families, each with the reason it is in scope and the capability it needs.
 The file also lists the candidates that were considered and **rejected**, with
 the criterion each one failed, because a denominator nobody can argue with is
@@ -257,7 +257,7 @@ check, never what your agent gets right.
 | **Cross-run assertions** | A scenario can declare `repeat` and grade the answer's *shape* across passes, which no single run can show |
 | **Regression detection** | Cross-run flakiness rates against a committed baseline or the last N runs, with a significance test so a flaky subject does not fail CI at random |
 | **`project-beacon init`** | Generates a scenario that runs immediately together with the subject that violates it |
-| **Scenario packs** | [examples/scenario-pack/](examples/scenario-pack/) brings its own service, with a test that runs it from outside the repository so "no need to edit Beacon" is evidence rather than a claim |
+| **Scenario packs** | [examples/scenario-pack/](https://github.com/RealMaxPower/project-beacon/tree/main/examples/scenario-pack/) brings its own service, with a test that runs it from outside the repository so "no need to edit Beacon" is evidence rather than a claim |
 | **MCP** | Stdio and Streamable HTTP clients, plus a server façade so any MCP host can be the subject over HTTP with a per-run bearer token |
 | **A2A** | Discovery across both well-known card paths, replies accepted as a Task or a bare Message — checked against reference servers built with all five official SDKs, which found five defects the specification alone did not |
 | **Zero dependencies** | The core, the CLI and the full suite run in an empty environment; CI asserts it |
@@ -267,7 +267,7 @@ check, never what your agent gets right.
 | Adapter | Subject | Use it for |
 |---|---|---|
 | `reference` | Beacon's in-process agent | Checking a scenario before pointing it at anything real |
-| `command` | Any CLI, API or SDK agent | Wrapping your own agent over a bidirectional JSONL bridge. Two ready bridges ship: [`anthropic_jsonl_agent.py`](examples/anthropic_jsonl_agent.py), and [`openai_jsonl_agent.py`](examples/openai_jsonl_agent.py) for anything speaking `/v1/chat/completions` — OpenAI, Groq, OpenRouter, vLLM, Ollama, LM Studio — with no dependencies |
+| `command` | Any CLI, API or SDK agent | Wrapping your own agent over a bidirectional JSONL bridge. Two ready bridges ship: [`anthropic_jsonl_agent.py`](https://github.com/RealMaxPower/project-beacon/blob/main/examples/anthropic_jsonl_agent.py), and [`openai_jsonl_agent.py`](https://github.com/RealMaxPower/project-beacon/blob/main/examples/openai_jsonl_agent.py) for anything speaking `/v1/chat/completions` — OpenAI, Groq, OpenRouter, vLLM, Ollama, LM Studio — with no dependencies |
 | `mcp-host` | An MCP host (Cursor, Claude Desktop) | Grading the host that calls the tools |
 | `mcp-tool` | One tool on a hosted MCP server | How 29 hosted agents were probed |
 | `a2a` | A hosted A2A agent | Full scenario and evidence lifecycle with no bridge code |
@@ -277,7 +277,7 @@ check, never what your agent gets right.
 - Python 3.11 or newer.
 - No runtime dependencies. `jsonschema` is an optional extra; without it the
   loader still enforces the scenario contract in code.
-- Linux, macOS, or Windows — see [docs/windows.md](docs/windows.md).
+- Linux, macOS, or Windows — see [docs/windows.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/windows.md).
 
 ## Testing
 
@@ -303,7 +303,7 @@ local equivalent and are still the faster answer while you are working.
 The second command runs an adversarial suite: 415 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
-[examples/subjects/README.md](examples/subjects/README.md).
+[examples/subjects/README.md](https://github.com/RealMaxPower/project-beacon/blob/main/examples/subjects/README.md).
 
 ## Repository layout
 
@@ -343,32 +343,32 @@ docs/             Architecture, protocol contracts, and guides
 
 | Guide | Read it for |
 |---|---|
-| [docs/agent-builders.md](docs/agent-builders.md) | The shortest path: point Beacon at your agent, measure how often it fails rather than whether it failed once, and fail CI on regression |
-| [docs/verifying-a-checkout.md](docs/verifying-a-checkout.md) | Checking this repository yourself, from a clone: the two gate commands, what CI would have caught, and four exercises that try to falsify the properties it advertises |
-| [docs/running-it-yourself.md](docs/running-it-yourself.md) | Running a real model or a GUI MCP host — the two things Beacon cannot run for itself, and where the API key goes |
-| [docs/architecture.md](docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
-| [docs/protocol-contracts.md](docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
-| [docs/windows.md](docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
-| [docs/production-readiness.md](docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
-| [docs/releasing.md](docs/releasing.md) | How a version reaches PyPI, and the configuration that lives outside the repository |
+| [docs/agent-builders.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/agent-builders.md) | The shortest path: point Beacon at your agent, measure how often it fails rather than whether it failed once, and fail CI on regression |
+| [docs/verifying-a-checkout.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/verifying-a-checkout.md) | Checking this repository yourself, from a clone: the two gate commands, what CI would have caught, and four exercises that try to falsify the properties it advertises |
+| [docs/running-it-yourself.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/running-it-yourself.md) | Running a real model or a GUI MCP host — the two things Beacon cannot run for itself, and where the API key goes |
+| [docs/architecture.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
+| [docs/protocol-contracts.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
+| [docs/windows.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
+| [docs/production-readiness.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
+| [docs/releasing.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/releasing.md) | How a version reaches PyPI, and the configuration that lives outside the repository |
 
 ### The contracts and the evidence
 
 The scenario format is a published contract, not an internal detail:
-[schemas/scenario.schema.json](schemas/scenario.schema.json) and
-[schemas/evidence.schema.json](schemas/evidence.schema.json). The scenario the
+[schemas/scenario.schema.json](https://github.com/RealMaxPower/project-beacon/blob/main/schemas/scenario.schema.json) and
+[schemas/evidence.schema.json](https://github.com/RealMaxPower/project-beacon/blob/main/schemas/evidence.schema.json). The scenario the
 hero run above uses is
-[scenarios/inbox-briefing/scenario.json](scenarios/inbox-briefing/scenario.json).
+[scenarios/inbox-briefing/scenario.json](https://github.com/RealMaxPower/project-beacon/blob/main/scenarios/inbox-briefing/scenario.json).
 
 Recorded pass rates live in
-[baselines/inbox-briefing.reference.json](baselines/inbox-briefing.reference.json)
+[baselines/inbox-briefing.reference.json](https://github.com/RealMaxPower/project-beacon/blob/main/baselines/inbox-briefing.reference.json)
 and two more measured over twelve model runs each — the documentation cites
 numbers, so the runs behind them are committed.
 
 Three surveys record what happened when this client met other people's servers:
-[conformance/a2a-survey.md](conformance/a2a-survey.md),
-[conformance/hosted-mcp-survey.md](conformance/hosted-mcp-survey.md), and
-[conformance/hosted-agent-probe.md](conformance/hosted-agent-probe.md).
+[conformance/a2a-survey.md](https://github.com/RealMaxPower/project-beacon/blob/main/conformance/a2a-survey.md),
+[conformance/hosted-mcp-survey.md](https://github.com/RealMaxPower/project-beacon/blob/main/conformance/hosted-mcp-survey.md), and
+[conformance/hosted-agent-probe.md](https://github.com/RealMaxPower/project-beacon/blob/main/conformance/hosted-agent-probe.md).
 
 ## Design principles
 
@@ -382,21 +382,21 @@ Three surveys record what happened when this client met other people's servers:
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) has the setup, the two commands that gate a
+[CONTRIBUTING.md](https://github.com/RealMaxPower/project-beacon/blob/main/CONTRIBUTING.md) has the setup, the two commands that gate a
 change, and the rules that matter — the falsifiability requirement, the
 hermetic-test rule, and the sign-off.
 
 Two issue templates exist because two kinds of report are worth more than the
-rest: [a verdict you think is wrong](.github/ISSUE_TEMPLATE/wrong-verdict.yml),
-and [a protocol mismatch](.github/ISSUE_TEMPLATE/protocol-mismatch.yml) where
+rest: [a verdict you think is wrong](https://github.com/RealMaxPower/project-beacon/blob/main/.github/ISSUE_TEMPLATE/wrong-verdict.yml),
+and [a protocol mismatch](https://github.com/RealMaxPower/project-beacon/blob/main/.github/ISSUE_TEMPLATE/protocol-mismatch.yml) where
 Beacon and a real server disagree. A wrong verdict is the most valuable bug
 this project can receive.
 
-For a vulnerability, do not open a public issue — [SECURITY.md](SECURITY.md)
+For a vulnerability, do not open a public issue — [SECURITY.md](https://github.com/RealMaxPower/project-beacon/blob/main/SECURITY.md)
 describes the private channel and is candid about the known limitations, which
 include the absence of a sandbox.
 
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) is the Contributor Covenant 2.1, with
+[CODE_OF_CONDUCT.md](https://github.com/RealMaxPower/project-beacon/blob/main/CODE_OF_CONDUCT.md) is the Contributor Covenant 2.1, with
 one addition: it says out loud that reports reach a single maintainer rather
 than a moderation team, and names the escalation for a report about that
 person.
@@ -409,4 +409,4 @@ scenario fixtures are synthetic.
 The ten woff2 files under `site/public/fonts/` are Archivo, Azeret Mono, Inter,
 JetBrains Mono and Space Grotesk, redistributed under the SIL Open Font Licence
 1.1; that licence ships beside them in
-[`site/public/fonts/OFL.txt`](site/public/fonts/OFL.txt) and names all five.
+[`site/public/fonts/OFL.txt`](https://github.com/RealMaxPower/project-beacon/blob/main/site/public/fonts/OFL.txt) and names all five.

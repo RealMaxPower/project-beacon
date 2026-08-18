@@ -15,6 +15,40 @@ statements it cannot back.
 
 Nothing yet.
 
+## [0.1.1] — 2026-08-18
+
+### Fixed
+
+- **The README is the PyPI project page, and half of it pointed nowhere
+  there.** `pyproject.toml` sets `readme = "README.md"`, so that file is
+  published verbatim as the description — and 29 of its links were relative.
+  On GitHub they resolve against the repository; on PyPI they resolve against
+  `pypi.org/project/project-beacon/` and reach nothing.
+
+  The demo image had already been made absolute, because `docs/releasing.md`
+  warns that PyPI resolves a relative image against pypi.org. The twenty-nine
+  links beside it fail the same way and silently, and nobody asked them the
+  same question. Every link is absolute now.
+
+- **A version badge that named a package which did not exist yet.** It was
+  added in the release-prep commit, before 0.1.0 was published, so the first
+  request for it legitimately answered "package or version not found" — and
+  that answer was cached, and the description was frozen around the URL that
+  produced it. A released description cannot be edited, which is why 0.1.0's
+  page still shows it and always will.
+
+- `tests/test_packaging.py` now fails if anything in the README is relative.
+  One check that would have caught the image, the links and the badge. The
+  guard was verified by making a single link relative again and watching it
+  name that link.
+
+  `tests/test_documented_claims.py` learned to resolve absolute links back to
+  repository paths, so making the README absolute did not quietly retire the
+  check that its links point at files that exist. Its own floor — "almost no
+  relative links were found; has the syntax changed?" — is what caught the
+  loss, which is the second time in two releases that a vacuity check has
+  earned itself.
+
 ## [0.1.0] — 2026-08-17
 
 The first published release. `pip install project-beacon` works from this tag

@@ -205,5 +205,47 @@ class BuildRequirementTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^license-files\s*=")
 
 
+class LongDescriptionTests(unittest.TestCase):
+    """
+    `README.md` is the package's PyPI description, and PyPI is not GitHub.
+
+    `pyproject.toml` sets `readme = "README.md"`, so every byte of that file is
+    published as the project page. A relative path there resolves against
+    `pypi.org/project/project-beacon/` rather than against the repository, and
+    reaches nothing.
+
+    0.1.0 shipped with 29 of them. The demo image had been converted to an
+    absolute URL because `docs/releasing.md` warned about it — a broken image
+    is visible — and the twenty-nine links beside it, which fail silently, were
+    never asked the same question. A released description cannot be edited, so
+    they are wrong on that version permanently.
+
+    This is the check that would have caught the image, the links, and the
+    version badge that was added before the package it names existed.
+    """
+
+    README = ROOT / "README.md"
+
+    #: `[label](target)` and `![alt](target)` in one pattern.
+    LINK = re.compile(r"!?\[([^\]]*)\]\(([^)\s]+)\)")
+
+    def test_nothing_in_the_readme_is_relative(self) -> None:
+        found = self.LINK.findall(self.README.read_text(encoding="utf-8"))
+        self.assertGreater(len(found), 20, "the README stopped linking anything")
+        relative = sorted(
+            {
+                target
+                for _, target in found
+                if not target.startswith(("http://", "https://", "mailto:", "#"))
+            }
+        )
+        self.assertEqual(
+            relative,
+            [],
+            "these resolve against pypi.org on the project page and reach "
+            f"nothing; make them absolute: {relative}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

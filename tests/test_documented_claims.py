@@ -14,6 +14,12 @@ SUBJECTS_README = ROOT / "examples" / "subjects" / "README.md"
 MANIFEST = ROOT / "examples" / "subjects" / "manifest.json"
 A2A_SURVEY = ROOT / "conformance" / "a2a-survey.md"
 
+#: Absolute forms of a link into this repository, which the README must use.
+SELF_LINK_PREFIXES = (
+    "https://github.com/RealMaxPower/project-beacon/blob/main/",
+    "https://github.com/RealMaxPower/project-beacon/tree/main/",
+)
+
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
     "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
@@ -264,6 +270,24 @@ class ReferencedPathTests(unittest.TestCase):
             for label, target in re.findall(
                 r"\[([^\]]*)\]\(([^)\s]+)\)", path.read_text(encoding="utf-8")
             ):
+                # A link into this repository is checkable whether it is
+                # written relative or absolute. README.md had to go absolute —
+                # it is also the package's PyPI description, where a relative
+                # path resolves against pypi.org and reaches nothing — and
+                # that alone dropped this check below its own floor, which is
+                # what the floor is for. Mapping the absolute form back to a
+                # path keeps the coverage instead of trading it away.
+                inside = None
+                for prefix in SELF_LINK_PREFIXES:
+                    if target.startswith(prefix):
+                        inside = target[len(prefix):]
+                        break
+                if inside is not None:
+                    checked += 1
+                    resolved = (ROOT / inside.split("#")[0].rstrip("/")).resolve()
+                    if not resolved.exists():
+                        broken.append(f"{path.relative_to(ROOT)}: [{label[:40]}]({target})")
+                    continue
                 if target.startswith(("http://", "https://", "mailto:", "#")):
                     continue
                 checked += 1
