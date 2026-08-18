@@ -284,13 +284,16 @@ class SharedSentenceTests(unittest.TestCase):
     """
 
     def test_it_appears_once_in_the_source(self) -> None:
+        # `as_posix`, not `str`. On Windows the latter yields `src\data\copy.ts`
+        # against a literal written with forward slashes, so this passed on
+        # every developer machine and failed all three Windows jobs at once.
         found = []
         for tree in ("src", "src-b", "tools"):
             for path in (SITE / tree).rglob("*"):
                 if path.suffix in {".ts", ".tsx"} and NO_RECORDED_RUN in path.read_text(
                     encoding="utf-8"
                 ):
-                    found.append(str(path.relative_to(SITE)))
+                    found.append(path.relative_to(SITE).as_posix())
         self.assertEqual(
             found,
             ["src/data/copy.ts"],
