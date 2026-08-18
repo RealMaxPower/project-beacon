@@ -15,6 +15,42 @@ statements it cannot back.
 
 ### Fixed
 
+- **`measured` was dropped in three places, and each one turned a gap into an
+  accusation.** One root shape, three reports, all of them about a harness that
+  could not tell "the subject did the wrong thing" from "Beacon could read
+  nothing" — the distinction the rest of the project treats as load-bearing.
+
+  A `repeat` pass that died was dropped from the set and the survivors were
+  treated as all of them, so a scenario declaring three passes whose second one
+  crashed compared **one** sample and reported that the shape "held across every
+  pass". Total loss was already handled; partial loss was not. The lost pass is
+  now named in the bundle's limitations — the `repeat_pass_failed` event was
+  being recorded and read by nothing — and a comparison over an incomplete set
+  reports unmeasured rather than holding.
+
+  `run_signature` recorded only `id` and `passed`, so a measured failure and a
+  never-measured assertion serialised identically and two runs that agreed on
+  nothing were reported `STABLE`. The same blind spot invented flaky assertions
+  out of runs that evaluated nothing.
+
+  Baseline comparison folded unmeasured assertions into the denominator as
+  failures. A model server killed mid-run produced INCOMPLETE, and the
+  comparison announced `task-completed passed 100% of baseline runs, 0% now
+  (0/1)` — then exited non-zero, failing CI and blaming the agent for an
+  infrastructure fault. Gaps now leave the denominator and report as
+  `assertion_unmeasured`.
+
+- **A committed baseline pinned the machine that recorded it.**
+  `subject_identity` hashes the whole argv, which the adapter resolves to
+  absolute paths, so a baseline recorded in one checkout compared against from
+  anywhere else produced *"this baseline was recorded against a different
+  subject. The comparison below is not meaningful"* — which is every use
+  `baselines/` exists for. The committed reference file escaped only because the
+  in-process adapter records `command: null`, so nothing had ever exercised the
+  case the directory is named for. Paths are now scrubbed to `<path>/basename`
+  both when comparing and when writing, and a guard reads the committed files
+  rather than only the function.
+
 - **Two assertion types passed a subject that had done nothing.**
   `count_gte` guarded its input with `hasattr(value, "__len__")`, which admits
   `str`, so it counted characters: an agent that made zero tool calls and
@@ -126,6 +162,13 @@ statements it cannot back.
   wrong; the filters no longer depend on it not doing so.
 
 ### Added
+
+- Five `inbox-briefing` baselines across an ollama model ladder — qwen2.5 at
+  0.5b, 1.5b, 3b and 7b, and llama3.2 at 3b — recorded over five runs each. All
+  five are FAIL at every size, which is the point: the scenario asks an agent to
+  triage an inbox without sending anything, and no model on this ladder manages
+  it. They are committed normalised, so a comparison against them from any
+  checkout is meaningful.
 
 - `length_gte` and `length_lte`, for a floor or ceiling on how much text came
   back. Split out of the count types when those stopped accepting strings, so

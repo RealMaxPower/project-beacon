@@ -306,12 +306,31 @@ def run_scenario(
         # single entry so an assertion comparing passes does not have to care
         # how many there were.
         "repeat": repeats,
+        # How many were *asked* for, which the list above cannot show once a
+        # pass has died. Evaluation-only: it is not a field of the bundle, and
+        # the count a reader needs is already in `scenario`.
+        "repeat_declared": scenario.repeat,
     }
     # Load-time validation should make this unreachable, but a run that dies
     # here dies after the subject has already done the work, discarding the
     # evidence for it. A Beacon-side failure is an INCOMPLETE to be recorded,
     # never an exception that loses the run.
     limitations = list(DEFAULT_LIMITATIONS) + list(context.limitations)
+    # A pass that died was recorded as an event and read by nothing, so a
+    # bundle from a run that lost one looked exactly like a bundle from a run
+    # that did not. The event is the record; this is the sentence a reader gets.
+    lost = [
+        event.payload.get("pass")
+        for event in recorder.events
+        if event.kind == "repeat_pass_failed"
+    ]
+    if lost:
+        limitations.append(
+            f"{len(lost)} of the {scenario.repeat - 1} additional pass(es) this "
+            f"scenario declared did not run (pass "
+            f"{', '.join(str(number) for number in lost)}). Any comparison "
+            f"across passes was made over fewer runs than were asked for."
+        )
     # Said in the bundle, not only in the docstring of the module that stores
     # it. A reader who quotes a token count is reading the bundle, and the
     # caveat has to be where they are.

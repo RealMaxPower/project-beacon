@@ -531,6 +531,20 @@ def _same_shape_across_runs(spec: Any, root: dict[str, Any], events: tuple) -> O
         raise EvaluationError(
             "no repeat pass to compare against, so shape stability was not measured"
         )
+
+    # Total loss was handled; partial loss was not. A pass that died was dropped
+    # from the list and the survivors were treated as the complete set, so a
+    # scenario declaring three passes whose second one crashed compared one
+    # sample and reported that the shape "held across every pass". Stability
+    # measured over the runs that happened to survive is a different and much
+    # weaker claim than the one being made.
+    expected = int(root.get("repeat_declared") or 0)
+    if expected and len(passes) != expected - 1:
+        raise EvaluationError(
+            f"{expected - 1 - len(passes)} of {expected - 1} later pass(es) did "
+            f"not run, so stability was measured over an incomplete set and is "
+            f"reported as unmeasured rather than as holding"
+        )
     first = _shape(get_path(root, path))
     later = [
         {"pass": entry.get("pass"), "shape": _shape(get_path(entry, path))}

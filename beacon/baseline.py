@@ -32,12 +32,67 @@ releases without becoming a different subject.
 """
 
 
+#: Stands in for the directory part of any absolute path on the command line.
+#:
+#: `site/tools/build_fixtures.py` learned this the expensive way and uses
+#: `<repo>` and `<python>` for the same reason: the machine that recorded
+#: something must not be identifiable from it, and 32 committed fixtures once
+#: shipped a laptop's absolute interpreter path. This is the same scrub one
+#: layer down, where it also buys correctness rather than only privacy.
+PATH_PLACEHOLDER = "<path>"
+
+
+def portable_command(command: Any) -> Any:
+    """
+    The command line with the recording machine taken out of it.
+
+    A baseline is meant to be committed and compared against from anywhere, and
+    `subject_identity` hashes the whole argv. The adapter resolves a subject to
+    absolute paths, so a baseline recorded in one checkout carried
+    `/tmp/pv/bin/python` and `/tmp/sd/project_beacon-0.1.2/examples/agent.py`,
+    and comparing from any other directory produced "this baseline was recorded
+    against a different subject. The comparison below is not meaningful" —
+    which is every use `baselines/` exists for. The committed
+    `inbox-briefing.reference.json` escaped only because the in-process adapter
+    records `command: null`.
+
+    Only the directory goes. The basename and every other argument stay,
+    because those are what distinguish one subject from another: five baselines
+    across a model ladder share a `name`, an `id` and an `adapter`, and differ
+    solely in `--model`. Scrubbing the whole command would make them one
+    subject with five contradictory histories, which is worse than the problem.
+    """
+    if not isinstance(command, (list, tuple)):
+        return command
+    scrubbed = []
+    for token in command:
+        text = str(token)
+        # A path, not a flag, a URL, or a bare word. The second separator is
+        # what tells `/tmp/pv/bin/python` from an argument that merely starts
+        # with a slash, and the drive letter covers Windows.
+        looks_absolute = (text.startswith("/") and text.count("/") >= 2) or (
+            len(text) > 3 and text[1] == ":" and text[2] in "\\/"
+        )
+        if looks_absolute:
+            base = text.replace("\\", "/").rsplit("/", 1)[-1]
+            scrubbed.append(f"{PATH_PLACEHOLDER}/{base}" if base else text)
+        else:
+            scrubbed.append(text)
+    return scrubbed
+
+
 def subject_identity(subject: Mapping[str, Any]) -> str:
-    """A stable, comparable key for a subject descriptor."""
-    return json.dumps(
-        {key: subject.get(key) for key in SUBJECT_IDENTITY_KEYS},
-        sort_keys=True,
-    )
+    """
+    A stable, comparable key for a subject descriptor.
+
+    Stable across machines, not only across runs on one. The command is
+    normalised here rather than at the call sites so that a baseline recorded
+    before this existed still compares equal to a run of the same subject
+    today: both sides go through the same scrub.
+    """
+    identity = {key: subject.get(key) for key in SUBJECT_IDENTITY_KEYS}
+    identity["command"] = portable_command(identity.get("command"))
+    return json.dumps(identity, sort_keys=True)
 
 
 @dataclass(frozen=True)
@@ -141,15 +196,40 @@ def wilson_interval(passed: int, total: int, z: float = Z_95) -> tuple[float, fl
 
 
 def _counts(evidences: Sequence[Evidence]) -> dict[str, tuple[int, int]]:
-    """(passed, total) per assertion — the counts, not just the ratio."""
+    """
+    (passed, total) per assertion — the counts, not just the ratio.
+
+    Unmeasured assertions leave the denominator entirely. They used to be folded
+    in as failures, which is how a crashed run came to be reported as the agent
+    getting worse: a model server killed mid-run produced INCOMPLETE with
+    `passed=False measured=False`, `_counts` read only `passed`, and the
+    comparison announced "task-completed passed 100% of baseline runs, 0% now
+    (0/1)". CI then exited non-zero and blamed the agent for an infrastructure
+    fault.
+
+    A gap is not a regression. `compare_to_baseline` reports it as its own kind
+    so it stays visible rather than being silently dropped.
+    """
     totals: dict[str, list[bool]] = {}
     for evidence in evidences:
         for item in evidence.assertions:
+            if not item.get("measured", True):
+                continue
             totals.setdefault(item["id"], []).append(bool(item["passed"]))
     return {
         assertion_id: (sum(results), len(results))
         for assertion_id, results in totals.items()
     }
+
+
+def _unmeasured(evidences: Sequence[Evidence]) -> dict[str, int]:
+    """How many runs could not evaluate each assertion at all."""
+    gaps: dict[str, int] = {}
+    for evidence in evidences:
+        for item in evidence.assertions:
+            if not item.get("measured", True):
+                gaps[item["id"]] = gaps.get(item["id"], 0) + 1
+    return gaps
 
 
 def _rates(evidences: Sequence[Evidence]) -> dict[str, float]:
@@ -172,9 +252,17 @@ def build_baseline(evidences: Sequence[Evidence]) -> dict[str, Any]:
         # Every identity key, present or not. Omitting an absent one would
         # make a stored baseline compare unequal to the very run it was built
         # from, because a missing key and a null key are not the same thing.
+        #
+        # The command is stored scrubbed as well as compared scrubbed. A
+        # baseline is a file people commit, and writing an absolute path into
+        # one publishes the recording machine's directory layout to everyone
+        # who clones the repository.
         "subject": {
-            key: evidences[0].subject.get(key)
-            for key in ("name",) + SUBJECT_IDENTITY_KEYS
+            **{
+                key: evidences[0].subject.get(key)
+                for key in ("name",) + SUBJECT_IDENTITY_KEYS
+            },
+            "command": portable_command(evidences[0].subject.get("command")),
         },
         "runs": len(evidences),
         "verdicts": verdicts,
@@ -296,12 +384,29 @@ def compare_to_baseline(
     drop is accepted as uninteresting even if it is statistically real.
     """
     counts = _counts(evidences)
+    gaps = _unmeasured(evidences)
     recorded = baseline.get("assertion_pass_rates", {})
     regressions: list[Regression] = []
     improvements: list[Regression] = []
 
     for assertion_id, was in sorted(recorded.items()):
         if assertion_id not in counts:
+            # Present but unevaluable is a different report from absent. A run
+            # whose subject crashed measures nothing, and calling that a
+            # missing assertion — or worse, a pass rate of zero — blames the
+            # agent for an infrastructure fault.
+            if assertion_id in gaps:
+                regressions.append(
+                    Regression(
+                        "assertion_unmeasured",
+                        assertion_id,
+                        f"{assertion_id} could not be evaluated in "
+                        f"{gaps[assertion_id]} of {len(evidences)} run(s), so "
+                        f"there is no rate to compare against the baseline's "
+                        f"{was:.0%}",
+                    )
+                )
+                continue
             regressions.append(
                 Regression(
                     "assertion_missing",

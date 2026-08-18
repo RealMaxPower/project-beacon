@@ -8,10 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from beacon.baseline import (
+    _counts,
     build_baseline,
     compare_to_baseline,
     load_baseline,
     load_recent_evidence,
+    portable_command,
     save_baseline,
     subject_identity,
     wilson_interval,
@@ -459,6 +461,153 @@ class EvidenceRoundTripTests(unittest.TestCase):
         self.assertEqual(restored.assertions, [])
         self.assertEqual(restored.limitations, [])
         self.assertFalse(restored.reset_verified)
+
+
+class UnmeasuredIsNotAFailureTests(unittest.TestCase):
+    """
+    A run that could not be evaluated is a gap, not the agent getting worse.
+
+    Found by a reviewer whose model server was OOM-killed mid-run. The subject
+    errored, the run reported INCOMPLETE with `task-completed passed=False
+    measured=False`, and the baseline comparison announced:
+
+        REGRESSION  task-completed passed 100% of baseline runs, 0% now (0/1)
+
+    `_counts` read `passed` and ignored `measured`, so an assertion nothing
+    could evaluate entered the denominator as a failure. `cli.py` then exits
+    non-zero, which fails CI and blames the agent for an infrastructure fault —
+    the most expensive kind of wrong answer this tool can give, because the
+    natural response is to go looking for a regression that is not there.
+    """
+
+    @staticmethod
+    def _crashed(run_id: str) -> Evidence:
+        evidence = _evidence(run_id, {"task-completed": False}, "INCOMPLETE")
+        for item in evidence.assertions:
+            item["measured"] = False
+        return evidence
+
+    def test_an_unmeasured_assertion_leaves_the_denominator(self) -> None:
+        counts = _counts([self._crashed("crash-1")])
+        self.assertEqual(
+            counts.get("task-completed"),
+            None,
+            "an assertion nothing could evaluate was counted as a failed run",
+        )
+
+    def test_a_crashed_run_reports_a_gap_rather_than_a_regression(self) -> None:
+        baseline = build_baseline([_evidence("base", {"task-completed": True}, "PASS")])
+        self.assertEqual(baseline["assertion_pass_rates"]["task-completed"], 1.0)
+
+        comparison = compare_to_baseline([self._crashed("crash-1")], baseline)
+        kinds = [regression.kind for regression in comparison.regressions]
+        self.assertIn(
+            "assertion_unmeasured",
+            kinds,
+            "a run that measured nothing did not report the gap",
+        )
+        self.assertNotIn(
+            "pass_rate_dropped",
+            kinds,
+            "an infrastructure fault was reported as the agent regressing",
+        )
+
+    def test_a_real_regression_is_still_reported(self) -> None:
+        """The control. A fix for this must not silence the thing it exists for."""
+        baseline = build_baseline(
+            [_evidence(f"base-{i}", {"task-completed": True}, "PASS") for i in range(5)]
+        )
+        measured_failures = [
+            _evidence(f"now-{i}", {"task-completed": False}, "FAIL") for i in range(5)
+        ]
+        comparison = compare_to_baseline(measured_failures, baseline)
+        self.assertIn(
+            "pass_rate_dropped", [r.kind for r in comparison.regressions]
+        )
+
+
+class PortableIdentityTests(unittest.TestCase):
+    """
+    A baseline is a file people commit, so it must not name their machine.
+
+    `subject_identity` hashed the whole argv, which the adapter resolves to
+    absolute paths. Five baselines recorded for a model ladder carried
+    `/tmp/pv/bin/python` and `/tmp/sd/project_beacon-0.1.2/examples/agent.py`,
+    so comparing against them from any other directory produced "this baseline
+    was recorded against a different subject. The comparison below is not
+    meaningful" — which is every use `baselines/` exists for.
+
+    The committed `inbox-briefing.reference.json` escaped only because the
+    in-process adapter records `command: null`, so nothing here had ever
+    exercised the case the directory is named for.
+    """
+
+    LADDER = ["/tmp/pv/bin/python", "/tmp/sd/project_beacon-0.1.2/examples/agent.py",
+              "--base-url", "http://localhost:11434/v1", "--model", "qwen2.5:3b"]
+    ELSEWHERE = ["/opt/venv/bin/python", "/srv/checkout/examples/agent.py",
+                 "--base-url", "http://localhost:11434/v1", "--model", "qwen2.5:3b"]
+
+    def _identity(self, command):
+        return subject_identity(
+            {"id": "jsonl-command", "adapter": "jsonl-command",
+             "agent_url": None, "server_url": None, "command": command}
+        )
+
+    def test_the_same_subject_compares_equal_from_another_checkout(self) -> None:
+        self.assertEqual(self._identity(self.LADDER), self._identity(self.ELSEWHERE))
+
+    def test_a_different_model_is_still_a_different_subject(self) -> None:
+        """
+        The scrub must not go so far that the ladder collapses.
+
+        These five baselines share a name, an id and an adapter, and differ only
+        in `--model`. Scrubbing the whole command would make them one subject
+        with five contradictory histories, which is worse than the bug.
+        """
+        other = list(self.ELSEWHERE)
+        other[-1] = "qwen2.5:7b"
+        self.assertNotEqual(self._identity(self.ELSEWHERE), self._identity(other))
+
+    def test_no_absolute_path_is_written_into_a_saved_baseline(self) -> None:
+        evidence = _evidence("run", {"a": True}, "PASS")
+        evidence.subject = {**evidence.subject, "command": self.LADDER}
+        stored = build_baseline([evidence])["subject"]["command"]
+        for token in stored:
+            with self.subTest(token=token):
+                self.assertFalse(
+                    token.startswith("/"),
+                    f"a saved baseline names the recording machine: {token}",
+                )
+        # What distinguishes the subject has to survive the scrub.
+        self.assertIn("--model", stored)
+        self.assertIn("qwen2.5:3b", stored)
+        self.assertTrue(any(t.endswith("agent.py") for t in stored))
+
+    def test_a_null_command_is_untouched(self) -> None:
+        """The in-process adapter records none, and that is not a path."""
+        self.assertIsNone(portable_command(None))
+
+    def test_no_committed_baseline_names_a_machine(self) -> None:
+        """
+        The rule applied to the files actually in the repository.
+
+        The tests above check the function; this checks the artefacts, which is
+        the thing a reader clones. A baseline recorded before the scrub existed,
+        or written by hand, would carry a home directory into a public
+        repository — and the model ladder that prompted this arrived carrying
+        `/tmp/pv/bin/python` and a `/tmp/sd/...` checkout path.
+        """
+        directory = Path(__file__).resolve().parents[1] / "baselines"
+        committed = sorted(directory.glob("*.json"))
+        self.assertGreater(len(committed), 0, "no committed baselines to check")
+
+        offenders = []
+        for path in committed:
+            command = json.loads(path.read_text(encoding="utf-8"))["subject"].get("command")
+            for token in command or []:
+                if token.startswith("/") or (len(token) > 3 and token[1] == ":"):
+                    offenders.append(f"{path.name}: {token}")
+        self.assertEqual(offenders, [], f"committed baselines name a machine: {offenders}")
 
 
 if __name__ == "__main__":

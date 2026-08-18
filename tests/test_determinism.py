@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import shutil
 import tempfile
 import unittest
@@ -14,7 +15,8 @@ from beacon.determinism import (
     run_signature,
     tool_sequence,
 )
-from beacon.models import Evidence, Scenario
+from beacon.evaluation import evaluate_all
+from beacon.models import AssertionSpec, Evidence, Scenario
 from beacon.runner import run_scenario
 
 
@@ -324,6 +326,157 @@ class RollingBaselineCLITests(unittest.TestCase):
 
     def test_a_tolerance_outside_zero_to_one_is_refused(self) -> None:
         self.assertEqual(self._run("--baseline-recent", "5", "--baseline-tolerance", "1.5"), 2)
+
+
+class _DiesOnOnePass:
+    """
+    The reference subject, except that one nominated execution raises.
+
+    Counted in executions, not in scenario passes: call 1 is the first pass,
+    call 2 is repeat pass 2. Failing "from" a call rather than "on" one kills
+    every pass after it too, which is the *total* loss case the evaluator
+    already handled — and is how the first version of this test managed to
+    reproduce the wrong bug.
+    """
+
+    def __init__(self, fails_on: int) -> None:
+        self._inner = ReferenceInboxAdapter()
+        self._fails_on = fails_on
+        self.calls = 0
+
+    @property
+    def descriptor(self):
+        return self._inner.descriptor
+
+    def execute(self, context):
+        self.calls += 1
+        if self.calls == self._fails_on:
+            raise RuntimeError("model server terminated: signal: kill")
+        return self._inner.execute(context)
+
+
+class RepeatPartialLossTests(unittest.TestCase):
+    """
+    A pass that died was dropped, and the survivors claimed to be all of them.
+
+    Total loss was handled: with every later pass gone, `same_shape_across_runs`
+    reported "no repeat pass to compare against, so shape stability was not
+    measured", which is right. Partial loss was not. A scenario declaring three
+    passes whose second one crashed compared **one** sample and reported that
+    the shape "held across every pass" — a cross-run stability claim made over a
+    single run.
+
+    The failure was recorded as a `repeat_pass_failed` event and read by
+    nothing, so a bundle from a run that lost a pass was indistinguishable from
+    one that did not.
+    """
+
+    def _run(self, declared: int, fails_on: int):
+        # `repeat` is set on the loaded object: the loader refuses it without a
+        # cross-run assertion, and inbox-briefing declares none.
+        scenario = dataclasses.replace(Scenario.load(SCENARIO), repeat=declared)
+        with tempfile.TemporaryDirectory() as directory:
+            return run_scenario(
+                scenario,
+                _DiesOnOnePass(fails_on),
+                output_dir=directory,
+                run_id="partial",
+            ).evidence
+
+    def test_a_lost_pass_is_named_in_the_limitations(self) -> None:
+        # Three declared passes, the second dies, the third survives.
+        evidence = self._run(declared=3, fails_on=2)
+        self.assertEqual(len(evidence.repeat), 1, "expected one surviving later pass")
+        self.assertTrue(
+            any("did not run" in limitation for limitation in evidence.limitations),
+            f"a lost pass left no trace a reader would see: {evidence.limitations}",
+        )
+
+    def test_stability_is_not_claimed_over_an_incomplete_set(self) -> None:
+        """
+        Evaluated directly, because `inbox-briefing` declares no cross-run
+        assertion — the shipped scenario that does is `contract-shape-stability`,
+        and the property under test is the evaluator's, not that scenario's.
+        """
+        spec = AssertionSpec.from_dict(
+            {"id": "shape", "type": "same_shape_across_runs",
+             "description": "d", "path": "artifacts.summary"}
+        )
+        root = {
+            "artifacts": {"summary": "x"},
+            "repeat": [{"pass": 3, "artifacts": {"summary": "x"}}],
+            "repeat_declared": 3,
+        }
+        result = evaluate_all([spec], root, [])[0]
+        self.assertFalse(
+            result.measured,
+            "stability was reported as holding across passes that never ran",
+        )
+
+        complete = {**root, "repeat": [
+            {"pass": 2, "artifacts": {"summary": "x"}},
+            {"pass": 3, "artifacts": {"summary": "x"}},
+        ]}
+        self.assertTrue(
+            evaluate_all([spec], complete, [])[0].passed,
+            "a complete set of passes must still be comparable",
+        )
+
+
+class MeasuredIsPartOfTheSignatureTests(unittest.TestCase):
+    """
+    "Beacon watched this fail" and "Beacon could read nothing" are not the same
+    run, and a determinism report that cannot tell them apart is worthless in
+    the exact case it exists for.
+
+    `run_signature` recorded `{"id", "passed"}` per assertion. A measured
+    failure and a never-measured assertion both serialise as `passed: False`,
+    so two runs — one where the subject demonstrably did the wrong thing, one
+    where the harness could not evaluate anything at all — produced identical
+    signatures and the report said:
+
+        Determinism: STABLE across 2 runs (state shape, verdict, and assertion
+        results identical).
+
+    Nothing about those two runs was identical except the field being compared.
+    """
+
+    @staticmethod
+    def _with(passed: bool, measured: bool):
+        return _evidence(assertions=[{"id": "one", "passed": passed, "measured": measured}])
+
+    def test_a_measured_failure_and_an_unmeasured_one_differ(self) -> None:
+        observed = run_signature(self._with(False, True))
+        unreadable = run_signature(self._with(False, False))
+        self.assertNotEqual(
+            observed["assertions"],
+            unreadable["assertions"],
+            "a failure Beacon watched and one it could not evaluate signed identically",
+        )
+
+    def test_the_report_calls_those_two_runs_divergent(self) -> None:
+        report = compare_runs([self._with(False, True), self._with(False, False)])
+        self.assertFalse(report.stable, report.summary())
+        self.assertIn("assertions", report.divergent_fields)
+
+    def test_two_runs_that_really_do_agree_are_still_stable(self) -> None:
+        """The control, so the fix cannot be "call everything divergent"."""
+        report = compare_runs([self._with(False, True), self._with(False, True)])
+        self.assertTrue(report.stable, report.summary())
+
+    def test_an_unmeasured_run_does_not_invent_flakiness(self) -> None:
+        """
+        Flaky means "sometimes passes, sometimes fails", which needs both
+        outcomes to have been *measured*. A run that evaluated nothing is not
+        evidence of either, and counting it as a failure manufactures a flaky
+        assertion out of an infrastructure fault.
+        """
+        report = compare_runs([self._with(True, True), self._with(False, False)])
+        self.assertEqual(
+            [item.id for item in report.flaky],
+            [],
+            "an unmeasured run was counted as a failing one and reported as flaky",
+        )
 
 
 if __name__ == "__main__":

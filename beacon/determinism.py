@@ -68,8 +68,19 @@ def run_signature(evidence: Evidence) -> dict[str, Any]:
         "before_state": canonical_digest(state_shape(evidence.state["before"])),
         "after_state": canonical_digest(state_shape(evidence.state["after"])),
         "reset_verified": evidence.reset_verified,
+        # `measured` belongs here as much as `passed` does. Without it, an
+        # assertion Beacon observed failing and one it could not evaluate at all
+        # both serialise as `passed: False`, so a run that found a real defect
+        # and a run that could read nothing produce identical signatures and the
+        # report says STABLE. That erases the exact distinction the rest of this
+        # project treats as load-bearing, in the report whose job is to say
+        # whether a subject is reproducible.
         "assertions": [
-            {"id": item["id"], "passed": item["passed"]}
+            {
+                "id": item["id"],
+                "passed": item["passed"],
+                "measured": item.get("measured", True),
+            }
             for item in evidence.assertions
         ],
         "artifact_names": sorted(evidence.artifacts),
@@ -216,10 +227,16 @@ def compare_runs(evidences: Sequence[Evidence]) -> DeterminismReport:
     # Which assertion is responsible, and how often. An assertion that passes
     # every run is not interesting; one that passes most runs is the dangerous
     # kind, because any single run is likely to look fine.
+    # Only measured outcomes, for the same reason `measured` is in the
+    # signature: a run Beacon could not evaluate is not evidence that the
+    # assertion failed, and folding it in as a failure invents flakiness out of
+    # an infrastructure fault.
     outcomes: dict[str, list[bool]] = {}
     failed_runs: dict[str, list[str]] = {}
     for evidence in evidences:
         for item in evidence.assertions:
+            if not item.get("measured", True):
+                continue
             outcomes.setdefault(item["id"], []).append(bool(item["passed"]))
             if not item["passed"]:
                 failed_runs.setdefault(item["id"], []).append(evidence.run_id)
