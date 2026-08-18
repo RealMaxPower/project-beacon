@@ -6,6 +6,17 @@
   "trailingSlash": false,
   "headers": [
     {
+      "//": "The deployment alias is not the site. Vercel serves byte-identical documents at project-beacon-*.vercel.app, canonicals and all, so the same pages were indexable at two origins and the only thing keeping them together was a canonical hint. Scoped by host so the header can never reach beaconlab.dev: a noindex on the real origin would remove the entire site from search, which is the sort of mistake that is silent for a week.",
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "(.*)\\.vercel\\.app" }],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {

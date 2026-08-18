@@ -98,7 +98,21 @@ export function RunTimeline({ evidence, events, expert, onDone }: Props) {
             {running && <Mark size={20} spinning className="text-accent" />}
             {running ? "Running." : "Finished."}
           </h2>
-          <p className="font-mono text-xs text-text-faint">
+          {/*
+           * The count is the progress indicator, so it carries the role rather
+           * than having a second, silent bar drawn beside it. The event list
+           * below is already a polite live region; what was missing was any way
+           * to ask how far through the replay is, rather than waiting to be
+           * told each time a row lands.
+           */}
+          <p
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={events.length}
+            aria-valuenow={revealed}
+            aria-valuetext={`${revealed} of ${events.length} events`}
+            className="font-mono text-xs text-text-faint"
+          >
             {revealed} of {events.length} events · run {evidence.run_id}
           </p>
         </div>

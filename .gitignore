@@ -71,6 +71,13 @@ _to_delete/
 # happening, stale within a release, and not documentation anyone cloning this
 # needs. What they established lives in CHANGELOG.md, in the commit messages,
 # and in the guards those passes produced.
+#
+# Anchored prefixes are why this needed a third pass: `validation-*.md` matched
+# the file it was written for and not `pypi-validation-0.1.2.md`, which sat
+# untracked and unignored where any `git add -A` would have taken it. These are
+# unanchored for that reason — the report is the same kind of file whatever it
+# is called, and the pattern should not depend on remembering the convention.
 *FINDINGS*.md
-retest-*.md
-validation-*.md
+*retest-*.md
+*validation-*.md
+*-audit.md

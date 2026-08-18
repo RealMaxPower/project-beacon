@@ -22,12 +22,13 @@
 import { renderToString } from "react-dom/server";
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SiteB } from "@b/SiteB";
 import { PAGES, SITE_ORIGIN, SITE_NAME, FAQ, type Page } from "@b/pages";
 import { scenarios, fixtures, loadAllRuns } from "@/data/fixtures";
-import { scenarioCopy } from "@/data/copy";
+import { scenarioCopy, NO_RECORDED_RUN } from "@/data/copy";
 import { toMarkdown } from "./to-markdown";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -283,7 +284,14 @@ const scenarioPages: Page[] = scenarios.map((scenario) => {
           .toLowerCase()}${copy.fails.slice(1)} Replay the recorded runs, check by check.`
       : REPLAYABLE.has(scenario.id)
         ? `A recorded run of ${scenario.name}, replayed check by check.`
-        : `${scenario.name}. A Beacon scenario: a synthetic world, a scoped tool surface, and ${scenario.assertions.length} checks it grades on ${scenario.graded_on}. No recorded run ships for it yet — clone Beacon to run it yourself.`,
+        : /*
+           * Imported rather than written again. This sentence is the one thing
+           * the head and the body both have to say about a scenario with no
+           * recorded run, and while it lived here alone the body said nothing
+           * at all — which is how these documents came to promise a named
+           * scenario in the tab and render a generic wizard underneath.
+           */
+          `${scenario.name}. A Beacon scenario: a synthetic world, a scoped tool surface, and ${scenario.assertions.length} checks it grades on ${scenario.graded_on}. ${NO_RECORDED_RUN}`,
     changefreq: "monthly",
     priority: "0.6",
   };
@@ -427,11 +435,40 @@ const notFound = shell
 writeFileSync(join(DIST, "404.html"), notFound);
 
 const SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
+
+/*
+ * When this build's content last changed, from git, or nothing at all.
+ *
+ * `<priority>` used to be here and `<lastmod>` did not, which is precisely
+ * backwards: every major crawler ignores priority, and lastmod is the one it
+ * uses to decide what to re-fetch.
+ *
+ * It is read from the last commit rather than from the clock or from file
+ * mtimes because both of those would stamp every one of these pages with the
+ * moment the build ran, which is a claim that all of them changed at once, and
+ * would be false on all but a handful every time. A shallow clone cannot answer
+ * the question — CI checks out with no history — so when git will not say, this
+ * emits no lastmod rather than a date it cannot support. An absent signal costs
+ * a crawler a heuristic; a wrong one teaches it to distrust the file.
+ */
+function lastCommitted(): string | null {
+  try {
+    const iso = execFileSync("git", ["log", "-1", "--format=%cI"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return /^\d{4}-\d{2}-\d{2}T/.test(iso) ? iso.slice(0, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+const lastmod = lastCommitted();
 const entries = ALL.map(
   (page) => `  <url>
-    <loc>${SITE_ORIGIN}${page.path}</loc>
+    <loc>${SITE_ORIGIN}${page.path}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
   </url>`,
 ).join("\n");
 

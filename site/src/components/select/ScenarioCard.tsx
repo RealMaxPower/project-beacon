@@ -12,8 +12,17 @@ import { scenarioCopy } from "@/data/copy";
 
 interface Props {
   scenario: ScenarioSummary;
+  /**
+   * Where the card goes. Its own page, which is a real document.
+   *
+   * The card was a `<button>` with a click handler and no destination, so the
+   * only address any scenario page had was the one in the sitemap: eighty-two
+   * of the eighty-three could not be opened in a new tab, copied, shared, or
+   * followed by a crawler, and the disclosure below the grid listed the rest as
+   * text with nothing to click at all.
+   */
+  href: string;
   selected: boolean;
-  disabled?: boolean;
   /**
    * Availability, rendered inside the card.
    *
@@ -25,18 +34,46 @@ interface Props {
   onPick: () => void;
 }
 
-export function ScenarioCard({ scenario, selected, disabled, note, onPick }: Props) {
+export function ScenarioCard({ scenario, href, selected, note, onPick }: Props) {
   const copy = scenarioCopy[scenario.slug];
 
   return (
-    <button
-      type="button"
-      onClick={onPick}
-      disabled={disabled}
-      aria-pressed={selected}
-      className={`flex h-full flex-col rounded-card border bg-surface p-5 text-left transition-colors ${
+    <a
+      href={href}
+      /*
+       * `aria-current`, not `aria-pressed`. `aria-pressed` is defined for
+       * toggle buttons; on a link a screen reader either drops it or announces
+       * "link, pressed", which is not a state a link can be in. The card also
+       * stopped being a toggle the moment it gained a destination — after the
+       * click the address bar genuinely reads this href, so "selected" and
+       * "points at the page you are on" became the same fact, which is what
+       * `aria-current="page"` means. That equivalence only holds because the
+       * click writes the URL; it would be a lie on a card that set state alone.
+       */
+      aria-current={selected ? "page" : undefined}
+      onClick={(event) => {
+        /*
+         * In place, but only for the plain click. A card that calls
+         * `preventDefault` unconditionally has silently taken cmd-click away
+         * from the reader whose whole reason for cmd-clicking is to open two
+         * scenarios side by side and compare them.
+         */
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+        event.preventDefault();
+        onPick();
+      }}
+      className={`flex h-full flex-col rounded-card border bg-surface p-5 text-left no-underline transition-colors ${
         selected ? "border-accent ring-1 ring-accent" : "border-line hover:border-line-strong"
-      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+      }`}
     >
       <div className="mb-3 flex items-center gap-2">
         <span className="rounded-[3px] border border-line bg-sunken px-1.5 py-0.5 font-mono text-[10px] text-text-muted">
@@ -75,6 +112,6 @@ export function ScenarioCard({ scenario, selected, disabled, note, onPick }: Pro
           {note}
         </p>
       )}
-    </button>
+    </a>
   );
 }

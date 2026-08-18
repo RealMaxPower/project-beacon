@@ -65,6 +65,7 @@ export function PickScenario({ selected, runnable, onPick }: Props) {
           <ScenarioCard
             key={scenario.slug}
             scenario={scenario}
+            href={`/playground/${scenario.id}`}
             selected={selected === scenario.id}
             onPick={() => onPick(scenario.id)}
           />
@@ -77,19 +78,36 @@ export function PickScenario({ selected, runnable, onPick }: Props) {
             <span className="font-medium text-text">
               {shipsOnly.length} more scenarios ship with Beacon
             </span>{" "}
-            — no recorded run here, so they cannot be replayed in the browser.{" "}
-            <span className="font-mono text-[12px] text-text-faint">
-              Clone the repository and run any of them.
-            </span>
+            — no recorded run here, so they cannot be replayed in the browser. Each has a page
+            of its own describing what it asks and what it checks.
           </summary>
 
           <ul className="grid gap-x-6 gap-y-2 border-t border-line px-5 py-4 sm:grid-cols-2 xl:grid-cols-3">
+            {/*
+              * Links, and real ones — no handler, no `preventDefault`.
+              *
+              * The rule deciding which kind a scenario gets: in place when the
+              * flow continues on this page, a full navigation when the
+              * destination is a different page. A card above selects something
+              * with five more steps behind it here; one of these goes to a page
+              * that has no step two, so intercepting the click would only
+              * simulate the navigation it was already going to make.
+              *
+              * These were plain text until now, which is the reason seventy-six
+              * of the eighty-three scenario pages had no clickable route to
+              * them from anywhere on the site.
+              */}
             {shipsOnly.map((scenario) => (
               <li key={scenario.slug} className="text-[13px] leading-snug">
-                <span className="text-text-muted text-pretty">{scenario.name}</span>
-                <span className="mt-0.5 block font-mono text-[11px] text-text-faint">
-                  {scenario.slug} · {scenario.assertions.length} checks
-                </span>
+                <a
+                  href={`/playground/${scenario.id}`}
+                  className="-mx-2 block rounded-row px-2 py-1.5 no-underline hover:bg-sunken"
+                >
+                  <span className="text-text-muted text-pretty">{scenario.name}</span>
+                  <span className="mt-0.5 block font-mono text-[11px] text-text-faint">
+                    {scenario.slug} · {scenario.assertions.length} checks
+                  </span>
+                </a>
               </li>
             ))}
           </ul>

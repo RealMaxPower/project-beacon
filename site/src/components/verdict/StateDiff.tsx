@@ -137,10 +137,17 @@ export function StateDiff({ evidence, events }: Props) {
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.09em] text-text-faint">
                     Before
                   </p>
+                  {/*
+                   * Named by the field and the side. Both of these sat inside
+                   * the row map with the same label, so a diff of N rows put 2N
+                   * regions called "Value, scrollable" into the landmark list —
+                   * on the one panel whose entire purpose is telling before from
+                   * after. `row.path` is already unique enough to be the key.
+                   */}
                   <pre
                     tabIndex={0}
                     role="region"
-                    aria-label="Value, scrollable"
+                    aria-label={`${row.path} before, scrollable`}
                     className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed"
                   >
                     {row.before}
@@ -153,7 +160,7 @@ export function StateDiff({ evidence, events }: Props) {
                   <pre
                     tabIndex={0}
                     role="region"
-                    aria-label="Value, scrollable"
+                    aria-label={`${row.path} after, scrollable`}
                     className="overflow-x-auto rounded-row border border-line bg-sunken p-2.5 font-mono text-[11px] leading-relaxed"
                   >
                     {row.after}

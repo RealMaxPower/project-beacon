@@ -5,6 +5,8 @@ import { ExpertToggle } from "@/components/shell/ExpertToggle";
 import { EmptyState } from "@/components/shell/EmptyState";
 import { PickScenario } from "./PickScenario";
 import { PickSubject } from "./PickSubject";
+import { ScenarioHeader } from "./ScenarioHeader";
+import { ScenarioDetail } from "./ScenarioDetail";
 import { WorldBefore } from "./WorldBefore";
 import { RunTimeline } from "./RunTimeline";
 import { Verdict } from "./Verdict";
@@ -45,6 +47,25 @@ export function Playground({ scenarioId: requested = null }: Props) {
    */
   const wanted = requested ? (scenarios.find((s) => s.id === requested) ?? null) : null;
   const unresolved = requested !== null && wanted === null;
+
+  /*
+   * Three cases, not two.
+   *
+   * This resolved a requested id against all eighty-three scenarios and then
+   * sent every one of them into the wizard at step two. For the seventy-six
+   * with no recorded bundle that step had nothing to offer: it asked "Which
+   * agent should try it?" over an empty grid and a dashed placeholder, and the
+   * five steps behind it were empty states all the way down. The id was valid,
+   * so the unresolved banner never fired either — the page was wrong in a way
+   * neither existing branch could describe.
+   *
+   * Existing, in `scenarios`, is therefore not the same question as replayable,
+   * and the second one decides whether there is a wizard at all.
+   */
+  const replayable = useMemo(() => {
+    const withRuns = new Set(fixtures.map((f) => f.scenario));
+    return scenarios.filter((s) => withRuns.has(s.id));
+  }, []);
 
   const [step, setStep] = useState<StepKey>(wanted ? "subject" : "scenario");
   const [scenarioId, setScenarioId] = useState<string | null>(wanted?.id ?? null);
@@ -165,6 +186,19 @@ export function Playground({ scenarioId: requested = null }: Props) {
   const scenario = scenarioId ? scenarios.find((s) => s.id === scenarioId) : null;
 
   /*
+   * A scenario that ships but has nothing recorded against it gets a page about
+   * itself instead of a wizard it cannot drive.
+   *
+   * Placed below every hook rather than beside the resolution at the top of the
+   * component, because the branch is a rendering decision and the hooks above
+   * must run in the same order on every render. Returning earlier would skip
+   * them on exactly the seventy-six routes this exists to serve.
+   */
+  if (wanted && !replayable.some((s) => s.id === wanted.id)) {
+    return <ScenarioDetail scenario={wanted} replayable={replayable} />;
+  }
+
+  /*
    * The bar carries the one action that moves the run forward, and nothing
    * else. The first two steps have none: choosing a card *is* the action
    * there, and a bar saying "pick one" below a grid of cards that say "pick
@@ -254,15 +288,26 @@ export function Playground({ scenarioId: requested = null }: Props) {
       className={`mx-auto max-w-[1180px] px-5 pt-10 sm:px-11 ${bar ? "pb-28" : "pb-10"}`}
     >
       <header className="mb-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-[28px] leading-tight font-medium tracking-[-0.03em] text-balance">
-              Watch an agent work, then read the evidence.
-            </h1>
-            <p className="mt-1.5 font-mono text-[11.5px] text-text-faint">
-              Recorded runs, replayed in your browser. Nothing is executing here.
-            </p>
-          </div>
+        {/*
+         * The heading names the scenario once one is chosen, and only the index
+         * keeps the general line. Every playground document used to emit the
+         * same `h1` — the index and all eighty-three scenario pages — so the
+         * element that heading navigation and search engines lean on hardest
+         * said the same thing everywhere and identified nothing.
+         */}
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          {scenario ? (
+            <ScenarioHeader scenario={scenario} />
+          ) : (
+            <div>
+              <h1 className="text-[28px] leading-tight font-medium tracking-[-0.03em] text-balance">
+                Watch an agent work, then read the evidence.
+              </h1>
+              <p className="mt-1.5 font-mono text-[11.5px] text-text-faint">
+                Recorded runs, replayed in your browser. Nothing is executing here.
+              </p>
+            </div>
+          )}
           <ExpertToggle on={expert} onChange={setExpert} />
         </div>
 

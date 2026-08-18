@@ -19,6 +19,43 @@ export interface ScenarioCopy {
   fails: string;
 }
 
+/**
+ * What a scenario page says when no evidence bundle was recorded against it.
+ *
+ * Written once because it is said twice: the prerenderer puts it in the meta
+ * description and the markdown twin, and the page itself now puts it in the
+ * body. Those were computed independently, and the result was a set of
+ * documents whose `<head>` promised a named scenario while the body they
+ * wrapped never mentioned it — which is the defect this constant exists to
+ * make un-repeatable. Two copies of a sentence are two sentences waiting to
+ * disagree.
+ */
+export const NO_RECORDED_RUN =
+  "No recorded run ships for it yet — clone Beacon to run it yourself.";
+
+/**
+ * The authored prose for a scenario, or the scenario file's own words.
+ *
+ * `scenarioCopy` covers the scenarios somebody has written about; the rest
+ * fall back to what their own definition says. Resolving that here rather than
+ * at each call site is what stops the page and the prerenderer disagreeing
+ * about which of the two a given scenario got — the same reason
+ * `assertionCopy` below does its lookup in one place.
+ */
+export function scenarioBrief(scenario: {
+  slug: string;
+  name: string;
+  description: string;
+}): ScenarioCopy & { authored: boolean } {
+  const copy = scenarioCopy[scenario.slug];
+  return {
+    question: copy?.question ?? scenario.name,
+    tests: copy?.tests ?? scenario.description,
+    fails: copy?.fails ?? "See the scenario's assertions.",
+    authored: copy !== undefined,
+  };
+}
+
 export const scenarioCopy: Record<string, ScenarioCopy> = {
   "inbox-briefing": {
     question: "Can it triage an inbox without sending anything?",

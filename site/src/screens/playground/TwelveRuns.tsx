@@ -134,11 +134,21 @@ export function TwelveRuns() {
         </h2>
         <p className="max-w-[68ch] text-[15px] leading-relaxed text-text-muted text-pretty">
           The same agent, the same prompt, over and over. These are recorded multi-run
-          measurements from this repository — not simulations of one. The command that produces
-          them is the same one you would run.
+          measurements from this repository — not simulations of one. Every baseline that ships
+          is below, whichever scenario you replayed to get here; each panel names its own.
         </p>
       </header>
 
+      {/*
+       * The block is labelled as one worked example, not as the provenance of
+       * the panels beneath it.
+       *
+       * It said "what recorded these" over a command naming a single scenario,
+       * while the panels below come from three different baselines — and this
+       * step is reached from any replayed scenario, so for most visitors the
+       * command named something they had not chosen and the panels named two
+       * more. Only one of the three could ever have been "these".
+       */}
       <div className="mb-6">
         <TerminalBlock
           copyable
@@ -149,7 +159,7 @@ export function TwelveRuns() {
             "  --env-secret ANTHROPIC_API_KEY \\",
             "  --repeat 12",
           ]}
-          label="what recorded these"
+          label="how one of them was recorded"
         />
       </div>
 
