@@ -12,6 +12,8 @@ from typing import Any
 
 from beacon.protocols.mcp import MCPError
 
+from beacon import __version__
+
 
 USER_AGENT = "project-beacon/0.1"
 PROTOCOL_VERSION = "2025-06-18"
@@ -379,7 +381,7 @@ class MCPHTTPClient:
             {
                 "protocolVersion": self.protocol_version,
                 "capabilities": {},
-                "clientInfo": {"name": "project-beacon", "version": "0.1.0"},
+                "clientInfo": {"name": "project-beacon", "version": __version__},
             },
         )
         negotiated = result.get("protocolVersion")

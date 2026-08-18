@@ -514,5 +514,47 @@ class VerificationTranscriptTests(unittest.TestCase):
         self.assertEqual(sorted(set(found)), [published])
 
 
+class SelfIdentificationTests(unittest.TestCase):
+    """
+    When Beacon introduces itself to a peer, it must say which Beacon it is.
+
+    MCP's `serverInfo`/`clientInfo` version is the implementation version, and
+    it is where a host's logs and a user's bug report get their version from.
+    Three sites had it typed as a literal, written at 0.1.0 and never bumped —
+    so a 0.1.1 install introduced itself as 0.1.0 to every host it spoke to.
+    That is the badge defect again, in the field where being wrong costs a
+    misdirected diagnosis rather than a misprinted page.
+
+    Scoped to the package's own name on purpose. `beacon-echo-fixture` and
+    `beacon-reference-mcp-host` are separate components with their own
+    identities, and pinning them here would assert something untrue about them.
+    """
+
+    #: A `{"name": "project-beacon", "version": …}` pair, either order, as it
+    #: appears in the source rather than at runtime.
+    IDENTITY = re.compile(
+        r'"name":\s*"project-beacon",\s*"version":\s*([^,}\s]+)', re.S
+    )
+
+    def test_every_place_beacon_names_itself_reports_the_real_version(self) -> None:
+        from beacon import __version__
+
+        found: list[tuple[str, str]] = []
+        for path in sorted((ROOT / "beacon").rglob("*.py")):
+            for value in self.IDENTITY.findall(path.read_text(encoding="utf-8")):
+                found.append((path.name, value))
+
+        self.assertGreater(
+            len(found), 0, "this guard found no self-identification to check"
+        )
+        literal = [(name, value) for name, value in found if value != "__version__"]
+        self.assertEqual(
+            literal,
+            [],
+            "these announce a version that cannot follow the package; use "
+            f"`__version__` (currently {__version__}): {literal}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

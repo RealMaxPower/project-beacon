@@ -9,6 +9,8 @@ from typing import Any
 from beacon.models import EventRecorder, Scenario
 from beacon.services.router import ToolRouter
 
+from beacon import __version__
+
 
 PROTOCOL_VERSION = "2025-06-18"
 SUBMIT_TOOL = "beacon_submit"
@@ -149,7 +151,7 @@ class ScenarioMCPServer:
                 {
                     "protocolVersion": self._protocol_version,
                     "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {"name": "project-beacon", "version": "0.1.0"},
+                    "serverInfo": {"name": "project-beacon", "version": __version__},
                 },
             )
 

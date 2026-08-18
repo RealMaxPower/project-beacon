@@ -8,6 +8,8 @@ import threading
 import time
 from typing import Any, Sequence, TextIO
 
+from beacon import __version__
+
 
 class MCPError(RuntimeError):
     """Raised when an MCP server cannot complete a protocol operation."""
@@ -111,7 +113,7 @@ class MCPStdioClient:
                     "capabilities": {},
                     "clientInfo": {
                         "name": "project-beacon",
-                        "version": "0.1.0",
+                        "version": __version__,
                     },
                 },
             )
