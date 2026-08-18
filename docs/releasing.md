@@ -139,13 +139,27 @@ each one currently states the opposite:
   `/releases`, with a comment saying to move it once a tag exists
 - `docs/production-readiness.md` — the Distribution section and the verdict
   table row for installing as a dependency
-- `README.md` — the demo image path. It is relative, which GitHub resolves and
-  PyPI does not: a relative path there resolves against pypi.org and renders as
-  a broken image on the project page. It must become
-  `https://raw.githubusercontent.com/RealMaxPower/project-beacon/main/docs/demo.gif`
-  before the first release. It is relative today because an absolute URL cannot
-  render at all while the repository is private — GitHub proxies README images
-  anonymously, so `raw.githubusercontent.com` refuses them.
+- `README.md` — **nothing in it may be relative.** `pyproject.toml` sets
+  `readme = "README.md"`, so the file is published verbatim as the PyPI project
+  page, where a relative path resolves against `pypi.org/project/project-beacon/`
+  rather than against the repository and reaches nothing.
+
+  This entry used to name only the demo image, because a broken image is
+  visible. 0.1.0 shipped with the image correctly absolute and **29 relative
+  links** beside it, which fail silently — the warning was followed to the
+  letter and the letter was too narrow. A released description cannot be
+  edited, so they are wrong on that version permanently.
+
+  `tests/test_packaging.py::LongDescriptionTests` enforces this now, so it is a
+  build failure rather than something to remember. The entry stays here because
+  the reason is not obvious from the test name.
+
+- **A PyPI version badge is added *after* the first publish, never before.**
+  Added beforehand, it points at a package that does not exist yet, the first
+  request answers "package or version not found", and that answer is cached —
+  into a description that can never be edited. This is the same rule stated
+  above for the CI badge, and 0.1.0 carries a permanently red badge because the
+  rule was written for one badge and not the other.
 
 Then:
 

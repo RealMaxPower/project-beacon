@@ -14,18 +14,26 @@ document is not exempt.
 
 ## 0 · Before you start
 
-Three things must not happen while this repository is private.
-
-- **Do not `git push`.** The remote is private, and the branch is 20-odd
-  commits ahead of `main`. Nothing here needs pushing.
-- **Do not enable the GitHub Actions workflows.** All three are
-  `disabled_manually`. Actions minutes are billed on private repositories and
-  macOS bills at 10×; the matrix measures around 104 billed minutes per push.
-  Everything CI runs is in §2 and §3 below, which is the point of them.
-- **Do not `vercel deploy --prod`.** A preview is fine and costs nothing.
+Nothing here needs write access. You are reading a clone, running its tests,
+and deliberately breaking a few things locally to see whether its guards
+notice — none of which touches the repository, the site, or PyPI.
 
 If you break something while working through §5, `git checkout -- .` puts it
 back. Nothing in this plan asks you to keep an edit.
+
+Two things are worth *not* doing by accident, because they reach other people:
+
+- **Do not dispatch the Conformance workflow.** It calls third-party MCP
+  servers and hosted agents belonging to people who did not ask to be
+  measured. It is manual permanently, for that reason and not for cost.
+- **Do not push a `v*` tag.** That is the release trigger, and it publishes to
+  PyPI. A version number cannot be reused.
+
+An earlier version of this section told you not to push at all and not to
+enable the workflows, because the repository was private and the matrix billed
+about 104 minutes a push. Both stopped being true on publication: Actions is
+free on a public repository, CI runs on every push and pull request, and the
+figures below come from those runs rather than from one laptop.
 
 ### Two things that will look like damage and are not
 
@@ -79,7 +87,7 @@ python3 examples/subjects/run_suite.py
 Expect:
 
 ```
-Ran 868 tests in ~115s
+Ran 871 tests in ~115s
 OK                        # or OK (skipped=10) before §6 has built the site
 ```
 
@@ -109,7 +117,7 @@ worth apologising for.
 
 ```bash
 # The core imports with nothing installed
-python3 -c "import beacon; print(beacon.__version__)"        # 0.1.0
+python3 -c "import beacon; print(beacon.__version__)"        # 0.1.1
 
 # The CLI vertical slice
 python3 -m beacon validate scenarios/inbox-briefing/scenario.json
@@ -170,7 +178,7 @@ python3 -m venv /tmp/fresh
 /tmp/fresh/bin/pip install dist/*.whl
 mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 
-/tmp/fresh/bin/project-beacon --version      # 0.1.0
+/tmp/fresh/bin/project-beacon --version      # 0.1.1
 /tmp/fresh/bin/project-beacon scenarios      # 83 of them
 /tmp/fresh/bin/project-beacon taxonomy       # 131 of 131
 /tmp/fresh/bin/project-beacon run inbox-briefing
