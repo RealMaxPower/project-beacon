@@ -3,8 +3,10 @@
 How `project-beacon` reaches PyPI, and the three pieces of state that live
 outside the repository and cannot be checked from a clone.
 
-Nothing has been released yet. The pipeline is built and exercised — what is
-missing is configuration on PyPI and on GitHub, plus a tag.
+0.1.0, 0.1.1, 0.1.2 and 0.2.0 have been released. The three pieces of external
+state below are configured; they are kept here because they cannot be checked
+from a clone, so the only way to know they are still right is to have written
+down what they were set to.
 
 ## What already works
 
@@ -111,9 +113,10 @@ mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 ```
 
 **The version is typed in three places and derived everywhere else.**
-`pyproject.toml`, `beacon/__init__.py`, and the two `# 0.1.2` comments in
+`pyproject.toml`, `beacon/__init__.py`, and the two `# <version>` comments in
 `docs/verifying-a-checkout.md` that annotate a `--version` command a reader is
-asked to compare against. `tests/test_builtins.py` asserts the first two agree
+asked to compare against. (Written without a literal version, because a
+checklist that names one is a fourth place to forget.) `tests/test_builtins.py` asserts the first two agree
 and `VerificationTranscriptTests` pins the third, and `release.yml` asserts the
 tag matches `pyproject.toml` — so the tag is tied to the rest only through
 tests that have to have run. Change all three, and run the suite, before

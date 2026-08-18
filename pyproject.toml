@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "project-beacon"
-version = "0.1.2"
+version = "0.2.0"
 description = "A protocol-neutral trial and readiness lab for AI agents, tools, and multi-agent systems."
 readme = "README.md"
 requires-python = ">=3.11"

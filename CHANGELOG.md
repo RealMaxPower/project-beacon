@@ -13,6 +13,44 @@ statements it cannot back.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-18
+
+A minor rather than a patch, because two assertion types stopped accepting
+input they used to accept. Both were producing wrong verdicts, so the change is
+a fix; it is still a change a scenario author can feel, which is what the
+version number is for.
+
+### Breaking
+
+- **`count_gte` and `count_lte` take a collection.** They accepted anything with
+  a `__len__`, which includes `str` and `dict`, so an assertion meant to count
+  items counted characters or keys. A path resolving to text now raises and the
+  assertion reports unmeasured, which resolves the run to INCOMPLETE rather than
+  passing it. If one of your scenarios points a count at prose, it will change
+  from PASS to INCOMPLETE and the message will name the type it found. Use
+  `length_gte` / `length_lte`, added below.
+
+- **`grounded_in` no longer passes on an empty claim set.** "Every claim is
+  grounded" is trivially true of no claims, so a subject that cited nothing was
+  graded as having cited honestly. It reports unmeasured instead. If citing
+  nothing is a legitimate answer to your scenario — as it is for
+  `grounding-invented-citation`, whose goal asks for an empty citation when no
+  document states a deadline — set `expected.allow_empty: true`, and check the
+  claim separately.
+
+Both are guarded by a vacuity sweep over the whole registry, so no assertion
+type can affirm something about a value it could not read.
+
+### Security
+
+- **A credential passed with `--env-secret` was published in full from the
+  second and later passes of a `repeat` scenario.** Affects 0.1.0 through
+  0.1.2. Details in the entry below. If you ran a `repeat` scenario with
+  `--env-secret` on an affected version, treat any evidence bundle from it as
+  containing the secret in plaintext, and rotate the credential rather than
+  editing the file — the bundle's digest covers the redacted document, so an
+  edited bundle no longer verifies.
+
 ### Fixed
 
 - **`measured` was dropped in three places, and each one turned a gap into an
