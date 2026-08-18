@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/downloads/)
 [![Dependencies](https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg)](pyproject.toml)
 [![Coverage floor](https://img.shields.io/badge/branch%20coverage-%E2%89%A580%25-brightgreen.svg)](CONTRIBUTING.md)
-[![PyPI](https://img.shields.io/pypi/v/project-beacon.svg)](https://pypi.org/project/project-beacon/)
+[![PyPI](https://img.shields.io/pypi/v/project-beacon?color=blue&label=pypi)](https://pypi.org/project/project-beacon/)
 [![Status](https://img.shields.io/badge/status-v0.1.0%20%C2%B7%20alpha-orange.svg)](CHANGELOG.md)
 [![CI](https://github.com/RealMaxPower/project-beacon/actions/workflows/ci.yml/badge.svg)](https://github.com/RealMaxPower/project-beacon/actions/workflows/ci.yml)
 [![Website](https://img.shields.io/badge/beaconlab.dev-live%20playground-4ed8ea.svg)](https://beaconlab.dev)
