@@ -55,11 +55,18 @@ function stripTags(value: string, gap: string): string {
 /**
  * Content a reader is never shown, and a model should not be either.
  *
- * The closing tags tolerate whitespace before the `>`, because HTML does:
- * `</script >` ends a script, and `</script>` is only the spelling React
- * happens to use. A filter that trusts the spelling drops the tags and keeps
- * the script body, which is the one failure mode where stripping markup badly
- * is worse than not stripping it at all.
+ * The closing tags allow anything HTML allows, which is more than it looks.
+ * `</script>` is only the spelling React happens to use: `</script >` closes a
+ * script, and so does `</script foo="bar">`, because an end tag runs through
+ * the same attribute parsing an opening tag does and merely ignores what it
+ * finds. All three were checked in Chromium rather than read off the spec, and
+ * so was the case that must *not* match — `</scriptx>` is a different tag and
+ * leaves the script open.
+ *
+ * A filter that trusts the short spelling removes both tags and keeps the body,
+ * which is the one failure mode where stripping markup badly is worse than not
+ * stripping it at all. `\s*` was the first attempt here and caught only the
+ * middle case; the lookahead is what makes the tag name end where HTML ends it.
  *
  * Deliberately *not* applied to a fixed point, which is the other half of the
  * same code-scanning rule and the half that is worth arguing with. Removing the
@@ -71,12 +78,15 @@ function stripTags(value: string, gap: string): string {
  * says; matching the parser matters more than satisfying the pattern.
  */
 function dropInvisible(html: string): string {
+  // `(?=[\s>])` is the tag name ending where HTML ends it — at whitespace or at
+  // `>`, never mid-word — and `[^>]*` is the attribute list an end tag is
+  // allowed to carry and ignore.
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script(?=[\s>])[^>]*>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style(?=[\s>])[^>]*>/gi, "")
     // Icons and rules. Each one is decoration with no text a reader relies on.
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, "")
-    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/[a-z]+\s*>/gi, "")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg(?=[\s>])[^>]*>/gi, "")
+    .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/[a-z]+(?=[\s>])[^>]*>/gi, "")
     .replace(/<[a-z]+\b[^>]*\saria-hidden="true"[^>]*\/?>/gi, "");
 }
 

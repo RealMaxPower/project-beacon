@@ -49,27 +49,37 @@ class MarkdownTwinTests(unittest.TestCase):
         # `<style>` would have counted its CSS as prose and disagreed with a
         # twin that correctly dropped it.
         #
-        # The closing tag tolerates whitespace before its `>`, because
-        # `</script >` closes a script and `to-markdown.ts` now allows for that.
-        # A comparison between two strippers is only as good as the weaker one:
-        # if this half keeps a script body the twin correctly dropped, the test
-        # reports drift that is its own, and if it drops one the twin kept, it
-        # stays silent about drift that is real.
+        # The closing tag allows what HTML allows, which `to-markdown.ts` now
+        # matches: `</script >` closes a script and so does `</script foo>`,
+        # while `</scriptx>` does not. A comparison between two strippers is
+        # only as good as the weaker one — if this half keeps a script body the
+        # twin correctly dropped, the test reports drift that is its own, and if
+        # it drops one the twin kept, it stays silent about drift that is real.
         text = re.sub(
-            r"<(script|style)\b[^>]*>.*?</\1\s*>", " ", body.group(1) if body else "",
+            r"<(script|style)\b[^>]*>.*?</\1(?=[\s>])[^>]*>",
+            " ", body.group(1) if body else "",
             flags=re.S | re.I,
         )
         return " ".join(re.sub(r"<[^>]+>", " ", text).split())
 
     def test_the_prose_reader_agrees_with_a_browser_about_what_is_script(self) -> None:
         """
-        The stripper above, on the two inputs code scanning raised it for.
+        The stripper above, on the markup code scanning raised it for.
 
-        `py/bad-tag-filter` was right about the first: `</script >` closes a
-        script, the pattern demanded `</script>`, so the filter removed both tags
-        and left the body behind as prose. This function decides whether a twin
-        has drifted, and a stripper that publishes a script body invents drift
-        that is its own rather than the page's.
+        `py/bad-tag-filter` was right twice over. The pattern demanded the exact
+        spelling `</script>`, so anything else removed both tags and left the
+        body behind as prose — and "anything else" is wider than it first looks:
+        an end tag runs through the same attribute parsing an opening tag does
+        and simply ignores what it finds, so `</script >` and
+        `</script foo="bar">` both close a script. Allowing only whitespace was
+        the first fix and closed half the hole. This function decides whether a
+        twin has drifted, and a stripper that publishes a script body invents
+        drift that is its own rather than the page's.
+
+        The negative case is checked in the same breath, because the obvious
+        over-correction — matching anything after the tag name — makes
+        `</scriptx>` end a script that HTML leaves open, which puts the body
+        back in the prose by the opposite route.
 
         The second is the one worth writing down. Remove the inner element of
         `<sc<script>x</script>ript>POISON</script>` and the text left behind
@@ -82,6 +92,18 @@ class MarkdownTwinTests(unittest.TestCase):
         for description, markup, expected in (
             ("a closing tag spelled with a space",
              "<p>KEEP</p><script >POISON</script >", False),
+            # An end tag runs through the same attribute parsing an opening tag
+            # does and ignores what it finds, so these close a script too. `\s*`
+            # was the first fix here and caught only the case above it.
+            ("a closing tag carrying an attribute",
+             '<p>KEEP</p><script>POISON</script foo="bar">', False),
+            ("a closing tag broken across whitespace",
+             "<p>KEEP</p><script>POISON</script\t\n bar>", False),
+            # The other side of the same line: a longer name is a different tag,
+            # so a pattern loose enough to match it would end the script early
+            # and start publishing the script body again.
+            ("a longer tag name, which closes nothing",
+             "<p>KEEP</p><script>POISON</scriptx>", True),
             ("markup that only looks like a completed script",
              "<p>KEEP</p><sc<script>x</script>ript>POISON</script>", True),
         ):

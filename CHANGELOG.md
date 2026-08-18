@@ -48,13 +48,16 @@ statements it cannot back.
 - **A script body could have been published as prose.** The markdown twins are
   written by stripping markup from the rendered page, and the filter that takes
   out the invisible parts matched `</script>` exactly. HTML does not require
-  that spelling: `</script >` closes a script too, so markup written that way
-  had both its tags removed and its body left behind in the text — which is the
-  one way stripping markup badly is worse than not stripping it. The same
-  mistake sat in the render linter, where it would have hidden a defect rather
-  than shown one, and in `test_site_markdown.py`, where the twin comparison is
-  only as good as its weaker half. React never emits that spelling, so nothing
-  published was ever wrong; the filters no longer depend on it not doing so.
+  that spelling. An end tag runs through the same attribute parsing an opening
+  tag does and ignores what it finds, so `</script >` and `</script foo="bar">`
+  both close a script — while `</scriptx>`, which is a different tag, does not.
+  Markup written any of the allowed ways had both its tags removed and its body
+  left behind in the text, which is the one way stripping markup badly is worse
+  than not stripping it. The same mistake sat in the render linter, where it
+  would have hidden a defect rather than shown one, and in
+  `test_site_markdown.py`, where the twin comparison is only as good as its
+  weaker half. React never emits those spellings, so nothing published was ever
+  wrong; the filters no longer depend on it not doing so.
 
 ### Added
 

@@ -50,10 +50,11 @@ const POISON = [
 /**
  * The text of a render: script bodies gone, then the tags.
  *
- * The closing tag tolerates whitespace, because `</script >` closes a script
- * and `</script>` is merely the spelling React emits. The old pattern matched
- * the opening tag and missed that closing one, so it deleted both tags and left
- * the script body sitting in the text — and this function is what decides
+ * The closing tag allows what HTML allows — `</script >` and
+ * `</script foo="bar">` both close a script, `</scriptx>` does not — and see
+ * `dropInvisible` in `to-markdown.ts` for why that is written the way it is.
+ * The old pattern demanded the short spelling, so it deleted both tags and left
+ * the script body sitting in the text, and this function is what decides
  * whether the poison strings below appear on a page. A script surviving as
  * prose is a false negative, the one direction a linter must not fail in.
  *
@@ -61,7 +62,7 @@ const POISON = [
  */
 function textOf(html: string): string {
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script(?=[\s>])[^>]*>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z]+;/g, " ");
 }
@@ -499,6 +500,17 @@ function auditStripping() {
    */
   for (const [what, input, visible] of [
     ["a closing tag spelled with a space", "<p>KEEP</p><script >POISON</script >", false],
+    // An end tag carries attributes and ignores them, so these close a script
+    // as well. `\s*` was the first fix here and caught only the case above.
+    ["a closing tag carrying an attribute",
+     `<p>KEEP</p><script>POISON</script foo="bar">`, false],
+    ["a closing tag broken across whitespace",
+     "<p>KEEP</p><script>POISON</script\t\n bar>", false],
+    // The other side of the same line: a longer name is a different tag, so a
+    // pattern loose enough to match it ends the script early and starts
+    // publishing the body again.
+    ["a longer tag name, which closes nothing",
+     "<p>KEEP</p><script>POISON</scriptx>", true],
     ["markup that only looks like a completed script",
      "<p>KEEP</p><sc<script>x</script>ript>POISON</script>", true],
   ] as const) {
