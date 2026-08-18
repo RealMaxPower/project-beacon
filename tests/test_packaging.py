@@ -246,6 +246,34 @@ class LongDescriptionTests(unittest.TestCase):
             f"nothing; make them absolute: {relative}",
         )
 
+    #: The `label-message-colour` payload of a *static* shields.io badge.
+    STATIC_BADGE = re.compile(r"https://img\.shields\.io/badge/([^)\s]+)")
+
+    def test_no_static_badge_carries_a_version_number(self) -> None:
+        """
+        A version typed into a badge is a second place to bump, and the second
+        place is the one that gets missed.
+
+        0.1.1 shipped with `status-v0.1.0`: `pyproject.toml` and
+        `beacon/__init__.py` moved and the badge beside them did not, so the
+        project page for 0.1.1 announced 0.1.0 — permanently, because a
+        released description cannot be edited.
+
+        The computed `pypi/v` badge on the line above it already prints the
+        version, and prints whatever was actually published rather than
+        whatever was last typed. So the rule is that the version appears in
+        the badge that is computed and in no badge that is not.
+        """
+        badges = self.STATIC_BADGE.findall(self.README.read_text(encoding="utf-8"))
+        self.assertGreater(len(badges), 0, "this guard found no badges to check")
+        carrying = sorted(b for b in badges if re.search(r"\d+\.\d+\.\d+", b))
+        self.assertEqual(
+            carrying,
+            [],
+            "a static badge cannot know the version; let the pypi badge print "
+            f"it: {carrying}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

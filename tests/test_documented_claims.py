@@ -470,5 +470,49 @@ class DocumentedInventoryTests(unittest.TestCase):
                     self.assertEqual(quoted, EVIDENCE_VERSION)
 
 
+class VerificationTranscriptTests(unittest.TestCase):
+    """
+    `docs/verifying-a-checkout.md` prints expected output, and expected output
+    carries version numbers.
+
+    A reader runs the command beside it and compares. If the number in the
+    comment is a release behind, either they conclude the checkout is wrong or
+    they learn to ignore the comments — and a transcript nobody compares
+    against is decoration in a document whose whole genre is comparison.
+
+    Both numbers here are computed from the thing that prints them, so a
+    version bump that forgets this file fails rather than ships. The badge in
+    the README taught this lesson at the cost of a permanently wrong project
+    page for 0.1.1.
+    """
+
+    DOC = ROOT / "docs" / "verifying-a-checkout.md"
+
+    #: `# 0.1.1` annotating a command that asks for the version.
+    ANNOTATED = re.compile(
+        r"(?:--version|__version__)[^\n#]*#\s*([0-9]+\.[0-9]+\.[0-9]+)"
+    )
+    PRINTED_TAXONOMY = re.compile(r"Failure taxonomy ([0-9]+\.[0-9]+\.[0-9]+)")
+
+    def test_the_printed_package_version_is_the_current_one(self) -> None:
+        from beacon import __version__
+
+        found = self.ANNOTATED.findall(self.DOC.read_text(encoding="utf-8"))
+        self.assertGreater(
+            len(found), 0, "this guard found no annotated version command"
+        )
+        self.assertEqual(sorted(set(found)), [__version__])
+
+    def test_the_printed_taxonomy_version_is_the_current_one(self) -> None:
+        published = json.loads(
+            (ROOT / "taxonomy" / "failure-modes.json").read_text(encoding="utf-8")
+        )["taxonomy_version"]
+        found = self.PRINTED_TAXONOMY.findall(self.DOC.read_text(encoding="utf-8"))
+        self.assertGreater(
+            len(found), 0, "this guard found no printed taxonomy version"
+        )
+        self.assertEqual(sorted(set(found)), [published])
+
+
 if __name__ == "__main__":
     unittest.main()
