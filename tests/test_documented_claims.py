@@ -503,6 +503,44 @@ class VerificationTranscriptTests(unittest.TestCase):
         )
         self.assertEqual(sorted(set(found)), [__version__])
 
+    def test_the_printed_test_count_is_a_band_and_the_band_is_true(self) -> None:
+        """
+        The figure in §1 was typed, and it drifted.
+
+        This class already pins the two *versions* in that transcript, computed
+        from the things that print them, explicitly so a version bump that
+        forgets the file fails rather than ships. The test count in the same
+        block was pinned by nothing, and read `Ran 871 tests` while the suite
+        reported 896 — in the one document whose §4 exists to demonstrate that
+        published figures are computed rather than typed, and whose whole
+        premise is that a disagreeing number means a bug.
+
+        A band rather than the exact number, deliberately. Pinning the count
+        exactly would fail the suite on every commit that adds a test, which is
+        the churn the README rejected when it chose "Over 800" — so this uses
+        the same shape and the same tolerance as the README's own guard.
+        """
+        stated = re.search(r"Ran ([\d,]+)\+ tests", self.DOC.read_text(encoding="utf-8"))
+        self.assertIsNotNone(
+            stated, "§1 no longer states a test count as a band; see this test's docstring"
+        )
+        claimed = int(stated.group(1).replace(",", ""))
+
+        actual = (
+            unittest.TestLoader()
+            .discover(str(ROOT / "tests"), top_level_dir=str(ROOT))
+            .countTestCases()
+        )
+        self.assertGreater(actual, 0, "no tests were discovered; this guard would pass on anything")
+        self.assertLessEqual(
+            claimed, actual, f"the document promises {claimed}+ tests and there are {actual}"
+        )
+        self.assertGreaterEqual(
+            claimed,
+            actual * 0.7,
+            f"the document says {claimed}+ and there are {actual}; it understates by over a third",
+        )
+
     def test_the_printed_taxonomy_version_is_the_current_one(self) -> None:
         published = json.loads(
             (ROOT / "taxonomy" / "failure-modes.json").read_text(encoding="utf-8")

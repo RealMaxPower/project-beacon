@@ -13,7 +13,44 @@ statements it cannot back.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **The eighty-three scenario pages were about no scenario in particular.** The
+  site prerenders a page per scenario and gave each a unique title, description
+  and sitemap entry; the bodies were another matter. Stripped of head and
+  markup, the eighty-three had eight distinct bodies between them, seventy-six
+  identical, and none of the eighty-three named the scenario it served.
+  `/playground/payments-rollback` promised "The first payment landed and the
+  second cannot" in the tab over a body containing "payment" zero times.
+
+  Each now carries its own heading, what it tests, what makes it fail, and —
+  for the seventy-six with nothing recorded — the goal, the tool surface, the
+  checks, and the command that would produce a run, instead of a wizard step
+  offering agents that do not exist. Every one is reachable by clicking: the
+  cards were buttons with no `href` and the rest was plain text, so one of the
+  eighty-three could be opened, shared or crawled.
+
+- **`docs/verifying-a-checkout.md` §1 typed a test count, and it drifted.** It
+  read `Ran 871 tests` against a suite reporting 896 — in the document whose §4
+  exists to show that published figures are computed rather than typed, and
+  whose premise is that a disagreeing number means a bug. It now states a band,
+  as the README does, and `VerificationTranscriptTests` pins the band: the class
+  already computed the two *versions* in that transcript and nothing checked the
+  count beside them.
+
+- Smaller things the same audits found: the 404 said the site had four pages;
+  the state diff labelled 2×N regions `Value, scrollable` on the one panel whose
+  purpose is telling before from after; the sitemap emitted `priority`, which
+  crawlers ignore, and no `lastmod`, which they use; the deployment alias was
+  independently indexable; and step six called one scenario's command "what
+  recorded these" above panels drawn from three.
+
+### Added
+
+- Guards for all of the above, each watched failing first — including one that
+  reads `vercel.json`, after a comment key added to explain a rule failed the
+  production build. Nothing here had ever read that file; the deploy was the
+  first thing to validate it.
 
 ## [0.1.2] — 2026-08-18
 

@@ -87,7 +87,7 @@ python3 examples/subjects/run_suite.py
 Expect:
 
 ```
-Ran 871 tests in ~115s
+Ran 870+ tests in ~115s
 OK                        # or OK (skipped=10) before §6 has built the site
 ```
 
