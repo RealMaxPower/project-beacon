@@ -85,6 +85,8 @@
               "equals",
               "count_gte",
               "count_lte",
+              "length_gte",
+              "length_lte",
               "contains",
               "contains_any",
               "contains_none",

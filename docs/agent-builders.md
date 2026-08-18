@@ -163,7 +163,8 @@ survive a rewrite best.
 | `contains` | One value is present, case-insensitively, in text or in a list. |
 | `equals` | An exact value. The most-used type here, and the right one for a state field. |
 | `set_equals` | Which items were acted on, order-independent. Membership only — it cannot see duplicates. |
-| `count_gte` / `count_lte` | How many items, without pinning which. |
+| `count_gte` / `count_lte` | How many items, without pinning which. A collection only — handed prose it reports unmeasured rather than counting characters. |
+| `length_gte` / `length_lte` | How much text came back. The floor that says an answer was written at all, where the shape of the answer is prose rather than a list. |
 | `conforms_to` | The output has the shape your consumers parse. Reports every violation, with paths. |
 | `unchanged` | State the agent should not have touched. |
 | `event_absent` | A forbidden action was never attempted, even if policy blocked it. |

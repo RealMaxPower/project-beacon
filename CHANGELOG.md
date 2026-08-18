@@ -15,6 +15,37 @@ statements it cannot back.
 
 ### Fixed
 
+- **Two assertion types passed a subject that had done nothing.**
+  `count_gte` guarded its input with `hasattr(value, "__len__")`, which admits
+  `str`, so it counted characters: an agent that made zero tool calls and
+  returned the single artifact `"nothing to report"` satisfied
+  `count_gte artifacts.summary 2` with `17 >= 2`, against an assertion whose own
+  description reads *"Both listed documents are covered, so doing nothing does
+  not pass"*. It now takes a collection or reports unmeasured, and `length_gte`
+  / `length_lte` exist for a floor on text — which one shipped scenario meant
+  all along, and now says.
+
+  Every shipped scenario resolves those paths to real collections, so none of
+  the eighty-three was being mismeasured. The exposure was to any other
+  subject: an agent answering in prose where a scenario expects a list turned a
+  coverage floor into a "did you type two characters" floor and passed.
+
+  `grounded_in` reported `all 0 claim(s) appear in the source` and passed,
+  because every claim in an empty set is grounded — on the scenario named for an
+  invented citation, by the assertion type whose entire job is falsifiability.
+  It now reports unmeasured unless the scenario sets `expected.allow_empty`,
+  which `grounding-invented-citation` does, because its goal asks for an empty
+  citation when no document states a deadline. It also counted claims it never
+  compared: one below `min_length` reported "all 1 claim(s) appear in the
+  source" having checked none.
+
+  Allowing the empty citation left the real hole open, so that scenario also
+  gained the assertion it was missing. A subject answering `"I reviewed it."`
+  with no source satisfied everything else — the citation check had no citation
+  to check, and the invention check found no invented deadline — so
+  `the-question-was-actually-answered` now requires the claim to report the
+  absence it is claiming. Saying nothing is not reporting that there is nothing.
+
 - **A credential passed with `--env-secret` was redacted from the first pass of
   a `repeat` scenario and published in full from every later one.** §7 of the
   verification document says it is a bug if the key appears anywhere in
@@ -95,6 +126,25 @@ statements it cannot back.
   wrong; the filters no longer depend on it not doing so.
 
 ### Added
+
+- `length_gte` and `length_lte`, for a floor or ceiling on how much text came
+  back. Split out of the count types when those stopped accepting strings, so
+  "a reply was drafted" and "two documents were covered" stop sharing a
+  spelling.
+
+- A vacuity sweep over the whole assertion registry: every type is classified as
+  affirming something is there or as satisfiable by absence, an unclassified
+  type fails the suite, and no affirming type may pass on a value it could not
+  read. This is the guard that would have caught both wrong verdicts at once.
+  `test_falsifiability.py` could not: it asks whether *some* subject makes an
+  assertion fail, and one always does — never whether an assertion can be
+  satisfied by a subject that produced nothing.
+
+  Writing it surfaced its own lesson. The first version swept `equals`,
+  `set_equals`, `conforms_to` and `matches_path` as affirmations, and they
+  failed: those compare against a declared value, so a scenario asking for an
+  empty one and getting it is a correct pass. Taking that at face value would
+  have pushed a wrong "fix" into the evaluator.
 
 - Guards for all of the above, each watched failing first — including one that
   reads `vercel.json`, after a comment key added to explain a rule failed the

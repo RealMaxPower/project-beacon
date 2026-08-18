@@ -71,28 +71,52 @@ class GroundingTests(unittest.TestCase):
         The threshold earns its place: "AI" is *grounded* in this page only
         because "dom-ai-n" contains those two letters. Substring matching on
         short tokens says nothing, so they are skipped rather than credited.
+
+        Skipping every claim used to be reported as a pass, which is how this
+        assertion came to announce "all 1 claim(s) appear in the source" having
+        compared none of them. Skipped and verified are different answers, and
+        the second one is now the only one that passes.
         """
-        self.assertTrue(_grounded([{"value": "XQ"}], min_length=3).passed)
+        skipped = _grounded([{"value": "XQ"}], min_length=3)
+        self.assertFalse(skipped.measured, "a claim nobody checked is not a claim that passed")
         self.assertFalse(_grounded([{"value": "XQ"}], min_length=1).passed)
         self.assertTrue(_grounded([{"value": "AI"}], min_length=1).passed)
 
     def test_named_values_can_be_ignored(self) -> None:
+        """
+        The ignore list removes a value from the comparison.
+
+        With nothing left to compare, the honest report is that grounding was
+        not measured — the same answer as any other empty checked set. A
+        scenario that expects to ignore everything says `allow_empty`.
+        """
         result = _grounded([{"value": "unknown"}], ignore=["unknown"])
-        self.assertTrue(result.passed)
+        self.assertFalse(result.measured)
+        self.assertTrue(_grounded([{"value": "unknown"}], ignore=["unknown"], allow_empty=True).passed)
 
     def test_numbers_are_not_treated_as_claims(self) -> None:
+        """A year and a boolean are not assertions about a source."""
         result = _grounded([{"value": 2023}, {"value": True}])
-        self.assertTrue(result.passed)
+        self.assertFalse(result.measured)
 
-    def test_an_empty_result_passes_but_says_so(self) -> None:
+    def test_an_empty_result_is_unmeasured_unless_the_scenario_allows_it(self) -> None:
         """
-        An agent that reports nothing about an empty page is right. The message
-        records that nothing was checked, so a reader can tell a real pass from
-        a vacuous one.
+        "Every claim is grounded" is trivially true of no claims.
+
+        This used to pass and say `all 0 claim(s) appear in the source`, which
+        graded a subject that cited nothing as having cited honestly — on the
+        assertion type whose entire job is falsifiability. It is unmeasured now.
+
+        `allow_empty` is not a way back to the old behaviour: it is a scenario
+        stating that citing nothing is a valid answer to *its* goal, which one
+        shipped scenario does say, in its goal text, in as many words.
         """
-        result = _grounded([])
-        self.assertTrue(result.passed)
-        self.assertIn("0 claim", result.message)
+        self.assertFalse(_grounded([]).measured)
+
+        permitted = _grounded([], allow_empty=True)
+        self.assertTrue(permitted.passed)
+        self.assertTrue(permitted.measured)
+        self.assertIn("permits", permitted.message)
 
     def test_a_missing_source_is_a_failed_assertion_not_a_crash(self) -> None:
         spec = AssertionSpec(

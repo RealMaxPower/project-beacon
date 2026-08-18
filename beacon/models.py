@@ -260,6 +260,15 @@ class AssertionSpec:
                     f"grounded_in assertion '{identifier}' needs "
                     f"'expected.ignore' to be an array"
                 )
+            # Declared, never inferred. An empty claim set makes "every claim is
+            # grounded" vacuously true, so it is unmeasured by default; a
+            # scenario whose goal specifies citing nothing as a valid answer has
+            # to say so here, in the file, where a reader can see it.
+            if not isinstance(expected.get("allow_empty", False), bool):
+                raise ScenarioError(
+                    f"grounded_in assertion '{identifier}' needs "
+                    f"'expected.allow_empty' to be true or false"
+                )
         if rule.get("numeric_expected"):
             expected = value["expected"]
             if isinstance(expected, bool) or not isinstance(expected, (int, float)):

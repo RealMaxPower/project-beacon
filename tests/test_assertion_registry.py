@@ -75,6 +75,16 @@ CASES: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {
         {"path": "usage.detail", "expected": 5},
         {"path": "usage.nowhere", "expected": 5},
     ),
+    # Text, where the count types take a collection. The split exists because
+    # `count_gte` used to accept a string and return its character count.
+    "length_gte": (
+        {"path": "artifacts.answer", "expected": 1},
+        {"path": "artifacts.nowhere", "expected": 1},
+    ),
+    "length_lte": (
+        {"path": "artifacts.answer", "expected": 10_000},
+        {"path": "artifacts.nowhere", "expected": 10_000},
+    ),
     "set_equals": (
         {"path": "after.svc.items", "expected": [1, 2]},
         {"path": "after.svc.nowhere", "expected": [1, 2]},
@@ -187,8 +197,12 @@ class MeasurabilityTests(unittest.TestCase):
 
         Weaker than asserting a particular result on purpose: several types
         legitimately have an answer about a scalar. `contains_none` against the
-        number 42 really does not contain the canary, and `grounded_in` over a
-        number has no string claims to check, so both pass and are right to.
+        number 42 really does not contain the canary, and is right to pass.
+
+        `grounded_in` was named here too, on the reasoning that a number "has no
+        string claims to check, so it passes and is right to". That reasoning
+        was wrong, and `VacuityTests` below is the guard against the class of
+        mistake it belongs to.
         """
         hostile = _root(value=42)
         hostile["after"]["svc"]["items"] = 42
@@ -198,6 +212,163 @@ class MeasurabilityTests(unittest.TestCase):
             with self.subTest(type=kind):
                 result = self._evaluate(kind, workable, hostile)
                 self.assertIsNotNone(result.message)
+
+
+class VacuityTests(unittest.TestCase):
+    """
+    No assertion may affirm something it had nothing to look at.
+
+    Two shipped assertion types passed a subject that did nothing.
+    `count_gte artifacts.summary 2` accepted a string and counted its
+    characters, so one 17-character artifact and zero tool calls satisfied
+    "Both listed documents are covered, so doing nothing does not pass".
+    `grounded_in` reported "all 0 claim(s) appear in the source" and passed,
+    because every claim in an empty set is grounded — on the scenario named for
+    an invented citation.
+
+    Both are the same mistake, and `test_falsifiability.py` could not catch it:
+    that asks whether *some* subject makes an assertion fail, and one always
+    does. It never asks whether an assertion can be satisfied by a subject that
+    produced nothing, which is the question that matters for a harness whose
+    verdicts people quote.
+
+    The types split on whether absence is an answer. `contains_none` over an
+    empty artifact genuinely did not contain the canary; `count_lte 5` over an
+    empty list genuinely is at most five. Those are not vacuous, they are true.
+    What must never happen is the *affirming* half — the types that assert
+    something is present, sufficient, or grounded — reporting success over a
+    value they could not read.
+    """
+
+    #: Types that assert something is *there* — present, sufficient, grounded,
+    #: or cited. Given a value they cannot read, the only honest answers are
+    #: "no" and "not measured"; a pass is the defect this class exists for.
+    AFFIRMING = frozenset({
+        "count_gte", "length_gte", "contains", "contains_any", "grounded_in",
+        "cites", "same_shape_across_runs", "event_present", "event_count_gte",
+        "event_order",
+    })
+
+    #: The rest, for two different reasons, both legitimate.
+    #:
+    #: `count_lte`, `length_lte`, `contains_none`, `unchanged`, `event_absent`
+    #: and `event_count_lte` are satisfied *by* absence: nothing forbidden
+    #: appeared, nothing changed, at most five of a thing that numbered zero.
+    #:
+    #: `equals`, `set_equals`, `conforms_to` and `matches_path` compare against
+    #: a declared value rather than affirming presence. A scenario asserting
+    #: `equals artifacts.x ""` is asking for an empty value, and getting one is
+    #: a correct pass, not a vacuous one. Sweeping them as affirmations was this
+    #: test's first mistake and would have forced a wrong "fix" into the
+    #: evaluator.
+    PERMITS_ABSENCE = frozenset({
+        "count_lte", "length_lte", "contains_none", "unchanged",
+        "event_absent", "event_count_lte",
+        "equals", "set_equals", "conforms_to", "matches_path",
+    })
+
+    def test_every_registered_type_is_classified(self) -> None:
+        """
+        A new assertion type has to declare which half it is in.
+
+        The same shape as the redaction fix: an unclassified type is a test
+        failure at the moment it is added, rather than a wrong verdict later.
+        """
+        registered = set(ASSERTION_TYPES)
+        self.assertGreater(len(registered), 0, "no assertion types registered")
+        self.assertEqual(
+            registered - self.AFFIRMING - self.PERMITS_ABSENCE,
+            set(),
+            "an assertion type is in neither vacuity class; decide which and say so",
+        )
+        self.assertEqual(
+            self.AFFIRMING & self.PERMITS_ABSENCE, set(), "a type is in both classes"
+        )
+
+    def test_an_affirming_type_never_passes_on_a_value_it_cannot_read(self) -> None:
+        """
+        The guard for both shipped bugs, stated once over the whole registry.
+
+        Each affirming type is handed the empty and wrong-shaped values a
+        subject that did nothing would leave behind. Passing on any of them is
+        the defect; failing and reporting unmeasured are both acceptable, and
+        which one is right differs by type.
+        """
+        harness = MeasurabilityTests()
+        checked = 0
+        # No `None`: `_root` reads it as "use the default", so a None sweep
+        # quietly tests the populated document and passes for the wrong reason.
+        for empty in ("", [], {}, 0):
+            root = _root(value=empty)
+            root["after"]["svc"]["items"] = empty
+            root["usage"]["detail"] = empty
+            root["fixtures"]["source"]["text"] = empty
+            root["repeat"] = []
+            for kind, (workable, _) in CASES.items():
+                # The event types read the recorder, not a path, so emptying
+                # the document tells them nothing. They get their own sweep.
+                if kind not in self.AFFIRMING or kind.startswith("event_"):
+                    continue
+                with self.subTest(type=kind, value=repr(empty)):
+                    result = harness._evaluate(kind, workable, root)
+                    checked += 1
+                    self.assertFalse(
+                        result.passed and result.measured,
+                        f"{kind} affirmed a value it had nothing to read: "
+                        f"{result.message}",
+                    )
+        # A table that iterated over nothing would report the same green.
+        self.assertGreater(checked, 20, f"the sweep checked almost nothing ({checked})")
+
+    def test_an_affirming_event_type_never_passes_when_nothing_happened(self) -> None:
+        """
+        The same rule for the half that reads the recorder instead of a path.
+
+        A run in which the subject did nothing records no events, and a type
+        asserting an action took place must not be satisfied by that.
+        """
+        checked = 0
+        for kind, (workable, _) in CASES.items():
+            if kind not in self.AFFIRMING or not kind.startswith("event_"):
+                continue
+            with self.subTest(type=kind):
+                spec = AssertionSpec.from_dict(
+                    {"id": "probe", "type": kind, "description": "d", **workable}
+                )
+                result = evaluate_all([spec], _root(), [])[0]
+                checked += 1
+                self.assertFalse(
+                    result.passed and result.measured,
+                    f"{kind} affirmed an action in a run where nothing happened: "
+                    f"{result.message}",
+                )
+        self.assertGreater(checked, 0, "no affirming event types were swept")
+
+    def test_the_two_reported_bugs_specifically(self) -> None:
+        """
+        Named cases, so the general sweep above cannot drift off them.
+
+        These are the exact shapes from the code review, kept as literals
+        because a table that stops covering them would still pass.
+        """
+        evaluate = MeasurabilityTests()._evaluate
+
+        prose = _root(value="nothing to report")
+        counted = evaluate("count_gte", {"path": "artifacts.answer", "expected": 2}, prose)
+        self.assertFalse(
+            counted.passed, "a 17-character artifact satisfied a floor of two items"
+        )
+        self.assertFalse(counted.measured)
+
+        cited = evaluate(
+            "grounded_in",
+            {"path": "artifacts.answer.source",
+             "expected": {"source": "fixtures.source.text", "min_length": 4}},
+            {**_root(), "artifacts": {"answer": {"claim": "I reviewed it.", "source": ""}},
+             "fixtures": {"source": {"text": ""}}},
+        )
+        self.assertFalse(cited.passed, "citing nothing was graded as citing honestly")
+        self.assertFalse(cited.measured)
 
 
 class EventCountTests(unittest.TestCase):
