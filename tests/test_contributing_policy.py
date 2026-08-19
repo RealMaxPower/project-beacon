@@ -26,6 +26,65 @@ rule with no enforcement at all in the only repository anyone can clone.
 """
 
 
+LOG_FORMAT = "%H%x1f%P%x1f%s%x1f%(trailers:key=Signed-off-by,valueonly)%x1e"
+"""
+One record per commit: hash, parents, subject, sign-off trailer.
+
+`%P` is here so merge commits can be told apart by parent count rather than by
+matching their subject line, which anyone could write by hand.
+"""
+
+
+def unsigned_commits(log: str) -> list[str]:
+    """
+    The in-scope commits in `log` that carry no sign-off.
+
+    Split out from the test so the merge-commit rule below can be exercised
+    against a log this file writes, rather than only against whatever history
+    the checkout happens to have. A rule that can only be tested by being in the
+    right repository on the right day is not being tested.
+
+    **Merge commits are skipped, and that is not a loosening.** GitHub's DCO app
+    skips them for the same reason: nobody writes a merge commit, so nobody can
+    certify one. A `pull_request` run does not check out the contributor's
+    commit — it checks out the ephemeral merge commit GitHub synthesises for the
+    pull request, whose subject is `Merge <head> into <base>` and whose author is
+    GitHub. Holding that to the policy failed every pull request ever opened,
+    including ones whose own commits were signed correctly, and the failure named
+    a commit its author could neither sign nor remove.
+
+    It stayed hidden because CI had only ever run on pushes to `main`, which
+    check out a real commit. The first pull request this repository received hit
+    it immediately, on all nine matrix legs at once.
+    """
+    commits = [
+        entry.strip("\n").split("\x1f")
+        for entry in log.split("\x1e")
+        if entry.strip()
+    ]
+    commits = [record for record in commits if len(record[1].split()) <= 1]
+    subjects = [subject for _, _, subject, _ in commits]
+
+    # `git log` is newest first, so the boundary and everything before it in
+    # this list is the boundary and everything after it in time. Absent a
+    # boundary the whole history is in scope — see POLICY_START. The one thing
+    # this must never do is decline to answer, which is how the rule came to be
+    # enforced nowhere.
+    boundary = next(
+        (
+            index
+            for index, subject in enumerate(subjects)
+            if subject.startswith(POLICY_START)
+        ),
+        len(commits) - 1,
+    )
+    return [
+        f"{sha[:9]} {subject}"
+        for sha, _, subject, trailer in commits[: boundary + 1]
+        if not re.fullmatch(r".+ <.+@.+>", trailer.strip())
+    ]
+
+
 def _git(*args: str) -> str | None:
     """Run git, or return None where there is no repository to ask."""
     try:
@@ -86,44 +145,123 @@ class SignOffPolicyTests(unittest.TestCase):
         # check used to pass a commit that a real DCO gate would reject, which
         # is worse than not checking: it certifies the wrong thing. Found by
         # amending a message and appending a paragraph below the sign-off.
-        log = _git(
-            "log",
-            "--format=%H%x1f%s%x1f%(trailers:key=Signed-off-by,valueonly)%x1e",
-        )
+        log = _git("log", f"--format={LOG_FORMAT}")
         if not log:
             self.skipTest("no git history available")
 
-        commits = [
-            entry.strip("\n").split("\x1f")
-            for entry in log.split("\x1e")
-            if entry.strip()
-        ]
-        subjects = [subject for _, subject, _ in commits]
+        # A shallow clone is not a short history, it is a history with the far
+        # end cut off — `git log` returns the tip and stops, and `%P` on the
+        # boundary commit is empty because the parents are not there to name.
+        # Walking it would report "no unsigned commits" after reading one, which
+        # is the difference between passing and having checked. `fetch-depth: 0`
+        # in CI keeps this from being reached there; the guard below asserts it.
+        if (_git("rev-parse", "--is-shallow-repository") or "").strip() == "true":
+            self.skipTest(
+                "shallow checkout: the walk cannot reach the policy boundary, "
+                "and a verdict from a history this cannot see would be invented"
+            )
 
-        # `git log` is newest first, so the boundary and everything before it
-        # in this list is the boundary and everything after it in time. Absent
-        # a boundary the whole history is in scope — see POLICY_START. The one
-        # thing this must never do is decline to answer, which is how the rule
-        # came to be enforced nowhere.
-        boundary = next(
-            (
-                index
-                for index, subject in enumerate(subjects)
-                if subject.startswith(POLICY_START)
-            ),
-            len(commits) - 1,
-        )
-        unsigned = [
-            f"{sha[:9]} {subject}"
-            for sha, subject, trailer in commits[: boundary + 1]
-            if not re.fullmatch(r".+ <.+@.+>", trailer.strip())
-        ]
+        unsigned = unsigned_commits(log)
         self.assertEqual(
             unsigned,
             [],
             "commits after the policy took effect are missing a sign-off:\n"
             + "\n".join(unsigned),
         )
+
+    @staticmethod
+    def _record(sha: str, parents: str, subject: str, trailer: str = "") -> str:
+        return f"{sha}\x1f{parents}\x1f{subject}\x1f{trailer}\x1e"
+
+    SIGNED = "A Contributor <contributor@example.com>"
+
+    def _boundary(self) -> str:
+        """The commit the policy starts from, signed, to close the walk."""
+        return self._record(
+            "b" * 40, "c" * 40, f"{POLICY_START} everywhere", self.SIGNED
+        )
+
+    def test_the_merge_commit_github_writes_for_a_pull_request_is_not_held_to_it(
+        self,
+    ) -> None:
+        """
+        The check ran only on pushes to `main` until this repository received a
+        pull request, and then failed all nine matrix legs on a commit GitHub
+        had written itself. A contributor can neither sign that commit nor
+        remove it, so failing them for it asks for something nobody can give.
+        """
+        log = (
+            self._record("a" * 40, f"{'b' * 40} {'d' * 40}", "Merge bbb into ddd")
+            + self._boundary()
+        )
+        self.assertEqual(unsigned_commits(log), [])
+
+    def test_an_unsigned_ordinary_commit_is_still_caught(self) -> None:
+        """
+        Rules out the opposite error, and it is the one that matters: a filter
+        wide enough to swallow the merge commit could swallow everything, and
+        the check would pass forever while certifying nothing. That is the exact
+        failure this file exists to end, so skipping merges has to be narrower
+        than "stop looking".
+        """
+        log = (
+            self._record("a" * 40, "b" * 40, "A commit somebody actually wrote")
+            + self._boundary()
+        )
+        self.assertEqual(
+            unsigned_commits(log),
+            ["aaaaaaaaa A commit somebody actually wrote"],
+        )
+
+    def test_a_signed_ordinary_commit_passes(self) -> None:
+        """The third leg: the check must also say yes to what is correct."""
+        log = (
+            self._record("a" * 40, "b" * 40, "A signed commit", self.SIGNED)
+            + self._boundary()
+        )
+        self.assertEqual(unsigned_commits(log), [])
+
+    CI = ROOT / ".github" / "workflows" / "ci.yml"
+
+    def test_ci_checks_out_the_history_this_walk_needs(self) -> None:
+        """
+        The rule and the thing that enforces it, kept together — which is what
+        the rest of this file is for.
+
+        `actions/checkout` fetches depth 1 unless told otherwise, and under that
+        default this check read one commit and reported no unsigned commits in
+        the whole history. It passed every run on `main` that way, having never
+        reached the boundary. The skip above keeps it from inventing a verdict;
+        this keeps CI from being the place where it never gets to answer.
+
+        Asserted on every job that runs the suite, not on the file as a whole,
+        because a `fetch-depth: 0` on the site job would satisfy a laxer check
+        while the walk stayed blind.
+        """
+        text = self.CI.read_text(encoding="utf-8")
+        _, _, body = text.partition("\njobs:\n")
+        self.assertTrue(body, "ci.yml has no jobs block to read")
+        jobs = [job for job in re.split(r"\n  (?=[A-Za-z][\w-]*:\n)", body) if job.strip()]
+
+        def runs_the_suite(job: str) -> bool:
+            # Only what CI actually executes. The header of this file quotes
+            # the same command in a comment, and a comment runs nothing.
+            return any(
+                "unittest discover" in line and not line.lstrip().startswith("#")
+                for line in job.splitlines()
+            )
+
+        running = [job for job in jobs if runs_the_suite(job)]
+        self.assertTrue(running, "no job in ci.yml runs the suite any more")
+        for job in running:
+            name = job.strip().split("\n", 1)[0].rstrip(":")
+            with self.subTest(job=name):
+                self.assertRegex(
+                    job,
+                    r"actions/checkout@[^\n]*\n\s*with:\n\s*fetch-depth:\s*0",
+                    f"{name} runs the suite without full history, so the "
+                    "sign-off walk passes there without reading anything",
+                )
 
 
 class CodeOfConductTests(unittest.TestCase):
