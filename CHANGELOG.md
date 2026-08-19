@@ -44,6 +44,29 @@ statements it cannot back.
 
 ### Fixed
 
+- **The sign-off check passed in CI without reading anything, and then failed
+  every pull request.** `actions/checkout` fetches depth 1 by default, and a
+  shallow clone is not a short history — it is a history with the far end cut
+  off. `tests/test_contributing_policy.py` walks the log for missing DCO
+  trailers, and under that default it could see only the tip commit: it
+  reported no unsigned commits in a history it had not read, and passed. One
+  test of 955, and only in CI — the other 954 ran normally, and the walk works
+  correctly in a full clone, which is what `CONTRIBUTING.md` tells contributors
+  to run. It is still a check that passed without measuring, which is the
+  failure this project exists to name, so it is recorded here rather than
+  quietly repaired.
+
+  It surfaced by starting to *fail*: on a pull request the one commit it could
+  see becomes the ephemeral merge commit GitHub synthesises, `Merge <head> into
+  <base>`, which GitHub authors and nobody can sign or remove. The first pull
+  request this repository received was rejected for it, on a patch that was
+  fine, and the `main` ruleset requires those checks — so nothing could merge
+  at all. Merge commits are now skipped by parent count rather than by subject
+  text, which anyone could write by hand; the jobs that run the suite check out
+  full history; the walk skips rather than answers when it finds itself shallow,
+  because a verdict from a history it cannot see would be invented; and a test
+  asserts CI keeps giving it sight, per job that runs the suite.
+
 - **Beacon's own falsifiability guard counted a crashed run as proof.** It
   collected `not passed` with no `measured` check, so a subject that died
   established the falsifiability of every assertion in its scenario — the
