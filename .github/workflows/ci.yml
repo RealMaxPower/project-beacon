@@ -49,7 +49,15 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
+      # Full history, because the suite contains a check that walks it.
+      # `actions/checkout` defaults to fetch-depth 1, and under that default
+      # `tests/test_contributing_policy.py` saw exactly one commit: it passed
+      # every run without ever reaching the policy boundary it exists to walk
+      # to. A check that passes because it looked at nothing is the failure
+      # this project is about, and it was running in this project's own CI.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v7
         with:
@@ -137,7 +145,10 @@ jobs:
     name: coverage floor
     runs-on: ubuntu-latest
     steps:
+      # Runs the same suite, so it needs the same history. See the test job.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
