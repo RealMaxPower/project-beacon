@@ -35,6 +35,7 @@ from beacon.protocols import (
     A2AClient,
     A2AError,
     MCPError,
+    MCPHTTPClient,
     MCPStdioClient,
 )
 from beacon.scaffold import scaffold
@@ -523,12 +524,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     mcp = subparsers.add_parser(
         "mcp-inspect",
-        help="Initialize an MCP stdio server and list its tools.",
+        help=(
+            "Initialize an MCP server and list its tools. Use --command for a "
+            "stdio server or --url for a hosted Streamable-HTTP server."
+        ),
     )
-    mcp.add_argument("--command", required=True)
+    mcp_target = mcp.add_mutually_exclusive_group(required=True)
+    mcp_target.add_argument(
+        "--command", help="Command to launch a stdio MCP server."
+    )
+    mcp_target.add_argument(
+        "--url", help="Base URL of a hosted Streamable-HTTP MCP server."
+    )
     mcp.add_argument("--call", help="Optional MCP tool name to call.")
     mcp.add_argument("--arguments", type=_json_object, default={})
     mcp.add_argument("--timeout", type=float, default=10)
+    mcp.add_argument(
+        "--authorization",
+        help=(
+            "Complete Authorization header value for --url, such as "
+            "'Bearer ...'. Ignored for --command."
+        ),
+    )
 
     a2a = subparsers.add_parser(
         "a2a-inspect",
@@ -1017,8 +1034,17 @@ def _adapters() -> int:
 
 
 def _mcp_inspect(args: argparse.Namespace) -> int:
-    command = split_command(args.command)
-    with MCPStdioClient(command, timeout_seconds=args.timeout) as client:
+    if args.url:
+        client_context = MCPHTTPClient(
+            args.url,
+            timeout_seconds=args.timeout,
+            authorization=args.authorization,
+        )
+    else:
+        client_context = MCPStdioClient(
+            split_command(args.command), timeout_seconds=args.timeout
+        )
+    with client_context as client:
         tools = client.list_tools()
         output = {
             "protocol_version": client.protocol_version,

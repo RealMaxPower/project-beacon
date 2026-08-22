@@ -158,5 +158,38 @@ class ReachabilityTests(unittest.TestCase):
         self.assertEqual(len(flags), len(set(flags)))
 
 
+class McpInspectTargetTests(unittest.TestCase):
+    """
+    `mcp-inspect` reaches a stdio server (--command) or a hosted
+    Streamable-HTTP server (--url). Exactly one is required: neither leaves
+    nothing to inspect, both is ambiguous. The mutually-exclusive group is the
+    contract, and these pin it so a later edit cannot quietly make --command
+    required again and re-strip hosted servers.
+    """
+
+    def _parse(self, argv: list[str]):
+        return build_parser().parse_args(argv)
+
+    def test_url_selects_the_http_target(self) -> None:
+        args = self._parse(["mcp-inspect", "--url", "https://agent.example/mcp"])
+        self.assertEqual(args.url, "https://agent.example/mcp")
+        self.assertIsNone(args.command)
+
+    def test_command_selects_the_stdio_target(self) -> None:
+        args = self._parse(["mcp-inspect", "--command", "my-server --flag"])
+        self.assertEqual(args.command, "my-server --flag")
+        self.assertIsNone(args.url)
+
+    def test_neither_target_is_rejected(self) -> None:
+        with self.assertRaises(SystemExit):
+            self._parse(["mcp-inspect"])
+
+    def test_both_targets_are_rejected(self) -> None:
+        with self.assertRaises(SystemExit):
+            self._parse(
+                ["mcp-inspect", "--command", "x", "--url", "https://agent.example/mcp"]
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
