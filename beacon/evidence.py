@@ -88,6 +88,24 @@ def _display(value: Any) -> str:
     return f"`{text}`"
 
 
+def _bullet(value: Any) -> str:
+    """
+    A limitation line that cannot become document structure.
+
+    These are harness-authored sentences, but several of them interpolate a
+    string the subject chose — the artifact name in the depth-truncation note,
+    and the exception text in the crash note. `!r` quotes those; it does not
+    stop a newline from ending the bullet and starting a heading, or raw HTML
+    from rendering as structure. The same argument `_code_span` makes for
+    headings, one bullet list along.
+
+    The prose is left readable rather than wrapped in a code span, so only the
+    two things that carry structure are neutralised.
+    """
+    text = re.sub(r"\r\n|[\r\n]", " ", str(value))
+    return text.replace("<", "&lt;")
+
+
 def render_markdown(evidence: Evidence) -> str:
     passed = sum(1 for item in evidence.assertions if item["passed"])
     lines = [
@@ -148,6 +166,6 @@ def render_markdown(evidence: Evidence) -> str:
 
     lines.extend(["", "## Limitations", ""])
     for limitation in evidence.limitations:
-        lines.append(f"- {limitation}")
+        lines.append(f"- {_bullet(limitation)}")
     lines.append("")
     return "\n".join(lines)

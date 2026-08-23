@@ -408,17 +408,31 @@ class DocumentedInventoryTests(unittest.TestCase):
                     )
 
     def test_no_document_states_a_stale_verdict_tally(self) -> None:
-        """`N/N verdicts correct` is the suite's own output, so it is checkable."""
-        expected = len(json.loads(MANIFEST.read_text(encoding="utf-8"))["subjects"])
+        """
+        `N/M verdicts correct` is the suite's own output, so it is checkable.
+
+        The numerator is the subjects whose recorded verdict is the one they
+        should get, not the total. Comparing both halves against the subject
+        count assumed the suite was perfect, and so demanded the documents say
+        so: the first subject to carry an open defect made `run_suite.py` print
+        419/420 while this test still required 420/420 everywhere. A check that
+        enforces a claim the tool contradicts is worse than no check, and in
+        this project it enforces the wrong half — the whole point of the
+        manifest's `should_be`/`currently` split is that a known-wrong verdict
+        stays visible instead of being rounded away.
+        """
+        subjects = json.loads(MANIFEST.read_text(encoding="utf-8"))["subjects"]
+        total = len(subjects)
+        correct = sum(1 for s in subjects if s["currently"] == s["should_be"])
         for path in self._tracked_prose():
             text = path.read_text(encoding="utf-8")
             for quoted in re.findall(r"(\d+)\s*/\s*(\d+)\s+verdicts correct", text):
                 with self.subTest(file=path.relative_to(ROOT), quoted=quoted):
                     self.assertEqual(
                         [int(quoted[0]), int(quoted[1])],
-                        [expected, expected],
+                        [correct, total],
                         f"{path.name} states {quoted[0]}/{quoted[1]} verdicts "
-                        f"against {expected} subjects",
+                        f"against {correct}/{total} in the manifest",
                     )
 
     def test_the_readme_layout_names_every_core_module(self) -> None:

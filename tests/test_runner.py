@@ -214,6 +214,49 @@ class RejectedScenarioTests(unittest.TestCase):
             )
 
 
+class RunIdTests(unittest.TestCase):
+    """
+    A run id becomes a path component, so it has to stay one.
+
+    `Path(output) / "/etc/beacon"` is `/etc/beacon`: an absolute id ignored the
+    output directory entirely, and a `..` component walked out of it. Rejected
+    rather than quietly rewritten, because a corrected id would not match the
+    path printed back and `repeat_run_ids` suffixes whatever it is given.
+    """
+
+    def _refuses(self, run_id: str) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError, msg=run_id):
+                run_scenario(
+                    Scenario.load(SCENARIO),
+                    ReferenceInboxAdapter(),
+                    output_dir=directory,
+                    run_id=run_id,
+                )
+            self.assertEqual(sorted(Path(directory).iterdir()), [])
+
+    def test_a_traversing_run_id_is_refused(self) -> None:
+        for run_id in ("../escape", "a/../../b", "..", "./x"):
+            with self.subTest(run_id=run_id):
+                self._refuses(run_id)
+
+    def test_an_absolute_run_id_is_refused(self) -> None:
+        self._refuses("/tmp/beacon-escape")
+
+    def test_a_separator_in_a_run_id_is_refused(self) -> None:
+        self._refuses("nested/run")
+
+    def test_an_ordinary_run_id_is_still_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                ReferenceInboxAdapter(),
+                output_dir=directory,
+                run_id="run-2026.08-001_a",
+            )
+            self.assertEqual(outcome.evidence.run_id, "run-2026.08-001_a")
+
+
 class RunnerTests(unittest.TestCase):
     def test_reference_adapter_produces_passing_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -528,7 +571,12 @@ class ReportInjectionTests(unittest.TestCase):
         "<table><tr><td>PASS</td><td>forgedhtml</td></tr></table>"
     )
 
-    def _report(self, artifact: str, name: str = "summary") -> str:
+    def _report(
+        self,
+        artifact: str,
+        name: str = "summary",
+        limitations: list[str] | None = None,
+    ) -> str:
         from beacon.evidence import render_markdown
         from beacon.models import Evidence
 
@@ -557,7 +605,7 @@ class ReportInjectionTests(unittest.TestCase):
             artifacts={name: artifact},
             usage={"calls": 0},
             reset_verified=True,
-            limitations=[],
+            limitations=list(limitations or []),
         )
         evidence.finalize()
         return render_markdown(evidence)
@@ -658,6 +706,51 @@ class ReportInjectionTests(unittest.TestCase):
         self.assertEqual(live.count("## Assertions"), 1)
         self.assertNotIn("forged", live)
         self.assertIn("| PASS |", report, "the name is dropped, not neutralised")
+
+    def test_a_hostile_limitation_cannot_forge_a_passing_row(self) -> None:
+        """
+        The bullet list was the one place the escaping did not reach.
+
+        Limitations are harness-authored sentences, but two of them interpolate
+        subject-chosen text: the artifact name in the depth-truncation note and
+        the exception text in the crash note. `!r` quotes; it does not stop a
+        newline from ending the bullet, or `<h2>` from rendering.
+        """
+        # `runner.py` interpolates `str(exc)` raw into the evaluator-failure and
+        # serialisation-failure notes, so an exception message carries real
+        # line endings into the bullet. The artifact-name note uses `!r`, which
+        # escapes those but leaves `<h2>` exactly as written.
+        sources = {
+            "exception text": f"Beacon's evaluator failed: RuntimeError: {self.HOSTILE}",
+            "artifact name": f"The artifact {self.HOSTILE_HTML!r} was truncated.",
+        }
+        for label, limitation in sources.items():
+            with self.subTest(source=label):
+                report = self._report(
+                    "The briefing is complete.", limitations=[limitation]
+                )
+                # Counted as lines, not substrings: the fix collapses the line
+                # endings, so the payload survives as inline text on the bullet
+                # — where it is prose, not a heading and not a table row.
+                lines = self._outside_code(report).splitlines()
+                self.assertIn("| FAIL | Nothing was sent |  |  |", lines)
+                self.assertEqual(
+                    [n for n in lines if n.startswith("## Assertions")],
+                    ["## Assertions"],
+                    "the subject opened a second Assertions section",
+                )
+                self.assertEqual(
+                    [n for n in lines if n.startswith("| PASS |")],
+                    [],
+                    "the subject wrote its own verdict row",
+                )
+                self.assertNotIn("<h2>", "\n".join(lines))
+
+    def test_an_ordinary_limitation_is_still_readable(self) -> None:
+        from beacon.secrets import REDACTION_NOTICE
+
+        report = self._report("brief", limitations=[REDACTION_NOTICE])
+        self.assertIn(REDACTION_NOTICE, report)
 
     def test_a_hostile_artifact_name_cannot_open_html(self) -> None:
         """

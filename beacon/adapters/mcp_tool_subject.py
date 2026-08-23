@@ -6,6 +6,7 @@ from beacon.adapters.base import ExecutionContext
 from beacon.models import SubjectResult
 from beacon.protocols.mcp import MCPError
 from beacon.protocols.mcp_http import MCPHTTPClient
+from beacon.secrets import MINIMUM_SECRET_LENGTH
 from beacon.usage import UsageLimitExceeded
 
 
@@ -71,7 +72,25 @@ class MCPToolSubjectAdapter:
             parts.append(_json.dumps(structured, ensure_ascii=False))
         return "\n".join(parts)
 
+    def _register_secrets(self, context: ExecutionContext) -> None:
+        """
+        Teach the run's registry the credential before anything can record it.
+
+        The same reasoning as the A2A adapter's: this credential arrives on the
+        command line, and the command line reaches evidence.json verbatim. This
+        adapter had no registration at all, so `--adapter mcp-tool
+        --authorization ...` wrote the header straight into the bundle.
+        """
+        if not self._authorization:
+            return
+        context.secrets.register("authorization", self._authorization)
+        _, _, credential = self._authorization.partition(" ")
+        credential = credential.strip()
+        if len(credential) >= MINIMUM_SECRET_LENGTH:
+            context.secrets.register("authorization", credential)
+
     def execute(self, context: ExecutionContext) -> SubjectResult:
+        self._register_secrets(context)
         limits = context.scenario.limits
         timeout = float(
             self._timeout_seconds

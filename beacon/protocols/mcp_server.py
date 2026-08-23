@@ -8,6 +8,7 @@ from typing import Any
 
 from beacon.models import EventRecorder, Scenario
 from beacon.services.router import ToolRouter
+from beacon.toolschema import ToolArgumentError, validate_arguments
 
 from beacon import __version__
 
@@ -173,6 +174,29 @@ class ScenarioMCPServer:
             return _error(request_id, -32602, "arguments must be an object")
 
         if name == SUBMIT_TOOL:
+            # Validated here because this call does not go through
+            # `ToolRouter.call`, which is where every other tool meets its
+            # declared schema. Without it the submit tool advertised a required
+            # `status` from a fixed enum and then accepted a call with no
+            # arguments at all, defaulting to "completed" — the subject's own
+            # word for how it ended, which is the whole of the verdict.
+            try:
+                validate_arguments(
+                    SUBMIT_TOOL,
+                    self.submit_tool_definition()["inputSchema"],
+                    arguments,
+                )
+            except ToolArgumentError as exc:
+                self._recorder.record(
+                    "mcp_submit_rejected", SUBMIT_TOOL, {"reason": str(exc)}
+                )
+                return _result(
+                    request_id,
+                    {
+                        "content": [{"type": "text", "text": str(exc)}],
+                        "isError": True,
+                    },
+                )
             return _result(request_id, self._submit(arguments))
 
         # A tool failure is a result the model can read and act on, not a

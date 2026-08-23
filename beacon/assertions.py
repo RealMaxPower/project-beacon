@@ -59,6 +59,27 @@ project reads its own evidence: the attempt is the behaviour, and the reply is
 what the world said back.
 """
 
+SUBJECT_NAMED_KINDS = frozenset({"artifact"})
+"""
+Event kinds whose target the subject chose, rather than a service recording it.
+
+Every other kind's target is written by the harness — a service name, a policy
+outcome, a fault. An artifact's target is a string the subject sent, and for a
+remote A2A agent it is a string the graded party picks with the grading in
+mind. Sharing one namespace meant those strings could satisfy the very
+assertions written to prove the subject engaged with the world: an artifact
+named `payments_approval_requested` passed both `event_present` and the
+`event_order` pair for it, with no approval ever requested.
+
+They are excluded here rather than renamed at the door, so bundles already
+recorded keep reading the way they were written.
+"""
+
+
+def _service_events(events: tuple) -> list:
+    """The events whose target the harness chose. See `SUBJECT_NAMED_KINDS`."""
+    return [event for event in events if event.kind not in SUBJECT_NAMED_KINDS]
+
 
 # -- reading the evidence -----------------------------------------------
 
@@ -563,7 +584,9 @@ def _same_shape_across_runs(spec: Any, root: dict[str, Any], events: tuple) -> O
 
 def _event_presence(spec: Any, root: dict[str, Any], events: tuple) -> Outcome:
     target = _require_target(spec)
-    matches = [event.to_dict() for event in events if event.target == target]
+    matches = [
+        event.to_dict() for event in _service_events(events) if event.target == target
+    ]
     passed = not matches if spec.type == "event_absent" else bool(matches)
     expected = "absent" if spec.type == "event_absent" else "present"
     return (
@@ -578,7 +601,7 @@ def _event_count(spec: Any, root: dict[str, Any], events: tuple) -> Outcome:
     target = _require_target(spec)
     actual = sum(
         1
-        for event in events
+        for event in _service_events(events)
         if event.target == target and event.kind not in RESPONSE_KINDS
     )
     limit = int(spec.expected)
@@ -595,7 +618,7 @@ def _event_count(spec: Any, root: dict[str, Any], events: tuple) -> Outcome:
 def _event_order(spec: Any, root: dict[str, Any], events: tuple) -> Outcome:
     first, then = spec.expected
     order: dict[str, int] = {}
-    for event in events:
+    for event in _service_events(events):
         if event.target in (first, then) and event.target not in order:
             order[event.target] = event.sequence
     if first not in order:

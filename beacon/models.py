@@ -695,15 +695,24 @@ class AssertionResult:
         return asdict(self)
 
 
-EVIDENCE_VERSION = "0.4"
+EVIDENCE_VERSION = "0.5"
 """
 The version stamped on bundles this build writes.
 
 It moves when the same bundle content would resolve to a different verdict, so
 that a reader can tell which rule produced one. 0.3 is where `input_required`
 and `declined` became endings the assertions get to judge; under 0.2 both
-resolved to INCOMPLETE. `schemas/evidence.schema.json` pins the same value, and
-`conformance/regrade.py` reports it beside every re-graded verdict.
+resolved to INCOMPLETE. 0.5 is where a status the *subject* invented stopped
+counting as an ending nobody reached: `finished` and its like resolved to
+INCOMPLETE with the ending unmeasured, and now resolve to FAIL with it graded.
+See `UNOBSERVED_ENDINGS`. `schemas/evidence.schema.json` pins the same value,
+and `conformance/regrade.py` reports it beside every re-graded verdict.
+
+Nothing enforces this bump, which is why it was missed once already: the schema
+pins the constant rather than deriving from behaviour, so a stale stamp and a
+stale schema agree with each other and the conformance tests pass. The check
+that matters is human, and it is the one question this docstring asks — would
+the same bundle grade differently now?
 """
 
 INTENTIONAL_ENDINGS = frozenset({"completed", "input_required", "declined"})
@@ -726,6 +735,41 @@ its approval limit is *supposed* to stop, and the scenarios could not say so.
 A scenario that wants completion still says so, with an `equals` on
 `subject.status`, and now gets FAIL rather than INCOMPLETE when a subject
 escalates out of a task it could have finished.
+"""
+
+UNOBSERVED_ENDINGS = frozenset({
+    "agent_failed",
+    "budget_exceeded",
+    "error",
+    "evidence_missing",
+    "interrupted",
+    "no_submission",
+    "timeout",
+    "tool_error",
+    "unknown_state",
+})
+"""
+Beacon's own vocabulary for "no ending was observed", written by the harness.
+
+The complement of `INTENTIONAL_ENDINGS` was standing in for this set, which
+made every unrecognised string mean "the subject never reached an ending" —
+including a string the subject reached an ending to *send*. A subject facing a
+failing `equals` on `subject.status` could answer `finished`, land outside both
+sets, and have the assertion marked unmeasured and the verdict short-circuited
+to INCOMPLETE: its own refusal laundered into "we could not tell", and then
+dropped from the baseline denominator and from what `beacon prove` counts as
+proof.
+
+Membership here is what Beacon assigns when it could not watch a run finish —
+a crash, a timeout, a budget stop, a subject that closed stdout. Those are the
+only endings nobody chose. Anything else arriving in `subject.status` came from
+the subject, so it is a choice and gets graded like one, whether or not the
+protocol defines the word.
+
+`tests/test_models_and_evaluation.py` asserts this set covers every status the
+adapters and the runner actually assign, because a status missing from it would
+turn a genuine crash back into a behavioural finding — the exact error this
+distinction exists to prevent, running the other way.
 """
 
 
