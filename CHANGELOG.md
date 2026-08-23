@@ -32,6 +32,32 @@ statements it cannot back.
   `docs/production-readiness.md` rather than restating it, because two copies of
   a decision is one copy that goes stale.
 
+- **`beacon/cli.py` was 1,095 lines; it is now 97.** The adapter table, a
+  372-line `build_parser` and twelve handlers were one module. Nothing was wrong
+  with it that a reader could point at — it was just the file every new
+  subcommand grows, in three directions at once, and the next one is `suite`.
+
+  Four pieces now. `cliadapters.py` holds the adapter table, `cliargs.py` builds
+  the parser and reads that table for its `--adapter` choices, `beacon/commands/`
+  holds one module per group of subcommands, and `cli.py` is the seam: a
+  name-to-handler mapping and the single `except` that turns an operator error
+  into `error: ...` and exit 2. Handlers return an exit code and never raise for
+  a bad invocation, so the rule that a run always produces evidence has one place
+  to live rather than twelve.
+
+  Behaviour is unchanged and the move was mechanical: the nineteen slices were
+  checked to tile the original file exactly once before anything was written, so
+  no line was silently dropped or duplicated. `beacon.cli` still exports
+  `ADAPTERS`, `RUN_ADAPTERS`, `AdapterSpec`, `adapter_rows`, `build_parser`,
+  `main` and `split_command`, because that is the path the tests and
+  `site/tools/build_fixtures.py` import from and a refactor that changed it would
+  be a breaking change dressed as tidying. The dispatch is a dict rather than an
+  if-chain, so the parser's subcommands and the handler set can be compared
+  directly instead of trusting that a reader noticed a missing branch.
+
+  One test changed: `tests/test_command_parsing.py` patched
+  `beacon.cli.os.name`, and `split_command` now lives in `beacon.cliargs`.
+
 - **`beacon/py.typed`.** Every module in the package is annotated and
   `models.py` publishes frozen dataclasses that `CONTRIBUTING.md` calls the
   project's contracts. Without the PEP 561 marker in the wheel, none of that
@@ -80,6 +106,22 @@ statements it cannot back.
   scenarios that declare it, so Beacon uses the mechanism it ships.
 
 ### Fixed
+
+- **The readiness ledger's account of this repository's workflows was wrong in
+  both directions.** It said three workflows were disabled at the GitHub level;
+  only `conformance.yml` is, and `ci.yml` and `release.yml` went back to
+  `active` when the repository was published. And it said a *fourth* workflow was
+  active and outside the default-deny gate — there are three, none of them a file
+  here: both Dependabot workflows and, since 2026-08-18, CodeQL default setup,
+  which runs on every pull request and weekly across five languages.
+
+  That is the failure the section is about, committed by the section itself. It
+  exists to record state that is not visible from a checkout, and state that is
+  not visible from a checkout does not correct itself: nothing was reading the
+  API the paragraph cites. `gh api repos/OWNER/REPO/actions/workflows` lists six
+  workflows; a checkout shows three. The section now names all three generated
+  ones and says plainly that `tests/test_workflow_triggers.py` cannot see any of
+  them arrive.
 
 - **The readiness ledger opened by saying nothing had been released, through
   four releases.** `docs/production-readiness.md` began **Status: v0.1, alpha.

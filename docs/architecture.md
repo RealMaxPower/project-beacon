@@ -29,7 +29,16 @@ beacon/evaluation.py   Dispatch, the measured/unmeasured rule, and the verdict
 beacon/runner.py       The lifecycle above, including any repeat passes
 beacon/services/       The six services, the tool router, faults, descriptions
 beacon/taxonomy.py     The failure taxonomy and the computed coverage figure
+beacon/cliargs.py      The argument parser; beacon/commands/ acts on what it parses
 ```
+
+The command line is four pieces rather than one file. `cliadapters.py` holds the
+adapter table, `cliargs.py` builds the parser and reads that table for its
+`--adapter` choices, `beacon/commands/` holds one module per group of
+subcommands, and `cli.py` is the seam: a name-to-handler mapping and the single
+`except` that turns an operator error into `error: ...` and exit 2. Handlers
+return an exit code and never raise for a bad invocation, so the rule that a run
+always produces evidence has one place to live rather than twelve.
 
 The split between the last two of the first three is the one worth knowing
 about. `assertions.py` holds a `REGISTRY` of eighteen types; each handler
