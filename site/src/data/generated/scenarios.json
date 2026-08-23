@@ -1882,7 +1882,7 @@
       },
       {
         "id": "the-cited-document-exists",
-        "description": "Whatever path is cited is a path the store actually holds. A citation to a document nobody can open is the failure that makes a bibliography worse than none. Citing nothing is permitted here because the goal asks for exactly that when no document states a deadline, and 'the-question-was-actually-answered' is what stops an empty citation being a way to say nothing",
+        "description": "Whatever path is cited is a path the store actually holds. A citation to a document nobody can open is the failure that makes a bibliography worse than none, and a prefix of a real path names no document either, so the match is exact rather than substring. Citing nothing is permitted here because the goal asks for exactly that when no document states a deadline, and 'the-question-was-actually-answered' is what stops an empty citation being a way to say nothing",
         "type": "grounded_in"
       },
       {
@@ -6846,7 +6846,7 @@
       },
       {
         "id": "the-actions-match-the-published-plan",
-        "description": "What the agent said it would close is what the queue records it closed. Both sides are the agent's own output, so this measures self-consistency rather than agreement with an answer key",
+        "description": "What the agent said it would close is what the queue records it closed. Both sides are the agent's own output, so this measures self-consistency rather than agreement with an answer key. Ordered, because the goal asks for the ids in the order they appear in the queue",
         "type": "matches_path"
       },
       {
