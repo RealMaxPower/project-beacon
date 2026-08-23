@@ -367,7 +367,17 @@ class DocumentedInventoryTests(unittest.TestCase):
     DOCS = sorted((ROOT / "docs").glob("*.md"))
 
     def _tracked_prose(self) -> list[Path]:
-        return [*self.DOCS, README, SUBJECTS_README, ROOT / "CONTRIBUTING.md"]
+        # `ROADMAP.md` is here from the day it was written rather than after it
+        # first went stale. A new prose file that no guard reads is the gap this
+        # class exists to close, and every file in this list was added to it
+        # because something in it had already drifted.
+        return [
+            *self.DOCS,
+            README,
+            SUBJECTS_README,
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "ROADMAP.md",
+        ]
 
     def test_every_shipped_service_is_named_where_services_are_enumerated(self) -> None:
         """
@@ -629,6 +639,66 @@ class VerificationTranscriptTests(unittest.TestCase):
             len(found), 0, "this guard found no printed taxonomy version"
         )
         self.assertEqual(sorted(set(found)), [published])
+
+
+class ReadinessStatusTests(unittest.TestCase):
+    """
+    The readiness ledger's own status line, against the version it describes.
+
+    It read **Status: v0.1, alpha. Nothing has been released.** through 0.1.0,
+    0.1.1, 0.1.2 and 0.2.0 — in the first paragraph of the page whose premise is
+    that every claim on it names the file behind it, and a few screens above a
+    *Distribution* section explaining that `pip install project-beacon` works.
+    A reader who checked the first claim on the page found it false.
+
+    Nothing could have caught it. `VerificationTranscriptTests` pins the two
+    versions printed in `docs/verifying-a-checkout.md` for exactly this reason,
+    and this file was outside it. So the same treatment, on the same argument:
+    a version in prose is a second place to bump, and the second place is the
+    one that gets missed.
+    """
+
+    DOC = ROOT / "docs" / "production-readiness.md"
+
+    #: The bolded status line, e.g. `**Status: v0.2.0, alpha.**`
+    STATUS = re.compile(r"\*\*Status:\s*v([0-9]+\.[0-9]+\.[0-9]+),\s*alpha\.\*\*")
+
+    def test_the_status_line_states_the_current_version(self) -> None:
+        from beacon import __version__
+
+        found = self.STATUS.findall(self.DOC.read_text(encoding="utf-8"))
+        self.assertEqual(
+            len(found),
+            1,
+            "expected exactly one bolded status line in the readiness ledger; "
+            f"found {found}. If the wording moved, repoint this guard rather "
+            "than deleting it.",
+        )
+        self.assertEqual(
+            found[0],
+            __version__,
+            f"the readiness ledger says v{found[0]} and the package is "
+            f"{__version__}",
+        )
+
+    def test_the_ledger_does_not_claim_nothing_has_been_released(self) -> None:
+        """
+        The stale half of that sentence was the assertion, not the number.
+
+        Pinning the version alone would let `Status: v0.2.0, alpha. Nothing has
+        been released.` pass — a sentence that contradicts itself and is wrong
+        in the direction that matters, since it is the line telling a reader
+        whether they can install this.
+        """
+        text = " ".join(self.DOC.read_text(encoding="utf-8").split())
+        stale = re.search(
+            r"\*\*Status:[^*]*\*\*\s*Nothing has been released", text
+        )
+        self.assertIsNone(
+            stale,
+            "the status line says nothing has been released; the package is on "
+            "PyPI and this page's own Distribution section says so",
+        )
 
 
 class SelfIdentificationTests(unittest.TestCase):

@@ -15,6 +15,43 @@ statements it cannot back.
 
 ### Added
 
+- **`ROADMAP.md`, because the answer was in three places and none of them was
+  that one.** Where the project is going lived in "what would change it" in
+  `docs/production-readiness.md`, in "Still planned" in `docs/architecture.md`,
+  and in a question the site asks about a hosted lab — three documents written
+  for other purposes, from which a reader had to assemble it, and no way to tell
+  a commitment from a musing.
+
+  It carries no dates and no counts, and says why: a quarter typed beside an
+  item is a claim with nothing behind it, and every other figure this project
+  publishes is computed by a test from the file that holds it, which a roadmap
+  has no equivalent of. What each entry carries instead is what would change its
+  status. The stated ordering is reach before trust — suite-scale runs ahead of
+  the container runner and evidence signing — with the argument for it written
+  down rather than implied. *Decided against* links to the section in
+  `docs/production-readiness.md` rather than restating it, because two copies of
+  a decision is one copy that goes stale.
+
+- **`beacon/py.typed`.** Every module in the package is annotated and
+  `models.py` publishes frozen dataclasses that `CONTRIBUTING.md` calls the
+  project's contracts. Without the PEP 561 marker in the wheel, none of that
+  reached anyone: a type checker that finds no marker inside a distribution does
+  not fall back to reading the annotations, it treats every symbol imported from
+  the package as `Any`. Silently, which is the failure mode where the tooling
+  reports success. The annotations have been there since the first commit and
+  nothing downstream could see them.
+
+  `tests/test_packaging.py` now checks all three halves of the claim — the file
+  exists, `pyproject.toml` ships it as package data so it reaches the wheel and
+  not just the sdist, and the modules under the marker really are annotated. A
+  marker on an unannotated package is a worse claim than no marker, because it
+  tells a checker that what it reads is authoritative.
+
+- Two documents were unreachable from the README's documentation table:
+  `docs/failure-taxonomy.md`, which is the argument behind the coverage figure
+  the README spends a section on, and `docs/beacon-test-run.md`. Both have rows
+  now.
+
 - **`project-beacon prove` — the falsifiability check, for your scenarios.** The
   README calls it load-bearing: "An assertion nobody has watched fail is a claim
   the evidence does not support." Beacon has enforced that across its own
@@ -43,6 +80,24 @@ statements it cannot back.
   scenarios that declare it, so Beacon uses the mechanism it ships.
 
 ### Fixed
+
+- **The readiness ledger opened by saying nothing had been released, through
+  four releases.** `docs/production-readiness.md` began **Status: v0.1, alpha.
+  Nothing has been released.** It shipped that way in 0.1.0, 0.1.1, 0.1.2 and
+  0.2.0 — the first claim on the page whose stated premise is that every claim
+  on it names the file, command or API response behind it, a few screens above
+  the *Distribution* section explaining that `pip install project-beacon` works,
+  and beside a README carrying a PyPI badge. A reader checking the page the way
+  it invites them to would find the opening sentence false and, by its own
+  argument, stop believing the rest.
+
+  It is the version badge defect again, in the document least able to afford it.
+  Nothing was reading the line, so nothing could notice. It is pinned now:
+  `tests/test_documented_claims.py` reads the version out of that sentence and
+  compares it to `beacon.__version__`, and separately refuses the half of the
+  sentence that was the real error — pinning the number alone would have let
+  "v0.2.0, alpha. Nothing has been released" pass, which is worse than what was
+  there, because it contradicts itself.
 
 - **The sign-off check passed in CI without reading anything, and then failed
   every pull request.** `actions/checkout` fetches depth 1 by default, and a
