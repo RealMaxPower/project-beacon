@@ -113,7 +113,9 @@ statements it cannot back.
   `active` when the repository was published. And it said a *fourth* workflow was
   active and outside the default-deny gate — there are three, none of them a file
   here: both Dependabot workflows and, since 2026-08-18, CodeQL default setup,
-  which runs on every pull request and weekly across five languages.
+  which scans five languages weekly and on pull requests — those targeting the
+  default branch, which a stacked pull request in this very change turned out to
+  demonstrate by not being scanned at all.
 
   That is the failure the section is about, committed by the section itself. It
   exists to record state that is not visible from a checkout, and state that is

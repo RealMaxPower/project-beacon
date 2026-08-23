@@ -334,10 +334,19 @@ repository. GitHub generates them and reports them under `dynamic/` paths that
 `tests/test_workflow_triggers.py` reads `.github/workflows/` and nothing else,
 so its default-deny classification — the rule that fails the suite for a
 workflow nobody has declared — cannot see any of the three arrive. CodeQL is the
-one worth naming: it runs on every pull request and weekly on five languages
-under the `remote` threat model, which is real security tooling that no file in
-this repository mentions. `gh api repos/OWNER/REPO/actions/workflows` lists all
-six; a checkout shows three.
+one worth naming: five languages under the `remote` threat model, weekly and on
+pull requests, which is real security tooling that no file in this repository
+mentions. `gh api repos/OWNER/REPO/actions/workflows` lists all six; a checkout
+shows three.
+
+**Not every pull request, though — only those targeting the default branch.**
+This paragraph said "every pull request" for about an hour, and the pull request
+that introduced it disproved it: a stacked branch based on another branch drew
+sixteen checks where one based on `main` drew twenty, the four missing being
+CodeQL's. That is worth knowing beyond the pedantry, because it means a stack of
+branches merged into each other is scanned once at the bottom rather than at
+each step, and the intermediate reviews are the ones that look complete while
+being four checks short.
 
 The Dependabot configuration itself is deliberately narrow: monthly, grouped
 into one pull request per ecosystem, and no pip ecosystem at all because the
