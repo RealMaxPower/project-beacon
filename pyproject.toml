@@ -60,6 +60,7 @@ project-beacon = "beacon.cli:main"
 packages = [
   "beacon",
   "beacon.adapters",
+  "beacon.commands",
   "beacon.protocols",
   "beacon.services",
   "beacon.builtin_scenarios",

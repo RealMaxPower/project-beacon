@@ -321,13 +321,16 @@ Six of those verdicts were wrong when the suite was written. See
 ```text
 beacon/
   adapters/       Subject contracts and reference adapters
+  commands/       One module per group of subcommands, each returning an exit code
   protocols/      MCP and A2A protocol clients
   services/       Six synthetic services, the tool router, the fault table,
                   and fixture-written tool descriptions
   assertions.py   Every assertion type, and how each one is graded
   baseline.py     Pass-rate baselines and regression detection
   builtins.py     Locating shipped scenarios from a checkout or a wheel
-  cli.py          Dependency-free command-line interface
+  cli.py          Dispatch, and where an operator error becomes an exit code
+  cliadapters.py  The adapter table, and the listing built from it
+  cliargs.py      The argument parser: the command surface, dependency-free
   determinism.py  Comparing repeated runs of the same subject
   evaluation.py   The measured/unmeasured rule and verdict resolution
   evidence.py     JSON and Markdown evidence output
