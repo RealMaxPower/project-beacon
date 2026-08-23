@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Any, Iterable
 
 from beacon.models import EventRecorder
@@ -27,6 +28,9 @@ class ToolRouter:
         self._allowed = None if allowed is None else frozenset(allowed)
         self._max_tool_calls = max_tool_calls
         self._calls = 0
+        # Tool calls arrive on one thread per request from the MCP façade, so
+        # the budget is incremented and tested concurrently. See `call`.
+        self._lock = threading.Lock()
 
     def register(self, service: Any) -> None:
         # Checked here rather than at publish time: a name that cannot reach a
@@ -74,8 +78,16 @@ class ToolRouter:
         # Recorded before dispatch, and before the scope check, so that an
         # attempt to use a forbidden tool is evidence even though it never ran.
         self._recorder.record("tool_call", tool, payload)
-        self._calls += 1
-        if self._max_tool_calls is not None and self._calls > self._max_tool_calls:
+        # Incremented and read as one step. `+=` is a read, an add and a write,
+        # so concurrent calls could interleave and lose one — a budget of eight
+        # then admitting nine, which makes `max_tool_calls` a number the run
+        # reports rather than a limit it keeps. The count is taken here and used
+        # below rather than re-read, so the value tested is the value this call
+        # was given.
+        with self._lock:
+            self._calls += 1
+            calls = self._calls
+        if self._max_tool_calls is not None and calls > self._max_tool_calls:
             # A *soft* budget, and the softness is the point.
             #
             # `max_protocol_messages` is the hard valve: it kills the run, which
@@ -94,7 +106,7 @@ class ToolRouter:
                 {
                     "call_id": call_id,
                     "max_tool_calls": self._max_tool_calls,
-                    "calls": self._calls,
+                    "calls": calls,
                 },
             )
             raise RuntimeError(
