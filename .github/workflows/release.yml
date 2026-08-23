@@ -32,9 +32,9 @@ jobs:
     name: build and verify the distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.13"
 
@@ -89,7 +89,7 @@ jobs:
           python -W error::ResourceWarning -m unittest discover -s tests
           python examples/subjects/run_suite.py
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: distribution
           path: dist/
@@ -107,14 +107,23 @@ jobs:
       # so there is no long-lived API token in the repository to leak.
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: distribution
           path: dist/
 
-      # Pinned to a commit, not to `release/v1`, which is a branch: a moving
-      # ref on the only third-party action in this repository, running in the
-      # one job that holds an id-token PyPI will accept. Whoever can move that
-      # branch can publish as this project. Update deliberately — the comment
-      # is the version, because the SHA is not readable.
+      # Pinned to a commit, not to `release/v1`, which is a branch. Whoever can
+      # move that ref can publish as this project.
+      #
+      # Every action in this file is pinned the same way now, and the reason the
+      # others were not is worth recording: this comment used to say "the only
+      # third-party action", which read as though first-party ones were outside
+      # the argument. They are not. `download-artifact` above runs in this same
+      # job, holds this same id-token, and fetches the `dist/` that is about to
+      # be uploaded — an action that can rewrite `dist/` never needs to touch
+      # the publish step at all. `actions/*` being GitHub's own changes who
+      # would have to be compromised, not what a moving ref would let them do.
+      #
+      # Update deliberately — the comment is the version, because the SHA is
+      # not readable. Dependabot's `github-actions` ecosystem raises these.
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
