@@ -142,19 +142,32 @@ transport error is not. The attempt is recorded either way.
 
 ## MCP client support
 
-The MVP client implements these MCP stdio methods:
+There are two clients over one surface. `MCPStdioClient` speaks to a server
+Beacon launches as a child process; `MCPHTTPClient` speaks Streamable HTTP to
+one somebody else is already running. Both implement:
 
 - `initialize`
 - `notifications/initialized`
 - `tools/list`
 - `tools/call`
 
-It negotiates a protocol version and records server identity and capabilities.
-It does not yet implement resources, prompts, roots, sampling, elicitation,
-OAuth, Streamable HTTP, experimental MCP tasks, or server-originated requests.
+Both negotiate a protocol version and record server identity and capabilities,
+so a caller can bind either one and read the same attributes off it.
+
+The HTTP client carries what the transport adds. It reads a
+`text/event-stream` response as well as `application/json`, because which one
+arrives is the server's choice; it carries `Mcp-Session-Id`; and it pins
+redirects. A hop to a different scheme, or to an address inside the harness's
+own network, is refused rather than followed — `Location: file:///…` and
+`Location: http://169.254.169.254/…` are the two that matter — and a hop that
+leaves the origin the credentials were issued for drops the bearer token and
+the session id before continuing.
+
+Neither client implements resources, prompts, roots, sampling, elicitation,
+OAuth, experimental MCP tasks, or server-originated requests.
 
 Use a complete official MCP SDK when these features are added. The minimal
-client is primarily a zero-dependency interoperability spike and fixture
+clients are primarily a zero-dependency interoperability spike and fixture
 harness.
 
 ## A2A support
