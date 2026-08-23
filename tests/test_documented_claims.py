@@ -715,6 +715,91 @@ class ReadinessStatusTests(unittest.TestCase):
         )
 
 
+class ProtocolScopeTests(unittest.TestCase):
+    """
+    A "does not implement" list must not name something that ships.
+
+    `docs/protocol-contracts.md` told readers the MCP client "does not yet
+    implement … OAuth, Streamable HTTP, experimental MCP tasks, or
+    server-originated requests" while `MCPHTTPClient` was exported from
+    `beacon.protocols` and used by `mcp_tool_subject.py`, `mcp_server.py` and
+    both conformance sweeps. The sentence was false before the pull request
+    that made it conspicuous — an outside contributor adding `mcp-inspect
+    --url`, the exact capability the line denied.
+
+    A negative claim is the kind that rots silently. Every other guard in this
+    file checks that something documented still exists; nothing checked the
+    reverse, and the reverse is worse: a reader who believes a feature is
+    absent does not go looking for it, so nobody finds the error by using the
+    software.
+
+    The map below is the checkable subset, not the whole sentence. A capability
+    belongs here when its presence can be decided from the package rather than
+    argued about — `resources` and `prompts` stay unlisted because "no method
+    for it" and "not implemented" are the same statement made twice, while
+    Streamable HTTP is a class you can import.
+    """
+
+    DOC = ROOT / "docs" / "protocol-contracts.md"
+
+    #: Phrase as it appears in a scope sentence → does the package have it?
+    CHECKABLE = {
+        "Streamable HTTP": lambda: _protocols_exports("MCPHTTPClient"),
+        "stdio": lambda: _protocols_exports("MCPStdioClient"),
+    }
+
+    #: Sentences that enumerate what is absent. Both list forms in the file.
+    DISCLAIMERS = re.compile(
+        r"(?:does not (?:yet )?implement|Not implemented:|Neither client implements)"
+        r"([^.]*)\.",
+        re.IGNORECASE,
+    )
+
+    def test_the_guard_finds_scope_sentences_to_check(self) -> None:
+        """Vacuity: a regex that matches nothing would pass on anything."""
+        found = self.DISCLAIMERS.findall(
+            " ".join(self.DOC.read_text(encoding="utf-8").split())
+        )
+        self.assertGreaterEqual(
+            len(found), 2, f"the scope sentences moved; repoint this guard: {found}"
+        )
+
+    def test_nothing_declared_absent_is_actually_present(self) -> None:
+        text = " ".join(self.DOC.read_text(encoding="utf-8").split())
+        wrong: list[str] = []
+        for sentence in self.DISCLAIMERS.findall(text):
+            for phrase, implemented in self.CHECKABLE.items():
+                if phrase.lower() in sentence.lower() and implemented():
+                    wrong.append(f"{phrase!r} in “…{sentence.strip()[:80]}…”")
+        self.assertEqual(
+            wrong,
+            [],
+            "docs/protocol-contracts.md lists these as not implemented, and "
+            f"the package implements them: {wrong}",
+        )
+
+    def test_the_checks_themselves_are_true(self) -> None:
+        """
+        The map is only as good as its predicates.
+
+        If `_protocols_exports` silently returned False the guard above would
+        pass while checking nothing, which is the failure mode it exists to
+        name in the prose.
+        """
+        for phrase, implemented in self.CHECKABLE.items():
+            with self.subTest(capability=phrase):
+                self.assertTrue(
+                    implemented(), f"the predicate for {phrase!r} no longer holds"
+                )
+
+
+def _protocols_exports(name: str) -> bool:
+    """True when `beacon.protocols` publishes a name, so the doc cannot deny it."""
+    import beacon.protocols as protocols
+
+    return hasattr(protocols, name)
+
+
 class SelfIdentificationTests(unittest.TestCase):
     """
     When Beacon introduces itself to a peer, it must say which Beacon it is.

@@ -107,6 +107,32 @@ statements it cannot back.
 
 ### Fixed
 
+- **The protocol contract said Streamable HTTP was not implemented, while it
+  shipped.** `docs/protocol-contracts.md` told readers the MCP client "does not
+  yet implement … OAuth, Streamable HTTP, experimental MCP tasks, or
+  server-originated requests." `MCPHTTPClient` is exported from
+  `beacon.protocols` and used by `mcp_tool_subject.py`, `mcp_server.py` and both
+  conformance sweeps. The sentence had been false for some time.
+
+  It surfaced through an outside contributor's pull request adding `mcp-inspect
+  --url` — the exact capability the line denied — which is the worst way to find
+  it: the document told someone a feature was absent while they were building
+  against the code that provides it.
+
+  **A negative claim is the kind that rots silently**, and this repository had no
+  guard for one. Every check in `tests/test_documented_claims.py` asserted that
+  something documented still exists; nothing asserted the reverse. The reverse is
+  worse, because a reader who believes a feature is absent does not go looking
+  for it, so nobody finds the error by using the software. There is now a check
+  that reads the scope sentences and fails when one names a capability the
+  package can be shown to have — verified by watching it fail against the text
+  that shipped.
+
+  The section is rewritten to describe both clients rather than one, including
+  what the HTTP transport adds: SSE responses, session ids, and redirect pinning
+  that refuses a scheme change or a hop into the harness's own network and drops
+  the bearer token when a hop leaves the origin it was issued for.
+
 - **The readiness ledger's account of this repository's workflows was wrong in
   both directions.** It said three workflows were disabled at the GitHub level;
   only `conformance.yml` is, and `ci.yml` and `release.yml` went back to
