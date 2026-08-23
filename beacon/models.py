@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
@@ -637,12 +638,23 @@ class Event:
 
 
 class EventRecorder:
+    """
+    The run's event log, written from every thread that serves a tool call.
+
+    `serve-mcp` and the MCP host adapter both run a `ThreadingHTTPServer` with
+    one thread per request, and real hosts — Claude Desktop, Cursor — issue tool
+    calls in parallel. So this is shared mutable state under genuine
+    concurrency, not in principle but in ordinary use.
+    """
+
     def __init__(self) -> None:
         self._events: list[Event] = []
+        self._lock = threading.Lock()
 
     @property
     def events(self) -> tuple[Event, ...]:
-        return tuple(self._events)
+        with self._lock:
+            return tuple(self._events)
 
     def record(
         self,
@@ -656,14 +668,25 @@ class EventRecorder:
         # encoder when the bundle is written. Bounding here covers every
         # recorded event at once, rather than each caller remembering to.
         bounded, _ = bound_depth(payload or {})
-        event = Event(
-            sequence=len(self._events) + 1,
-            timestamp=utc_now(),
-            kind=kind,
-            target=target,
-            payload=bounded,
-        )
-        self._events.append(event)
+        # Numbered and appended under one lock. Reading the length, building
+        # the event and appending were three steps, so two concurrent calls
+        # could read the same length and take the same sequence number — and
+        # `event_order` grades on `sequence`, so a duplicate is not a cosmetic
+        # flaw in the log. It is a wrong answer to "did the subject ask before
+        # it acted", produced without any subject misbehaving.
+        #
+        # `bound_depth` stays outside: it only touches the payload passed in,
+        # it is the expensive part, and holding the lock across it would
+        # serialise every concurrent tool call on the deepest one.
+        with self._lock:
+            event = Event(
+                sequence=len(self._events) + 1,
+                timestamp=utc_now(),
+                kind=kind,
+                target=target,
+                payload=bounded,
+            )
+            self._events.append(event)
         return event
 
 
