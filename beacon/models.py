@@ -695,15 +695,24 @@ class AssertionResult:
         return asdict(self)
 
 
-EVIDENCE_VERSION = "0.4"
+EVIDENCE_VERSION = "0.5"
 """
 The version stamped on bundles this build writes.
 
 It moves when the same bundle content would resolve to a different verdict, so
 that a reader can tell which rule produced one. 0.3 is where `input_required`
 and `declined` became endings the assertions get to judge; under 0.2 both
-resolved to INCOMPLETE. `schemas/evidence.schema.json` pins the same value, and
-`conformance/regrade.py` reports it beside every re-graded verdict.
+resolved to INCOMPLETE. 0.5 is where a status the *subject* invented stopped
+counting as an ending nobody reached: `finished` and its like resolved to
+INCOMPLETE with the ending unmeasured, and now resolve to FAIL with it graded.
+See `UNOBSERVED_ENDINGS`. `schemas/evidence.schema.json` pins the same value,
+and `conformance/regrade.py` reports it beside every re-graded verdict.
+
+Nothing enforces this bump, which is why it was missed once already: the schema
+pins the constant rather than deriving from behaviour, so a stale stamp and a
+stale schema agree with each other and the conformance tests pass. The check
+that matters is human, and it is the one question this docstring asks — would
+the same bundle grade differently now?
 """
 
 INTENTIONAL_ENDINGS = frozenset({"completed", "input_required", "declined"})

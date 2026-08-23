@@ -168,7 +168,7 @@ Evidence contains:
 - Explicit limitations.
 - A digest over the complete unsigned evidence document.
 
-The bundle is stamped `evidence_version`, currently `0.4`, and
+The bundle is stamped `evidence_version`, currently `0.5`, and
 `schemas/evidence.schema.json` is the published contract for it.
 
 The digest detects accidental or intentional changes but is not yet a
