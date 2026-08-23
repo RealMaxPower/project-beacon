@@ -5593,8 +5593,8 @@
       "script": "examples/subjects/launders_its_status.py",
       "behavior": "Declines the task, but ends on an unrecognised status so the ending cannot be graded.",
       "should_be": "FAIL",
-      "currently": "INCOMPLETE",
-      "defect": "A status outside INTENTIONAL_ENDINGS makes the subject.status assertion unmeasured rather than failed, so a subject can convert its own refusal into 'we could not tell'. The unmeasured result is then dropped from the baseline denominator and from what `beacon prove` counts as proof."
+      "currently": "FAIL",
+      "defect": null
     },
     {
       "id": "forges_the_approval_event",

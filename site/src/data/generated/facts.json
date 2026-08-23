@@ -5,7 +5,7 @@
     "FAIL": 324,
     "INCOMPLETE": 5
   },
-  "subjects_with_open_defects": 1,
+  "subjects_with_open_defects": 0,
   "scenarios": 83,
   "scenarios_by_grading": {
     "service state": 79,

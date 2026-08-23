@@ -12,6 +12,7 @@ from beacon.assertions import (
 )
 from beacon.models import (
     INTENTIONAL_ENDINGS,
+    UNOBSERVED_ENDINGS,
     AssertionResult,
     AssertionSpec,
     Event,
@@ -75,6 +76,13 @@ def _ending_never_happened(spec: AssertionSpec, root: dict[str, Any]) -> bool:
     for a path it cannot reach or an artifact that never arrived, and it lands
     on the same verdict, INCOMPLETE, by the honest route rather than by a
     coincidence of two rules agreeing.
+
+    The test is membership of `UNOBSERVED_ENDINGS` rather than absence from
+    `INTENTIONAL_ENDINGS`. Those read the same while the only statuses in play
+    are Beacon's own, and come apart the moment a subject sends a word of its
+    own choosing: `finished` is not an ending that *happened to* anybody, so
+    treating it as one let a subject convert a failing assertion about its
+    ending into a gap by misspelling the ending.
     """
     if spec.path != SUBJECT_STATUS_PATH:
         return False
@@ -82,7 +90,7 @@ def _ending_never_happened(spec: AssertionSpec, root: dict[str, Any]) -> bool:
         status = get_path(root, SUBJECT_STATUS_PATH)
     except EvaluationError:
         return False
-    return status not in INTENTIONAL_ENDINGS
+    return status in UNOBSERVED_ENDINGS
 
 
 def evaluate_assertion(
@@ -163,7 +171,7 @@ def resolve_result(
     between "we could not tell" and "the subject did the wrong thing".
     """
     results = tuple(assertions)
-    if subject_status not in INTENTIONAL_ENDINGS:
+    if subject_status in UNOBSERVED_ENDINGS:
         return "INCOMPLETE"
     if not results:
         return "INCOMPLETE"
@@ -183,6 +191,14 @@ def resolve_result(
     # matters: FAIL is not a pass. What changes is that an unreachable path can
     # no longer soften a failure Beacon actually observed.
     if any(result.measured and not result.passed for result in results):
+        return "FAIL"
+    if subject_status not in INTENTIONAL_ENDINGS:
+        # Observed, chosen, and not a word the protocol defines. A scenario
+        # that grades `subject.status` has already failed above; this is the
+        # floor for one that does not, because a subject must not be able to
+        # reach PASS through an ending Beacon cannot interpret. It is a finding
+        # rather than a gap: the subject did reach an ending, and this is what
+        # it said.
         return "FAIL"
     if any(not result.measured for result in results):
         return "INCOMPLETE"

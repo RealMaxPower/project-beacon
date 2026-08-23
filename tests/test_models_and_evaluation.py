@@ -6,6 +6,8 @@ from typing import Any
 
 from beacon.evaluation import EvaluationError, evaluate_all, get_path, resolve_result
 from beacon.models import (
+    INTENTIONAL_ENDINGS,
+    UNOBSERVED_ENDINGS,
     AssertionResult,
     AssertionSpec,
     EventRecorder,
@@ -520,6 +522,77 @@ class EndingTests(unittest.TestCase):
             expected=expected,
         )
 
+    def test_a_status_the_subject_invented_is_graded_not_excused(self) -> None:
+        """
+        The laundering this split exists to stop.
+
+        A subject about to fail `equals subject.status "completed"` used to be
+        able to send any unrecognised word instead. It fell outside
+        `INTENTIONAL_ENDINGS`, so the assertion was marked unmeasured and the
+        verdict short-circuited to INCOMPLETE — and an unmeasured result is
+        then dropped from the baseline denominator and from what `beacon prove`
+        counts as proof. Misspelling the ending was cheaper than reaching one.
+        """
+        for status in ("finished", "done", "COMPLETED", "ok", ""):
+            with self.subTest(status=status):
+                result = evaluate_all(
+                    [self._ending()], self._root(status), []
+                )[0]
+                self.assertTrue(
+                    result.measured, "the subject chose this ending; grade it"
+                )
+                self.assertFalse(result.passed)
+                self.assertEqual(resolve_result(status, [result]), "FAIL")
+
+    def test_an_invented_status_cannot_reach_pass_without_an_ending_assertion(
+        self,
+    ) -> None:
+        """
+        The floor for a scenario that does not grade `subject.status`.
+
+        Nothing would have failed above, so without this the subject reaches
+        PASS through an ending Beacon cannot interpret.
+        """
+        self.assertEqual(resolve_result("finished", [_passing()]), "FAIL")
+
+    def test_an_ending_nobody_chose_is_still_a_gap(self) -> None:
+        """The half that must not change: a crash is not a behavioural finding."""
+        for status in sorted(UNOBSERVED_ENDINGS):
+            with self.subTest(status=status):
+                result = evaluate_all(
+                    [self._ending()], self._root(status), []
+                )[0]
+                self.assertFalse(result.measured)
+                self.assertEqual(resolve_result(status, [result]), "INCOMPLETE")
+
+    def test_every_status_the_harness_assigns_is_a_known_non_ending(self) -> None:
+        """
+        A status the harness assigns but this set omits would be read as the
+        subject's own word and graded as a finding — this distinction running
+        backwards, turning a crash into a behavioural failure. Scanned from the
+        source rather than listed here, so a new one cannot be added quietly.
+        """
+        import re
+
+        assigned: set[str] = set()
+        for path in [
+            *(REPO_ROOT / "beacon" / "adapters").glob("*.py"),
+            REPO_ROOT / "beacon" / "runner.py",
+        ]:
+            text = path.read_text(encoding="utf-8")
+            assigned |= set(re.findall(r'status\s*=\s*"([a-z_]+)"', text))
+            assigned |= set(re.findall(r'status\s*=\s*\(?\s*"([a-z_]+)"', text))
+        unaccounted = sorted(
+            assigned - UNOBSERVED_ENDINGS - INTENTIONAL_ENDINGS
+        )
+        self.assertEqual(
+            unaccounted,
+            [],
+            f"these statuses are assigned by the harness but are in neither "
+            f"ending set, so a run ending in one would be graded as though the "
+            f"subject chose the word: {unaccounted}",
+        )
+
     def test_a_chosen_ending_reaches_the_assertions(self) -> None:
         for status in ("completed", "input_required", "declined"):
             with self.subTest(status=status):
@@ -529,8 +602,17 @@ class EndingTests(unittest.TestCase):
                 )
 
     def test_an_ending_that_happened_to_the_subject_does_not(self) -> None:
-        """Beacon failing to observe a run is not a finding about the run."""
-        for status in ("error", "agent_failed", "no_submission", "unknown"):
+        """
+        Beacon failing to observe a run is not a finding about the run.
+
+        The fourth case read `unknown`, which is not a status anything assigns:
+        an unrecognised A2A task state becomes `unknown_state`. It passed
+        because the old rule accepted any string outside `INTENTIONAL_ENDINGS`,
+        so a fictional status stood in for a real one. Now that the harness's
+        own vocabulary is the test, the case has to name a status the harness
+        actually produces — which is the point of `UNOBSERVED_ENDINGS`.
+        """
+        for status in ("error", "agent_failed", "no_submission", "unknown_state"):
             with self.subTest(status=status):
                 self.assertEqual(
                     resolve_result(status, [_passing()]),

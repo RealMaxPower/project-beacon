@@ -109,9 +109,17 @@ is the one that matters.
 with `-W error::ResourceWarning` on purpose — a leaked subprocess or file
 handle fails the suite rather than printing a warning nobody reads.
 
-**It is a bug if** `run_suite.py` prints anything under "Open defects" or
-"Manifest drift". Both mean the recorded expectation and the observed verdict
-have parted company, which is the one thing that suite exists to catch.
+**It is a bug if** `run_suite.py` prints anything under "Manifest drift", and
+it exits non-zero when it does. That section means a subject's verdict today is
+not the one the manifest recorded, so the two have parted company and one of
+them is stale — which is the thing that suite exists to catch.
+
+"Open defects" is a different section and is not a bug in your checkout. It
+lists subjects whose recorded verdict is not the verdict they *should* get:
+known Beacon defects, each printed with a note saying what is wrong. The suite
+exits zero with them listed, because the manifest's `should_be`/`currently`
+split exists to keep a known-wrong verdict visible while it is being closed.
+The tally above counts them, so it drops below `420/420` while one is open.
 
 ---
 
