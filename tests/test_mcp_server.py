@@ -187,6 +187,37 @@ class SubmissionTests(unittest.TestCase):
         self.assertTrue(second["result"]["isError"])
         self.assertEqual(self.server.submission["summary"], "first")
 
+    def test_an_empty_submission_is_refused_rather_than_defaulted(self) -> None:
+        """
+        The submit tool does not go through `ToolRouter.call`, which is where
+        every other tool meets its declared schema — so it advertised a
+        required `status` from a fixed enum and then accepted a call with no
+        arguments at all, defaulting to "completed". That default is the
+        subject's own word for how it ended, and the whole of the verdict.
+        """
+        response = _call(
+            self.server, "tools/call", {"name": SUBMIT_TOOL, "arguments": {}}
+        )
+        self.assertTrue(response["result"]["isError"])
+        self.assertIsNone(self.server.submission)
+        self.assertIn("mcp_submit_rejected", [e.kind for e in self.recorder.events])
+
+    def test_a_status_outside_the_declared_enum_is_refused(self) -> None:
+        response = _call(
+            self.server,
+            "tools/call",
+            {
+                "name": SUBMIT_TOOL,
+                "arguments": {
+                    "status": "COMPLETED",
+                    "summary": "done",
+                    "artifact": "a",
+                },
+            },
+        )
+        self.assertTrue(response["result"]["isError"])
+        self.assertIsNone(self.server.submission)
+
 
 class TransportTests(unittest.TestCase):
     def setUp(self) -> None:

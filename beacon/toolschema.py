@@ -115,3 +115,11 @@ def validate_arguments(
                 f"{tool} argument '{name}' must be {expected}, "
                 f"got {_type_name(value)}"
             )
+        # A declared enum that nothing checks is a suggestion. `beacon_submit`
+        # declares one for `status`, and that value becomes the run verdict.
+        allowed = properties.get(name, {}).get("enum")
+        if allowed and value not in allowed:
+            raise ToolArgumentError(
+                f"{tool} argument '{name}' must be one of "
+                f"{', '.join(repr(item) for item in allowed)}, got {value!r}"
+            )

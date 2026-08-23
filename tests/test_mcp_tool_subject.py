@@ -226,6 +226,58 @@ class MCPToolSubjectTests(unittest.TestCase):
         self.assertEqual(subject["integration_level"], 1)
 
 
+class MCPToolCredentialTests(unittest.TestCase):
+    """
+    The same hole the A2A adapter had, in the adapter that never got the fix.
+
+    `--authorization` arrives on the command line and the command line reaches
+    evidence.json verbatim. `A2ASubjectAdapter` registers the value with the
+    run's secret registry before anything can record it; this adapter had no
+    registration at all, and it also publishes `server_url`, where a token can
+    ride in a query string.
+    """
+
+    TOKEN = "mcp-tool-fixture-token-4f19ab-DO-NOT-SHIP"
+
+    def _run(self, url_suffix: str = ""):
+        server = _StubMCPServer()
+        self.addCleanup(server.stop)
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        outcome = run_scenario(
+            Scenario.load(SCENARIO),
+            MCPToolSubjectAdapter(
+                server.url + url_suffix,
+                "ask",
+                {"question": "What is it?"},
+                authorization=f"Bearer {self.TOKEN}",
+            ),
+            output_dir=directory.name,
+            run_id="mcp-tool-credentialed",
+        )
+        return outcome, outcome.json_path.parent
+
+    def test_the_token_reaches_none_of_the_written_files(self) -> None:
+        _, run_dir = self._run()
+        for name in ("evidence.json", "report.md", "events.json"):
+            with self.subTest(file=name):
+                text = (run_dir / name).read_text(encoding="utf-8")
+                self.assertNotIn(self.TOKEN, text)
+
+    def test_a_token_in_the_server_url_is_redacted(self) -> None:
+        outcome, run_dir = self._run(f"?access_token={self.TOKEN}")
+        self.assertNotIn(self.TOKEN, json.dumps(outcome.evidence.subject))
+        self.assertNotIn(self.TOKEN, json.dumps(outcome.evidence.usage))
+        text = (run_dir / "evidence.json").read_text(encoding="utf-8")
+        self.assertNotIn(self.TOKEN, text)
+
+    def test_the_credential_is_named_in_the_redaction_record(self) -> None:
+        outcome, _ = self._run()
+        self.assertEqual(
+            outcome.evidence.subject["secret_redaction"]["names"], ["authorization"]
+        )
+
+
 class MCPToolCLITests(unittest.TestCase):
     """
     That the adapter exists is one claim; that the command line reaches it is
