@@ -31,6 +31,11 @@ export const ELSEWHERE = [
     body: "What works, what does not, and the sixty-second path from clone to an evidence bundle.",
   },
   {
+    path: "ROADMAP.md",
+    href: `${REPO}/ROADMAP.md`,
+    body: "What is committed next, what is still an open question, and what was considered and rejected. No dates on it, and a paragraph explaining why there are none.",
+  },
+  {
     path: "schemas/",
     href: `${TREE}/schemas`,
     body: "The published scenario and evidence JSON Schema, kept in step with the code by test.",

@@ -278,6 +278,10 @@ probed from the adapter's own descriptor rather than declared.
 
 ## Still planned
 
+The two items below are what is unfinished *in the architecture*. For what the
+project intends to build next, and what it has decided not to,
+[ROADMAP.md](../ROADMAP.md) is the list.
+
 `A2ASubjectAdapter` ships and is reachable as `beacon run --adapter a2a`: it
 discovers the Agent Card at both well-known paths, submits the goal, accepts a
 reply as either a Task or a bare Message, and treats `input-required` as an

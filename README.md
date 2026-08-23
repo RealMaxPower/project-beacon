@@ -360,8 +360,11 @@ docs/             Architecture, protocol contracts, and guides
 | [docs/architecture.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
 | [docs/protocol-contracts.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
 | [docs/windows.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
+| [docs/failure-taxonomy.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/failure-taxonomy.md) | The four tests a failure mode has to pass to be counted, and why the rejected candidates are published beside the accepted ones |
 | [docs/production-readiness.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
+| [ROADMAP.md](https://github.com/RealMaxPower/project-beacon/blob/main/ROADMAP.md) | What is committed next, what is still a question, and what has been decided against — with no dates on it, and the reason there are none |
 | [docs/releasing.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/releasing.md) | How a version reaches PyPI, and the configuration that lives outside the repository |
+| [docs/beacon-test-run.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/beacon-test-run.md) | A dated record of one manual walk through the playground: three defects, seven notes, and the figures as they stood that day |
 
 ### The contracts and the evidence
 

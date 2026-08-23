@@ -71,6 +71,12 @@ packages = [
 "beacon.builtin_taxonomy" = "taxonomy"
 
 [tool.setuptools.package-data]
+# PEP 561. Every module in `beacon/` is annotated and `models.py` publishes
+# frozen dataclasses as contracts, but without this marker in the wheel a type
+# checker treats the whole package as untyped and every symbol a caller imports
+# from it as `Any`. The annotations were there from the first commit; nothing
+# downstream could see them.
+"beacon" = ["py.typed"]
 "beacon.builtin_scenarios" = ["*/scenario.json"]
 "beacon.builtin_taxonomy" = ["*.json"]
 

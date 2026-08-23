@@ -9,9 +9,25 @@ specific evidence for each claim. It exists because a limitation compressed to
 half a bullet stops being checkable — and a reader who finds one claim wrong
 stops believing the rest of the page.
 
-**Status: v0.1, alpha.** Nothing has been released. The version is duplicated in
+**Status: v0.2.0, alpha.** Released on PyPI. The version is duplicated in
 `pyproject.toml` and `beacon/__init__.py`, and the release workflow asserts a
 tag matches the first.
+
+That line read "v0.1, alpha. Nothing has been released" through all four
+releases so far — in the opening paragraph of the page whose whole premise is
+that every claim below it names the file, command or API response behind it,
+and a few screens above the *Distribution* section explaining that `pip install
+project-beacon` works. It went stale the way the README's version badge did,
+for the same reason: it was typed rather than computed, and nothing read it.
+
+So it is pinned now. `tests/test_documented_claims.py` reads the version out of
+that sentence and compares it to `beacon.__version__`, and a bump that forgets
+this file fails the suite instead of shipping.
+
+This page says what is finished. [ROADMAP.md](../ROADMAP.md) says what is next,
+and takes its committed items from the "what would change it" answers below —
+so a **Not yet** here has a corresponding entry there, and the two should be
+read together.
 
 ## Verdict by use case
 

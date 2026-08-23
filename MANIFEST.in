@@ -19,6 +19,12 @@ include CONTRIBUTING.md
 include SECURITY.md
 include MANIFEST.in
 
+# The README links it, and `tests/test_documented_claims.py` resolves every
+# markdown link in every tracked file against disk. Left out, the shipped suite
+# would fail in the one place it is hardest to notice - the release workflow's
+# sdist run, after the tag is already cut.
+include ROADMAP.md
+
 # `tests/test_contributing_policy.py` reads this one, so leaving it out would
 # make the shipped suite error rather than skip - the same shape of gap this
 # file was written to close.
