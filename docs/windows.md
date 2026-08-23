@@ -34,7 +34,7 @@ python examples/subjects/run_suite.py
 ```
 
 Expected: `PASS` with ten passing assertions, `Determinism: STABLE across 5
-runs`, and `417/417 verdicts correct`.
+runs`, and `420/420 verdicts correct`.
 
 ## Paths in `--command`
 

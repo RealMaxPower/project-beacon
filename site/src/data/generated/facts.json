@@ -1,11 +1,11 @@
 {
-  "subjects": 417,
+  "subjects": 420,
   "subjects_by_expected_verdict": {
-    "PASS": 90,
-    "FAIL": 322,
+    "PASS": 91,
+    "FAIL": 324,
     "INCOMPLETE": 5
   },
-  "subjects_with_open_defects": 0,
+  "subjects_with_open_defects": 1,
   "scenarios": 83,
   "scenarios_by_grading": {
     "service state": 79,

@@ -98,7 +98,7 @@ OK                        # some checks skip until §6 has built the site
 ```
 
 ```
-417/417 verdicts correct.
+420/420 verdicts correct.
 ```
 
 Together they take about two and a half minutes — roughly 2m05 for the suite

@@ -311,7 +311,7 @@ private, because Actions minutes are billed there and macOS bills at 10x — fre
 on a public repository, so that reason is gone. The two commands above are the
 local equivalent and are still the faster answer while you are working.
 
-The second command runs an adversarial suite: 417 subjects that behave in a
+The second command runs an adversarial suite: 420 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](https://github.com/RealMaxPower/project-beacon/blob/main/examples/subjects/README.md).
