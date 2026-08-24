@@ -13,6 +13,14 @@ statements it cannot back.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-24
+
+A minor rather than a patch, because `evidence_version` moved to 0.5: the
+same bundle content can resolve to a different verdict than it did under
+0.2.0. Most of what follows is the class of defect this project calls the
+worst it can ship — a wrong verdict — and every one of them was live in the
+only version anyone could install.
+
 ### Added
 
 - **`ROADMAP.md`, because the answer was in three places and none of them was
