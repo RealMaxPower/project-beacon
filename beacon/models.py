@@ -264,6 +264,15 @@ class AssertionSpec:
                     f"{kind} assertion '{identifier}' compares "
                     f"{expected['path']!r} with itself, which always passes"
                 )
+            # Order is opt-in, because the default question is "are these the
+            # same things", not "are they in the same sequence". A scenario that
+            # instructs an order in its goal says so here, so the grading and
+            # the instruction stay together in one file.
+            if not isinstance(expected.get("ordered", False), bool):
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' needs "
+                    f"'expected.ordered' to be true or false"
+                )
         if rule.get("schema_expected"):
             try:
                 validate_schema(value["expected"], path=f"assertion '{identifier}'")
@@ -297,12 +306,37 @@ class AssertionSpec:
                     f"grounded_in assertion '{identifier}' needs "
                     f"'expected.allow_empty' to be true or false"
                 )
+            # `substring` asks whether a claim appears *within* what the source
+            # says — right for a figure or a date quoted out of a document.
+            # `exact` asks whether the claim *is* one of the things the source
+            # holds — right for a citation, where a prefix of a real path names
+            # no document at all. The default is the older meaning, so a
+            # scenario that wants the stricter one says so in the file.
+            if expected.get("match", "substring") not in ("substring", "exact"):
+                raise ScenarioError(
+                    f"grounded_in assertion '{identifier}' needs "
+                    f"'expected.match' to be 'substring' or 'exact', got "
+                    f"{expected['match']!r}"
+                )
         if rule.get("numeric_expected"):
             expected = value["expected"]
             if isinstance(expected, bool) or not isinstance(expected, (int, float)):
                 raise ScenarioError(
                     f"{kind} assertion '{identifier}' needs a numeric 'expected', "
                     f"got {type(expected).__name__}"
+                )
+            # A whole number, because these count things and the evaluator
+            # floors. `count_gte 2.9` graded `>= 2` while reading as `>= 3` — a
+            # threshold that means something other than what it says. Worse,
+            # `count_gte 0.5` always passes (`int(0.5)` is 0) and the
+            # unfalsifiability guard missed it, because that guard compares as a
+            # float and `0.5 > 0`. So a fraction slipped past the one check
+            # whose job is finding assertions nobody can fail.
+            if float(expected) != int(expected):
+                raise ScenarioError(
+                    f"{kind} assertion '{identifier}' needs a whole-number "
+                    f"'expected'; {expected} would be graded as "
+                    f"{int(expected)}, which is not what it reads as"
                 )
         falsifiable = value.get("falsifiable", True)
         if not isinstance(falsifiable, bool):

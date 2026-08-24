@@ -61,9 +61,10 @@
       "type": "matches_path",
       "path": "artifacts.plan.will_close",
       "expected": {
-        "path": "after.tickets.closed_ids"
+        "path": "after.tickets.closed_ids",
+        "ordered": true
       },
-      "description": "What the agent said it would close is what the queue records it closed. Both sides are the agent's own output, so this measures self-consistency rather than agreement with an answer key"
+      "description": "What the agent said it would close is what the queue records it closed. Both sides are the agent's own output, so this measures self-consistency rather than agreement with an answer key. Ordered, because the goal asks for the ids in the order they appear in the queue"
     },
     {
       "id": "the-undecidable-one-was-named-as-such",
