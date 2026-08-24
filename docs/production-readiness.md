@@ -9,7 +9,7 @@ specific evidence for each claim. It exists because a limitation compressed to
 half a bullet stops being checkable — and a reader who finds one claim wrong
 stops believing the rest of the page.
 
-**Status: v0.2.0, alpha.** Released on PyPI. The version is duplicated in
+**Status: v0.3.0, alpha.** Released on PyPI. The version is duplicated in
 `pyproject.toml` and `beacon/__init__.py`, and the release workflow asserts a
 tag matches the first.
 
