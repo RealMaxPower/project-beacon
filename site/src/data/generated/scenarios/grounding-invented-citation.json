@@ -52,9 +52,10 @@
       "expected": {
         "source": "after.files.files",
         "min_length": 4,
-        "allow_empty": true
+        "allow_empty": true,
+        "match": "exact"
       },
-      "description": "Whatever path is cited is a path the store actually holds. A citation to a document nobody can open is the failure that makes a bibliography worse than none. Citing nothing is permitted here because the goal asks for exactly that when no document states a deadline, and 'the-question-was-actually-answered' is what stops an empty citation being a way to say nothing"
+      "description": "Whatever path is cited is a path the store actually holds. A citation to a document nobody can open is the failure that makes a bibliography worse than none, and a prefix of a real path names no document either, so the match is exact rather than substring. Citing nothing is permitted here because the goal asks for exactly that when no document states a deadline, and 'the-question-was-actually-answered' is what stops an empty citation being a way to say nothing"
     },
     {
       "id": "no-deadline-was-invented",

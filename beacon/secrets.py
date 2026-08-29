@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import re
 import urllib.parse
 from typing import Any
@@ -83,11 +84,35 @@ class SecretRegistry:
 
     @staticmethod
     def _variants(value: str) -> list[str]:
-        """The raw value plus the encodings a subject is likely to emit."""
+        """
+        The raw value plus the encodings it is likely to be wearing.
+
+        The JSON-escaped form is here because *Beacon* puts it there.
+        `MCPToolSubjectAdapter._flatten` serialises a tool's `structuredContent`
+        with `json.dumps` and stores the result as the graded artifact, so a
+        credential containing a quote, a backslash or a newline reaches
+        `evidence.json` already escaped — and this registry matched raw
+        substrings, so it never found it. The bundle then published
+        `replacements: 0`, which is not silence but a positive claim that the
+        scan ran and found nothing.
+
+        `REDACTION_NOTICE` does not cover that. It disclaims a *subject* that
+        transforms a secret before emitting it; here the transforming is ours.
+
+        Both `ensure_ascii` settings are registered: Beacon writes with it off,
+        and a subject echoing the value through a default `json.dumps` writes
+        with it on.
+        """
         variants = [value]
         encoded = urllib.parse.quote(value, safe="")
         if encoded != value:
             variants.append(encoded)
+        for ascii_only in (False, True):
+            # `[1:-1]` strips the quotes `dumps` adds, leaving the escaped body
+            # exactly as it appears inside a serialised string.
+            escaped = json.dumps(value, ensure_ascii=ascii_only)[1:-1]
+            if escaped != value and escaped not in variants:
+                variants.append(escaped)
         try:
             variants.append(base64.b64encode(value.encode("utf-8")).decode("ascii"))
         except (UnicodeError, ValueError):  # pragma: no cover - defensive

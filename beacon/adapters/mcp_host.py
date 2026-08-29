@@ -23,6 +23,27 @@ from beacon.protocols.mcp_server import (
 )
 
 
+def _note_undrained(context: ExecutionContext, service: Any) -> None:
+    """
+    Say so when a tool call was still running as the façade came down.
+
+    `stop()` waits a bounded time for in-flight handlers, because a subject
+    that hangs one must not hang the harness. When that wait expires the run
+    still produces a verdict — but the state it was judged on may have moved
+    afterwards, and a bundle that did not mention it would be asserting a
+    cleanliness nobody checked.
+    """
+    if getattr(service, "drained", None) is False:
+        context.recorder.record(
+            "mcp_shutdown_undrained", "mcp_shutdown_undrained", {}
+        )
+        context.limitations.append(
+            "A tool call was still being served when the MCP façade shut down, "
+            "so the recorded end state may have changed after the run was "
+            "judged."
+        )
+
+
 class MCPHostError(RuntimeError):
     """Raised when an MCP host subject cannot be run."""
 
@@ -191,6 +212,7 @@ class MCPHostAdapter:
             result = self._run(context, server, command, environment, timeout)
         finally:
             service.stop()
+            _note_undrained(context, service)
 
         return result
 
@@ -388,6 +410,7 @@ class MCPServeAdapter:
             interrupted = True
         finally:
             service.stop()
+            _note_undrained(context, service)
 
         submission = server.submission
         context.recorder.record(

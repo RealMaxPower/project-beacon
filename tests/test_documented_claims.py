@@ -367,7 +367,17 @@ class DocumentedInventoryTests(unittest.TestCase):
     DOCS = sorted((ROOT / "docs").glob("*.md"))
 
     def _tracked_prose(self) -> list[Path]:
-        return [*self.DOCS, README, SUBJECTS_README, ROOT / "CONTRIBUTING.md"]
+        # `ROADMAP.md` is here from the day it was written rather than after it
+        # first went stale. A new prose file that no guard reads is the gap this
+        # class exists to close, and every file in this list was added to it
+        # because something in it had already drifted.
+        return [
+            *self.DOCS,
+            README,
+            SUBJECTS_README,
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "ROADMAP.md",
+        ]
 
     def test_every_shipped_service_is_named_where_services_are_enumerated(self) -> None:
         """
@@ -398,17 +408,31 @@ class DocumentedInventoryTests(unittest.TestCase):
                     )
 
     def test_no_document_states_a_stale_verdict_tally(self) -> None:
-        """`N/N verdicts correct` is the suite's own output, so it is checkable."""
-        expected = len(json.loads(MANIFEST.read_text(encoding="utf-8"))["subjects"])
+        """
+        `N/M verdicts correct` is the suite's own output, so it is checkable.
+
+        The numerator is the subjects whose recorded verdict is the one they
+        should get, not the total. Comparing both halves against the subject
+        count assumed the suite was perfect, and so demanded the documents say
+        so: the first subject to carry an open defect made `run_suite.py` print
+        419/420 while this test still required 420/420 everywhere. A check that
+        enforces a claim the tool contradicts is worse than no check, and in
+        this project it enforces the wrong half — the whole point of the
+        manifest's `should_be`/`currently` split is that a known-wrong verdict
+        stays visible instead of being rounded away.
+        """
+        subjects = json.loads(MANIFEST.read_text(encoding="utf-8"))["subjects"]
+        total = len(subjects)
+        correct = sum(1 for s in subjects if s["currently"] == s["should_be"])
         for path in self._tracked_prose():
             text = path.read_text(encoding="utf-8")
             for quoted in re.findall(r"(\d+)\s*/\s*(\d+)\s+verdicts correct", text):
                 with self.subTest(file=path.relative_to(ROOT), quoted=quoted):
                     self.assertEqual(
                         [int(quoted[0]), int(quoted[1])],
-                        [expected, expected],
+                        [correct, total],
                         f"{path.name} states {quoted[0]}/{quoted[1]} verdicts "
-                        f"against {expected} subjects",
+                        f"against {correct}/{total} in the manifest",
                     )
 
     def test_the_readme_layout_names_every_core_module(self) -> None:
@@ -629,6 +653,151 @@ class VerificationTranscriptTests(unittest.TestCase):
             len(found), 0, "this guard found no printed taxonomy version"
         )
         self.assertEqual(sorted(set(found)), [published])
+
+
+class ReadinessStatusTests(unittest.TestCase):
+    """
+    The readiness ledger's own status line, against the version it describes.
+
+    It read **Status: v0.1, alpha. Nothing has been released.** through 0.1.0,
+    0.1.1, 0.1.2 and 0.2.0 — in the first paragraph of the page whose premise is
+    that every claim on it names the file behind it, and a few screens above a
+    *Distribution* section explaining that `pip install project-beacon` works.
+    A reader who checked the first claim on the page found it false.
+
+    Nothing could have caught it. `VerificationTranscriptTests` pins the two
+    versions printed in `docs/verifying-a-checkout.md` for exactly this reason,
+    and this file was outside it. So the same treatment, on the same argument:
+    a version in prose is a second place to bump, and the second place is the
+    one that gets missed.
+    """
+
+    DOC = ROOT / "docs" / "production-readiness.md"
+
+    #: The bolded status line, e.g. `**Status: v0.2.0, alpha.**`
+    STATUS = re.compile(r"\*\*Status:\s*v([0-9]+\.[0-9]+\.[0-9]+),\s*alpha\.\*\*")
+
+    def test_the_status_line_states_the_current_version(self) -> None:
+        from beacon import __version__
+
+        found = self.STATUS.findall(self.DOC.read_text(encoding="utf-8"))
+        self.assertEqual(
+            len(found),
+            1,
+            "expected exactly one bolded status line in the readiness ledger; "
+            f"found {found}. If the wording moved, repoint this guard rather "
+            "than deleting it.",
+        )
+        self.assertEqual(
+            found[0],
+            __version__,
+            f"the readiness ledger says v{found[0]} and the package is "
+            f"{__version__}",
+        )
+
+    def test_the_ledger_does_not_claim_nothing_has_been_released(self) -> None:
+        """
+        The stale half of that sentence was the assertion, not the number.
+
+        Pinning the version alone would let `Status: v0.2.0, alpha. Nothing has
+        been released.` pass — a sentence that contradicts itself and is wrong
+        in the direction that matters, since it is the line telling a reader
+        whether they can install this.
+        """
+        text = " ".join(self.DOC.read_text(encoding="utf-8").split())
+        stale = re.search(
+            r"\*\*Status:[^*]*\*\*\s*Nothing has been released", text
+        )
+        self.assertIsNone(
+            stale,
+            "the status line says nothing has been released; the package is on "
+            "PyPI and this page's own Distribution section says so",
+        )
+
+
+class ProtocolScopeTests(unittest.TestCase):
+    """
+    A "does not implement" list must not name something that ships.
+
+    `docs/protocol-contracts.md` told readers the MCP client "does not yet
+    implement … OAuth, Streamable HTTP, experimental MCP tasks, or
+    server-originated requests" while `MCPHTTPClient` was exported from
+    `beacon.protocols` and used by `mcp_tool_subject.py`, `mcp_server.py` and
+    both conformance sweeps. The sentence was false before the pull request
+    that made it conspicuous — an outside contributor adding `mcp-inspect
+    --url`, the exact capability the line denied.
+
+    A negative claim is the kind that rots silently. Every other guard in this
+    file checks that something documented still exists; nothing checked the
+    reverse, and the reverse is worse: a reader who believes a feature is
+    absent does not go looking for it, so nobody finds the error by using the
+    software.
+
+    The map below is the checkable subset, not the whole sentence. A capability
+    belongs here when its presence can be decided from the package rather than
+    argued about — `resources` and `prompts` stay unlisted because "no method
+    for it" and "not implemented" are the same statement made twice, while
+    Streamable HTTP is a class you can import.
+    """
+
+    DOC = ROOT / "docs" / "protocol-contracts.md"
+
+    #: Phrase as it appears in a scope sentence → does the package have it?
+    CHECKABLE = {
+        "Streamable HTTP": lambda: _protocols_exports("MCPHTTPClient"),
+        "stdio": lambda: _protocols_exports("MCPStdioClient"),
+    }
+
+    #: Sentences that enumerate what is absent. Both list forms in the file.
+    DISCLAIMERS = re.compile(
+        r"(?:does not (?:yet )?implement|Not implemented:|Neither client implements)"
+        r"([^.]*)\.",
+        re.IGNORECASE,
+    )
+
+    def test_the_guard_finds_scope_sentences_to_check(self) -> None:
+        """Vacuity: a regex that matches nothing would pass on anything."""
+        found = self.DISCLAIMERS.findall(
+            " ".join(self.DOC.read_text(encoding="utf-8").split())
+        )
+        self.assertGreaterEqual(
+            len(found), 2, f"the scope sentences moved; repoint this guard: {found}"
+        )
+
+    def test_nothing_declared_absent_is_actually_present(self) -> None:
+        text = " ".join(self.DOC.read_text(encoding="utf-8").split())
+        wrong: list[str] = []
+        for sentence in self.DISCLAIMERS.findall(text):
+            for phrase, implemented in self.CHECKABLE.items():
+                if phrase.lower() in sentence.lower() and implemented():
+                    wrong.append(f"{phrase!r} in “…{sentence.strip()[:80]}…”")
+        self.assertEqual(
+            wrong,
+            [],
+            "docs/protocol-contracts.md lists these as not implemented, and "
+            f"the package implements them: {wrong}",
+        )
+
+    def test_the_checks_themselves_are_true(self) -> None:
+        """
+        The map is only as good as its predicates.
+
+        If `_protocols_exports` silently returned False the guard above would
+        pass while checking nothing, which is the failure mode it exists to
+        name in the prose.
+        """
+        for phrase, implemented in self.CHECKABLE.items():
+            with self.subTest(capability=phrase):
+                self.assertTrue(
+                    implemented(), f"the predicate for {phrase!r} no longer holds"
+                )
+
+
+def _protocols_exports(name: str) -> bool:
+    """True when `beacon.protocols` publishes a name, so the doc cannot deny it."""
+    import beacon.protocols as protocols
+
+    return hasattr(protocols, name)
 
 
 class SelfIdentificationTests(unittest.TestCase):

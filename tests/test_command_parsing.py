@@ -8,7 +8,7 @@ from beacon.cli import split_command
 
 class PosixSplitTests(unittest.TestCase):
     def setUp(self) -> None:
-        patcher = mock.patch("beacon.cli.os.name", "posix")
+        patcher = mock.patch("beacon.cliargs.os.name", "posix")
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -33,7 +33,7 @@ class WindowsSplitTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        patcher = mock.patch("beacon.cli.os.name", "nt")
+        patcher = mock.patch("beacon.cliargs.os.name", "nt")
         patcher.start()
         self.addCleanup(patcher.stop)
 

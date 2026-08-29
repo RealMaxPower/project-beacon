@@ -6,7 +6,7 @@
 - **Integration:** jsonl-command (level 3)
 - **Assertions:** 10/10 passed
 - **Reset verified:** yes
-- **Evidence digest:** `4b6fe99c58a3c99ec736dce8d79829a12bbdfb8912bb821c8eb7dcc0d83b9a3e`
+- **Evidence digest:** `d03aaba0be22a4b0225cdb2ae1e4f6170de7ff2091ba66f5f3b50a82df0452d2`
 
 ## Assertions
 

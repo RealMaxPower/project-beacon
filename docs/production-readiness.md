@@ -9,9 +9,25 @@ specific evidence for each claim. It exists because a limitation compressed to
 half a bullet stops being checkable — and a reader who finds one claim wrong
 stops believing the rest of the page.
 
-**Status: v0.1, alpha.** Nothing has been released. The version is duplicated in
+**Status: v0.3.0, alpha.** Released on PyPI. The version is duplicated in
 `pyproject.toml` and `beacon/__init__.py`, and the release workflow asserts a
 tag matches the first.
+
+That line read "v0.1, alpha. Nothing has been released" through all four
+releases so far — in the opening paragraph of the page whose whole premise is
+that every claim below it names the file, command or API response behind it,
+and a few screens above the *Distribution* section explaining that `pip install
+project-beacon` works. It went stale the way the README's version badge did,
+for the same reason: it was typed rather than computed, and nothing read it.
+
+So it is pinned now. `tests/test_documented_claims.py` reads the version out of
+that sentence and compares it to `beacon.__version__`, and a bump that forgets
+this file fails the suite instead of shipping.
+
+This page says what is finished. [ROADMAP.md](../ROADMAP.md) says what is next,
+and takes its committed items from the "what would change it" answers below —
+so a **Not yet** here has a corresponding entry there, and the two should be
+read together.
 
 ## Verdict by use case
 
@@ -291,22 +307,50 @@ typed on it would be published in the artifact you share.
 These are facts about the repository rather than the software, and none of them
 is visible from a checkout.
 
-**Three workflows are disabled at the GitHub level.** `ci.yml`, `release.yml`
-and `conformance.yml` all report `disabled_manually` from the Actions API. The
-trigger blocks in the YAML are live, but the Actions-tab switch overrides them,
-so a push to `main` starts nothing. Editing triggers in git does not change
-this; re-enabling is an API call or a click per workflow. This is exactly the
-invisible state that `tests/test_workflow_triggers.py` was written to argue
-against, and it is not something that test can see.
+**One workflow is disabled at the GitHub level.** `conformance.yml` reports
+`disabled_manually` from the Actions API; `ci.yml` and `release.yml` are
+`active`. The Actions-tab switch overrides the trigger blocks in the YAML, so
+while it is off a push starts nothing however live the triggers look, and
+editing them in git does not change it — re-enabling is an API call or a click
+per workflow. This is the invisible state `tests/test_workflow_triggers.py` was
+written to argue against, and it is still not something that test can see.
 
-**A fourth workflow is active and outside the gate.** GitHub generates a
-Dependabot Updates workflow from `.github/dependabot.yml`. It never appears in
-`.github/workflows/`, which is the only directory
-`tests/test_workflow_triggers.py` reads — so the default-deny classification
-that fails the suite for an unclassified workflow did not see it arrive. The
-configuration itself is deliberately narrow: monthly, grouped into one pull
-request per ecosystem, and no pip ecosystem at all because the package has no
-runtime dependencies.
+This paragraph said *three* workflows for as long as there were three, and
+stayed that way after two of them were switched back on when the repository was
+published. Which is the failure the section is about, committed by the section
+itself: state that is not visible from a checkout does not correct itself, and
+nothing here was reading the API it cites.
+
+**Three workflows are active and outside the gate**, none of them a file in this
+repository. GitHub generates them and reports them under `dynamic/` paths that
+`.github/workflows/` never contains:
+
+| Workflow | Generated from |
+|---|---|
+| `dynamic/dependabot/dependabot-updates` | `.github/dependabot.yml` |
+| `dynamic/dependabot/update-graph` | the dependency graph setting |
+| `dynamic/github-code-scanning/codeql` | CodeQL **default setup**, configured 2026-08-18 |
+
+`tests/test_workflow_triggers.py` reads `.github/workflows/` and nothing else,
+so its default-deny classification — the rule that fails the suite for a
+workflow nobody has declared — cannot see any of the three arrive. CodeQL is the
+one worth naming: five languages under the `remote` threat model, weekly and on
+pull requests, which is real security tooling that no file in this repository
+mentions. `gh api repos/OWNER/REPO/actions/workflows` lists all six; a checkout
+shows three.
+
+**Not every pull request, though — only those targeting the default branch.**
+This paragraph said "every pull request" for about an hour, and the pull request
+that introduced it disproved it: a stacked branch based on another branch drew
+sixteen checks where one based on `main` drew twenty, the four missing being
+CodeQL's. That is worth knowing beyond the pedantry, because it means a stack of
+branches merged into each other is scanned once at the bottom rather than at
+each step, and the intermediate reviews are the ones that look complete while
+being four checks short.
+
+The Dependabot configuration itself is deliberately narrow: monthly, grouped
+into one pull request per ecosystem, and no pip ecosystem at all because the
+package has no runtime dependencies.
 
 **`conformance.yml` should stay manual permanently.** Its cost reason expired
 when the repository was published; its real reason did not. It calls

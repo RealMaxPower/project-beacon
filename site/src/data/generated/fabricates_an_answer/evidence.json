@@ -1,8 +1,8 @@
 {
-  "evidence_version": "0.4",
+  "evidence_version": "0.5",
   "run_id": "fabricates_an_answer",
-  "started_at": "2026-08-17T00:04:05.932753+00:00",
-  "completed_at": "2026-08-17T00:04:05.953655+00:00",
+  "started_at": "2026-08-23T15:13:33.055961+00:00",
+  "completed_at": "2026-08-23T15:13:33.076592+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "fabrication-probe",
@@ -141,7 +141,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-17T00:04:05.932762+00:00",
+      "timestamp": "2026-08-23T15:13:33.055969+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -153,7 +153,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-17T00:04:05.932766+00:00",
+      "timestamp": "2026-08-23T15:13:33.055974+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -169,7 +169,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-17T00:04:05.949711+00:00",
+      "timestamp": "2026-08-23T15:13:33.072658+00:00",
       "kind": "artifact",
       "target": "answer",
       "payload": {
@@ -178,7 +178,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-17T00:04:05.953541+00:00",
+      "timestamp": "2026-08-23T15:13:33.076486+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -209,5 +209,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "82f5c1d74e4e63969a5e2ff0c3066fd25e855838cc9893985cca10125aee55c1"
+  "digest": "1e250a5682db8fce25bfcfc7c8ba4b702039fb884ab54984eb9c4e00b3dbebd2"
 }

@@ -65,6 +65,32 @@ string would otherwise survive.
 """
 
 
+RUN_ID_ALLOWED = "-_."
+
+
+def check_run_id(run_id: str) -> str:
+    """
+    Reject a run id that would not stay inside the output directory.
+
+    The id becomes a path component, and `Path(output) / "/etc/beacon"` is
+    `/etc/beacon` — an absolute id escapes the output directory entirely, and a
+    `..` component walks out of it. Rejected rather than rewritten: a silently
+    corrected id would not match the path printed back, and `repeat_run_ids`
+    builds `-001` suffixes on top of whatever was passed.
+    """
+    if not run_id or run_id.strip() != run_id:
+        raise ValueError("--run-id cannot be empty or padded with whitespace")
+    bad = sorted({c for c in run_id if not (c.isalnum() or c in RUN_ID_ALLOWED)})
+    if bad:
+        raise ValueError(
+            f"--run-id may only contain letters, digits and {RUN_ID_ALLOWED!r}; "
+            f"found {', '.join(repr(c) for c in bad)}"
+        )
+    if run_id.startswith(".") or ".." in run_id:
+        raise ValueError(f"--run-id is not a usable directory name: {run_id!r}")
+    return run_id
+
+
 def redacted_evidence_fields() -> tuple[str, ...]:
     """Every `Evidence` field that is not harness-generated, in declared order."""
     return tuple(
@@ -224,8 +250,11 @@ def run_scenario(
     output_dir: str | Path,
     run_id: str | None = None,
 ) -> RunOutcome:
-    actual_run_id = run_id or f"run-{uuid.uuid4().hex[:12]}"
-    run_dir = Path(output_dir).resolve() / actual_run_id
+    actual_run_id = check_run_id(run_id) if run_id else f"run-{uuid.uuid4().hex[:12]}"
+    root = Path(output_dir).resolve()
+    run_dir = root / actual_run_id
+    if root not in run_dir.resolve().parents:
+        raise ValueError(f"--run-id would write outside {root}: {actual_run_id!r}")
 
     # Services are built before the directory exists, because building them is
     # the last thing that can reject the scenario outright. A scoped tool no

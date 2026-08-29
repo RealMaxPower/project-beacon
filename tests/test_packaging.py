@@ -206,6 +206,76 @@ class BuildRequirementTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^license-files\s*=")
 
 
+class TypeMarkerTests(unittest.TestCase):
+    """
+    PEP 561: an annotated package that ships no marker is an untyped package.
+
+    Every module under `beacon/` carries `from __future__ import annotations`
+    and full signatures, `models.py` publishes frozen dataclasses that
+    CONTRIBUTING calls the project's contracts, and none of it was visible to
+    anyone who installed the wheel. A type checker that finds no `py.typed`
+    inside a distribution does not fall back to reading the annotations — it
+    treats every symbol imported from the package as `Any`, silently, which is
+    the failure mode where the tooling reports success.
+
+    The file has to be both present and declared. Present alone reaches the
+    sdist and not the wheel, and the wheel is what `pip install` unpacks.
+    """
+
+    MARKER = ROOT / "beacon" / "py.typed"
+
+    def test_the_marker_exists(self) -> None:
+        self.assertTrue(
+            self.MARKER.is_file(),
+            "beacon/py.typed is missing, so the package's annotations are "
+            "invisible to every downstream type checker",
+        )
+
+    def test_the_marker_is_declared_as_package_data(self) -> None:
+        """
+        Otherwise it is a file in the repository and not a file in the wheel.
+
+        `[tool.setuptools] packages` is an explicit list and package data is
+        opt-in, so a marker nobody declares is dropped by the build with no
+        warning — the same shape as the sdist that shipped without `examples/`
+        and stayed green for weeks.
+        """
+        text = PYPROJECT.read_text(encoding="utf-8")
+        section = re.search(
+            r"^\[tool\.setuptools\.package-data\](.*?)(?=^\[|\Z)", text, re.M | re.S
+        )
+        self.assertIsNotNone(section, "no package-data section to declare a marker in")
+        self.assertRegex(
+            section.group(1),
+            r'(?m)^"beacon"\s*=\s*\[[^\]]*"py\.typed"',
+            'pyproject.toml does not ship beacon/py.typed as package data, so '
+            "the wheel will not carry it",
+        )
+
+    def test_the_annotations_the_marker_advertises_are_really_there(self) -> None:
+        """
+        A marker on an unannotated package is a worse claim than no marker.
+
+        It promises a checker that what it reads is authoritative. This is not
+        a type check — that is `mypy`'s job and it does not run here — only the
+        floor: the modules use the annotation syntax the marker advertises.
+        """
+        modules = sorted((ROOT / "beacon").glob("*.py"))
+        self.assertGreater(len(modules), 5, "found almost no modules to check")
+        # The same two the README layout guard excludes: one holds a version
+        # string and one is a five-line entry stub, and neither declares a
+        # signature for anything.
+        bare = [
+            path.name
+            for path in modules
+            if path.name not in {"__init__.py", "__main__.py"}
+            and "from __future__ import annotations" not in path.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(
+            bare, [], f"these ship under a py.typed marker without annotations: {bare}"
+        )
+
+
 class LongDescriptionTests(unittest.TestCase):
     """
     `README.md` is the package's PyPI description, and PyPI is not GitHub.
@@ -347,6 +417,10 @@ class RepositoryContentsTests(unittest.TestCase):
         "CONTRIBUTING.md",
         "CODE_OF_CONDUCT.md",
         "SECURITY.md",
+        # Where the project is going, and what it has decided not to do. At the
+        # root rather than in `docs/` because it is about the project rather
+        # than about using it, which is the same reason CHANGELOG.md is here.
+        "ROADMAP.md",
     })
 
     def test_no_review_correspondence_is_committed(self) -> None:

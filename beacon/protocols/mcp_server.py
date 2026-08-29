@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import secrets
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from beacon.models import EventRecorder, Scenario
 from beacon.services.router import ToolRouter
+from beacon.toolschema import ToolArgumentError, validate_arguments
 
 from beacon import __version__
 
@@ -173,6 +175,29 @@ class ScenarioMCPServer:
             return _error(request_id, -32602, "arguments must be an object")
 
         if name == SUBMIT_TOOL:
+            # Validated here because this call does not go through
+            # `ToolRouter.call`, which is where every other tool meets its
+            # declared schema. Without it the submit tool advertised a required
+            # `status` from a fixed enum and then accepted a call with no
+            # arguments at all, defaulting to "completed" — the subject's own
+            # word for how it ended, which is the whole of the verdict.
+            try:
+                validate_arguments(
+                    SUBMIT_TOOL,
+                    self.submit_tool_definition()["inputSchema"],
+                    arguments,
+                )
+            except ToolArgumentError as exc:
+                self._recorder.record(
+                    "mcp_submit_rejected", SUBMIT_TOOL, {"reason": str(exc)}
+                )
+                return _result(
+                    request_id,
+                    {
+                        "content": [{"type": "text", "text": str(exc)}],
+                        "isError": True,
+                    },
+                )
             return _result(request_id, self._submit(arguments))
 
         # A tool failure is a result the model can read and act on, not a
@@ -275,6 +300,15 @@ class MCPHTTPService:
         self.token = token or secrets.token_urlsafe(32)
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
+        self._inflight = _InFlight()
+        self.drained: bool | None = None
+        """
+        Whether the last `stop()` saw every in-flight request finish.
+
+        `None` until stopped. False means a handler was still running when the
+        drain gave up, so the recorded state may have moved after the run was
+        judged — which the caller reports as a limitation rather than swallowing.
+        """
 
     @property
     def url(self) -> str:
@@ -288,7 +322,7 @@ class MCPHTTPService:
             raise RuntimeError("MCP service is already running")
         self._httpd = ThreadingHTTPServer(
             (self._host, self._port),
-            _handler_class(self._server, self.token, self._path),
+            _handler_class(self._server, self.token, self._path, self._inflight),
         )
         self._httpd.daemon_threads = True
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
@@ -298,7 +332,11 @@ class MCPHTTPService:
     def stop(self) -> None:
         if not self._httpd:
             return
+        # Accept loop first, so nothing new arrives; then wait for what is
+        # already inside a handler. Without the second step the caller returns
+        # to a run whose services can still change under it.
         self._httpd.shutdown()
+        self.drained = self._inflight.drain(SHUTDOWN_DRAIN_SECONDS)
         self._httpd.server_close()
         if self._thread:
             self._thread.join(timeout=5)
@@ -313,10 +351,63 @@ class MCPHTTPService:
         self.stop()
 
 
+SHUTDOWN_DRAIN_SECONDS = 5.0
+"""
+How long `stop()` waits for tool calls still being served.
+
+`shutdown()` stops the accept loop; it does not wait for the handler threads
+already inside it, and `daemon_threads` means `server_close()` will not either.
+So a tool call could still be mutating a service while the runner snapshotted
+the after-state and serialised the bundle — a torn read of the thing the run
+exists to record.
+
+Bounded rather than unbounded, and daemon threads are kept, because the party
+on the other end is the one being graded. A handler that never returns must not
+take the harness with it: the drain gives up, the run is recorded with a
+limitation saying so, and a verdict still comes out.
+"""
+
+
+class _InFlight:
+    """
+    Counts requests being served, so shutdown can wait for them to finish.
+
+    Tracked here rather than through `socketserver`'s own thread list, whose
+    joining behaviour is tied to `block_on_close` and has no timeout — waiting
+    forever on a subject's handler is exactly what this must not do.
+    """
+
+    def __init__(self) -> None:
+        self._count = 0
+        self._idle = threading.Condition()
+
+    def __enter__(self) -> None:
+        with self._idle:
+            self._count += 1
+
+    def __exit__(self, *_: Any) -> None:
+        with self._idle:
+            self._count -= 1
+            if self._count == 0:
+                self._idle.notify_all()
+
+    def drain(self, timeout: float) -> bool:
+        """Wait for the count to reach zero. False if it did not in time."""
+        deadline = time.monotonic() + timeout
+        with self._idle:
+            while self._count:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self._idle.wait(remaining)
+        return True
+
+
 def _handler_class(
     server: ScenarioMCPServer,
     token: str,
     path: str,
+    inflight: _InFlight,
 ) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -353,6 +444,13 @@ def _handler_class(
             self.end_headers()
 
         def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+            # Counted for the whole request, including the refusals above the
+            # dispatch: a 401 touches no state, but a request that is in the
+            # handler at all is one `shutdown()` should not race.
+            with inflight:
+                self._serve_post()
+
+        def _serve_post(self) -> None:
             if self.path.split("?")[0] != path:
                 self._send(404, {"error": "not found"}, {})
                 return

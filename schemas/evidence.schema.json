@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://beaconlab.dev/schemas/evidence-0.4.json",
+  "$id": "https://beaconlab.dev/schemas/evidence-0.5.json",
   "title": "Project Beacon Evidence",
   "type": "object",
   "required": [
@@ -21,7 +21,7 @@
   ],
   "properties": {
     "evidence_version": {
-      "const": "0.4"
+      "const": "0.5"
     },
     "run_id": {
       "type": "string"

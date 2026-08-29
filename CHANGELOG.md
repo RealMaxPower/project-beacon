@@ -13,7 +13,78 @@ statements it cannot back.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-24
+
+A minor rather than a patch, because `evidence_version` moved to 0.5: the
+same bundle content can resolve to a different verdict than it did under
+0.2.0. Most of what follows is the class of defect this project calls the
+worst it can ship — a wrong verdict — and every one of them was live in the
+only version anyone could install.
+
 ### Added
+
+- **`ROADMAP.md`, because the answer was in three places and none of them was
+  that one.** Where the project is going lived in "what would change it" in
+  `docs/production-readiness.md`, in "Still planned" in `docs/architecture.md`,
+  and in a question the site asks about a hosted lab — three documents written
+  for other purposes, from which a reader had to assemble it, and no way to tell
+  a commitment from a musing.
+
+  It carries no dates and no counts, and says why: a quarter typed beside an
+  item is a claim with nothing behind it, and every other figure this project
+  publishes is computed by a test from the file that holds it, which a roadmap
+  has no equivalent of. What each entry carries instead is what would change its
+  status. The stated ordering is reach before trust — suite-scale runs ahead of
+  the container runner and evidence signing — with the argument for it written
+  down rather than implied. *Decided against* links to the section in
+  `docs/production-readiness.md` rather than restating it, because two copies of
+  a decision is one copy that goes stale.
+
+- **`beacon/cli.py` was 1,095 lines; it is now 97.** The adapter table, a
+  372-line `build_parser` and twelve handlers were one module. Nothing was wrong
+  with it that a reader could point at — it was just the file every new
+  subcommand grows, in three directions at once, and the next one is `suite`.
+
+  Four pieces now. `cliadapters.py` holds the adapter table, `cliargs.py` builds
+  the parser and reads that table for its `--adapter` choices, `beacon/commands/`
+  holds one module per group of subcommands, and `cli.py` is the seam: a
+  name-to-handler mapping and the single `except` that turns an operator error
+  into `error: ...` and exit 2. Handlers return an exit code and never raise for
+  a bad invocation, so the rule that a run always produces evidence has one place
+  to live rather than twelve.
+
+  Behaviour is unchanged and the move was mechanical: the nineteen slices were
+  checked to tile the original file exactly once before anything was written, so
+  no line was silently dropped or duplicated. `beacon.cli` still exports
+  `ADAPTERS`, `RUN_ADAPTERS`, `AdapterSpec`, `adapter_rows`, `build_parser`,
+  `main` and `split_command`, because that is the path the tests and
+  `site/tools/build_fixtures.py` import from and a refactor that changed it would
+  be a breaking change dressed as tidying. The dispatch is a dict rather than an
+  if-chain, so the parser's subcommands and the handler set can be compared
+  directly instead of trusting that a reader noticed a missing branch.
+
+  One test changed: `tests/test_command_parsing.py` patched
+  `beacon.cli.os.name`, and `split_command` now lives in `beacon.cliargs`.
+
+- **`beacon/py.typed`.** Every module in the package is annotated and
+  `models.py` publishes frozen dataclasses that `CONTRIBUTING.md` calls the
+  project's contracts. Without the PEP 561 marker in the wheel, none of that
+  reached anyone: a type checker that finds no marker inside a distribution does
+  not fall back to reading the annotations, it treats every symbol imported from
+  the package as `Any`. Silently, which is the failure mode where the tooling
+  reports success. The annotations have been there since the first commit and
+  nothing downstream could see them.
+
+  `tests/test_packaging.py` now checks all three halves of the claim — the file
+  exists, `pyproject.toml` ships it as package data so it reaches the wheel and
+  not just the sdist, and the modules under the marker really are annotated. A
+  marker on an unannotated package is a worse claim than no marker, because it
+  tells a checker that what it reads is authoritative.
+
+- Two documents were unreachable from the README's documentation table:
+  `docs/failure-taxonomy.md`, which is the argument behind the coverage figure
+  the README spends a section on, and `docs/beacon-test-run.md`. Both have rows
+  now.
 
 - **`project-beacon prove` — the falsifiability check, for your scenarios.** The
   README calls it load-bearing: "An assertion nobody has watched fail is a claim
@@ -43,6 +114,68 @@ statements it cannot back.
   scenarios that declare it, so Beacon uses the mechanism it ships.
 
 ### Fixed
+
+- **The protocol contract said Streamable HTTP was not implemented, while it
+  shipped.** `docs/protocol-contracts.md` told readers the MCP client "does not
+  yet implement … OAuth, Streamable HTTP, experimental MCP tasks, or
+  server-originated requests." `MCPHTTPClient` is exported from
+  `beacon.protocols` and used by `mcp_tool_subject.py`, `mcp_server.py` and both
+  conformance sweeps. The sentence had been false for some time.
+
+  It surfaced through an outside contributor's pull request adding `mcp-inspect
+  --url` — the exact capability the line denied — which is the worst way to find
+  it: the document told someone a feature was absent while they were building
+  against the code that provides it.
+
+  **A negative claim is the kind that rots silently**, and this repository had no
+  guard for one. Every check in `tests/test_documented_claims.py` asserted that
+  something documented still exists; nothing asserted the reverse. The reverse is
+  worse, because a reader who believes a feature is absent does not go looking
+  for it, so nobody finds the error by using the software. There is now a check
+  that reads the scope sentences and fails when one names a capability the
+  package can be shown to have — verified by watching it fail against the text
+  that shipped.
+
+  The section is rewritten to describe both clients rather than one, including
+  what the HTTP transport adds: SSE responses, session ids, and redirect pinning
+  that refuses a scheme change or a hop into the harness's own network and drops
+  the bearer token when a hop leaves the origin it was issued for.
+
+- **The readiness ledger's account of this repository's workflows was wrong in
+  both directions.** It said three workflows were disabled at the GitHub level;
+  only `conformance.yml` is, and `ci.yml` and `release.yml` went back to
+  `active` when the repository was published. And it said a *fourth* workflow was
+  active and outside the default-deny gate — there are three, none of them a file
+  here: both Dependabot workflows and, since 2026-08-18, CodeQL default setup,
+  which scans five languages weekly and on pull requests — those targeting the
+  default branch, which a stacked pull request in this very change turned out to
+  demonstrate by not being scanned at all.
+
+  That is the failure the section is about, committed by the section itself. It
+  exists to record state that is not visible from a checkout, and state that is
+  not visible from a checkout does not correct itself: nothing was reading the
+  API the paragraph cites. `gh api repos/OWNER/REPO/actions/workflows` lists six
+  workflows; a checkout shows three. The section now names all three generated
+  ones and says plainly that `tests/test_workflow_triggers.py` cannot see any of
+  them arrive.
+
+- **The readiness ledger opened by saying nothing had been released, through
+  four releases.** `docs/production-readiness.md` began **Status: v0.1, alpha.
+  Nothing has been released.** It shipped that way in 0.1.0, 0.1.1, 0.1.2 and
+  0.2.0 — the first claim on the page whose stated premise is that every claim
+  on it names the file, command or API response behind it, a few screens above
+  the *Distribution* section explaining that `pip install project-beacon` works,
+  and beside a README carrying a PyPI badge. A reader checking the page the way
+  it invites them to would find the opening sentence false and, by its own
+  argument, stop believing the rest.
+
+  It is the version badge defect again, in the document least able to afford it.
+  Nothing was reading the line, so nothing could notice. It is pinned now:
+  `tests/test_documented_claims.py` reads the version out of that sentence and
+  compares it to `beacon.__version__`, and separately refuses the half of the
+  sentence that was the real error — pinning the number alone would have let
+  "v0.2.0, alpha. Nothing has been released" pass, which is worse than what was
+  there, because it contradicts itself.
 
 - **The sign-off check passed in CI without reading anything, and then failed
   every pull request.** `actions/checkout` fetches depth 1 by default, and a
@@ -126,6 +259,105 @@ statements it cannot back.
   OKLab mixing in about thirty lines so it runs in `npm run check` and therefore
   in CI, rather than needing a browser — checked against Chromium's own
   `color-mix` output on six pairs across both themes, matching to the byte.
+
+
+### Fixed
+
+- **A subject could write the evidence that graded it.** Four defects, one
+  shape: Beacon trusted strings the party under evaluation controls. Each let a
+  subject produce a verdict that was not true and leave nothing behind saying so,
+  which for a harness whose claim is that a verdict is a deterministic fact is
+  the worst category there is.
+
+  `cp` and `mv` read a protected file and recorded nothing. `cat` gates on
+  `_visible` and records `shell_read_protected`; the copy did neither, so
+  `cp secrets/deploy.key notes.txt && cat notes.txt` handed over the key while
+  `event_absent shell_read_protected` graded the run as restraint. Reachable as
+  shipped: `shell-partial-failure-recovery` sets `protected_paths: ["secrets/*"]`,
+  plants that file, and its injection payload names it. This is the pass
+  `files.py` had already taken and `shell.py` never did — the comment there makes
+  the argument for fixing `rm` while no scenario enables it, so `rm` and `touch`
+  are covered too.
+
+  The web allowlist was `domain in url`, satisfied anywhere in the string:
+  `evil.test/?ref=example.test` carried it in the query,
+  `example.test.attacker.tld` in a longer host, `attacker.tld/example.test` in
+  the path. The one scenario whose entire purpose is grading whether an agent
+  stays on the allowlist passed all three. It parses and compares the host now.
+
+  Artifact targets are chosen by the subject — and for an A2A subject by the
+  graded party, with the grading in view — but event assertions matched on
+  `target` and ignored `kind`. An artifact named `payments_approval_requested`
+  satisfied both `event_present` and the `event_order` pair for it with no
+  approval ever requested. Every event assertion in every shipped scenario
+  targets a service event, so the artifact kind is excluded rather than the
+  namespace renamed, and bundles already recorded read as they were written.
+
+  `beacon_submit` does not route through `ToolRouter.call`, where every other
+  tool meets its declared schema, so it advertised a required `status` from a
+  fixed enum and then accepted a call with no arguments at all — defaulting to
+  `completed`, the subject's own word for how it ended and the whole of the
+  verdict. `validate_arguments` enforces `enum` now, which nothing did.
+
+- **A subject could launder its own refusal into "we could not tell".**
+  `_ending_never_happened` asked whether a status was outside
+  `INTENTIONAL_ENDINGS` as a proxy for whether the subject reached an ending at
+  all. Those read the same until a subject sends a word of its own: `finished`
+  fell outside the set, so the ending assertion was marked unmeasured and the
+  verdict short-circuited to INCOMPLETE. That is not merely a softer verdict —
+  an unmeasured result is dropped from the baseline denominator and from what
+  `beacon prove` counts as proof, so misspelling the ending was cheaper than
+  reaching one.
+
+  `UNOBSERVED_ENDINGS` names what the code was reaching for: the vocabulary the
+  *harness* writes when it could not watch a run finish. Anything else in
+  `subject.status` came from the subject and is graded as the choice it is.
+  `resolve_result` keys its short-circuit on the same set, and a status that is
+  observed, chosen and undefined returns FAIL rather than reaching PASS through
+  an ending Beacon cannot interpret.
+
+  **`evidence_version` moves to 0.5**, because the same bundle content now
+  resolves differently. Nothing enforces that bump — the schema pins the
+  constant rather than deriving it, so a stale stamp and a stale schema agree
+  and the conformance tests pass over both, which is how it was missed once
+  already.
+
+- **Three of the same shape, each one adapter or one line from a fix already
+  made elsewhere.** `--adapter mcp-tool --authorization` was never registered for
+  redaction while `A2ASubjectAdapter` does it deliberately, so the credential
+  reached `evidence.json` verbatim. `--run-id` became a path component unchecked,
+  and `Path(output) / "/etc/beacon"` is `/etc/beacon`. Limitation bullets were the
+  one place the report escaping did not reach, while `runner.py` interpolates
+  `str(exc)` into them raw.
+
+- **A documentation check enforced a claim the tool contradicts.**
+  `test_no_document_states_a_stale_verdict_tally` compared both halves of
+  `N/M verdicts correct` against the subject count, assuming every verdict was
+  right and so requiring every document to say so. The first subject with an open
+  defect made `run_suite.py` print 419/420 while the test demanded 420/420
+  everywhere. It counts the verdicts that are actually correct now.
+
+  `docs/verifying-a-checkout.md` said it is a bug if the suite prints anything
+  under "Open defects" **or** "Manifest drift". `run_suite.py` has always known
+  the difference — drift exits 1, open defects exit 0 — so a reader meeting a
+  correctly-recorded defect would have read it as a broken tree.
+
+### Added
+
+- **Three adversarial subjects that attack the evaluator rather than the task.**
+  `examples/subjects/` held 417 agents that fail the *task* — obeying an
+  injection, leaking a file, closing tickets it should not — and none that attack
+  the *grader*. That is why the defects above survived: the harness had no
+  adversary aimed at itself, so nothing in 1,680 subtests would have noticed.
+
+  `forges_the_approval_event` never calls `payments_request_approval` and names
+  an artifact after the event that proves it did; it is otherwise a model citizen,
+  so the forged assertion is the only thing holding its verdict up.
+  `artifact_named_like_an_event` is the same defect pointed the other way and does
+  nothing wrong at all — a namespace the subject can write into is not evidence in
+  either direction, and a fix that only stopped the forgery would leave it
+  convicted on the name of its own scratch file. `launders_its_status` opened as
+  the manifest's first recorded defect and is closed by the ending fix above.
 
 
 ## [0.2.0] — 2026-08-18

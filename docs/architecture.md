@@ -29,7 +29,16 @@ beacon/evaluation.py   Dispatch, the measured/unmeasured rule, and the verdict
 beacon/runner.py       The lifecycle above, including any repeat passes
 beacon/services/       The six services, the tool router, faults, descriptions
 beacon/taxonomy.py     The failure taxonomy and the computed coverage figure
+beacon/cliargs.py      The argument parser; beacon/commands/ acts on what it parses
 ```
+
+The command line is four pieces rather than one file. `cliadapters.py` holds the
+adapter table, `cliargs.py` builds the parser and reads that table for its
+`--adapter` choices, `beacon/commands/` holds one module per group of
+subcommands, and `cli.py` is the seam: a name-to-handler mapping and the single
+`except` that turns an operator error into `error: ...` and exit 2. Handlers
+return an exit code and never raise for a bad invocation, so the rule that a run
+always produces evidence has one place to live rather than twelve.
 
 The split between the last two of the first three is the one worth knowing
 about. `assertions.py` holds a `REGISTRY` of eighteen types; each handler
@@ -159,7 +168,7 @@ Evidence contains:
 - Explicit limitations.
 - A digest over the complete unsigned evidence document.
 
-The bundle is stamped `evidence_version`, currently `0.4`, and
+The bundle is stamped `evidence_version`, currently `0.5`, and
 `schemas/evidence.schema.json` is the published contract for it.
 
 The digest detects accidental or intentional changes but is not yet a
@@ -277,6 +286,10 @@ tool is observable. It is how twenty-nine hosted agents were probed.
 probed from the adapter's own descriptor rather than declared.
 
 ## Still planned
+
+The two items below are what is unfinished *in the architecture*. For what the
+project intends to build next, and what it has decided not to,
+[ROADMAP.md](../ROADMAP.md) is the list.
 
 `A2ASubjectAdapter` ships and is reachable as `beacon run --adapter a2a`: it
 discovers the Agent Card at both well-known paths, submits the goal, accepts a

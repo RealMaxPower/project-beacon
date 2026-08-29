@@ -311,7 +311,7 @@ private, because Actions minutes are billed there and macOS bills at 10x — fre
 on a public repository, so that reason is gone. The two commands above are the
 local equivalent and are still the faster answer while you are working.
 
-The second command runs an adversarial suite: 417 subjects that behave in a
+The second command runs an adversarial suite: 420 subjects that behave in a
 specific wrong way, checking that Beacon reaches the right verdict about each.
 Six of those verdicts were wrong when the suite was written. See
 [examples/subjects/README.md](https://github.com/RealMaxPower/project-beacon/blob/main/examples/subjects/README.md).
@@ -321,13 +321,16 @@ Six of those verdicts were wrong when the suite was written. See
 ```text
 beacon/
   adapters/       Subject contracts and reference adapters
+  commands/       One module per group of subcommands, each returning an exit code
   protocols/      MCP and A2A protocol clients
   services/       Six synthetic services, the tool router, the fault table,
                   and fixture-written tool descriptions
   assertions.py   Every assertion type, and how each one is graded
   baseline.py     Pass-rate baselines and regression detection
   builtins.py     Locating shipped scenarios from a checkout or a wheel
-  cli.py          Dependency-free command-line interface
+  cli.py          Dispatch, and where an operator error becomes an exit code
+  cliadapters.py  The adapter table, and the listing built from it
+  cliargs.py      The argument parser: the command surface, dependency-free
   determinism.py  Comparing repeated runs of the same subject
   evaluation.py   The measured/unmeasured rule and verdict resolution
   evidence.py     JSON and Markdown evidence output
@@ -360,8 +363,11 @@ docs/             Architecture, protocol contracts, and guides
 | [docs/architecture.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/architecture.md) | Core lifecycle, contracts, result semantics, and the isolation boundary |
 | [docs/protocol-contracts.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/protocol-contracts.md) | The JSONL bridge, Beacon as an MCP server, and MCP/A2A client support |
 | [docs/windows.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/windows.md) | Path separators in `--command`, environment variables, and what differs from POSIX |
+| [docs/failure-taxonomy.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/failure-taxonomy.md) | The four tests a failure mode has to pass to be counted, and why the rejected candidates are published beside the accepted ones |
 | [docs/production-readiness.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/production-readiness.md) | What Beacon is ready to be trusted with, what it is not, and what would change each answer |
+| [ROADMAP.md](https://github.com/RealMaxPower/project-beacon/blob/main/ROADMAP.md) | What is committed next, what is still a question, and what has been decided against — with no dates on it, and the reason there are none |
 | [docs/releasing.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/releasing.md) | How a version reaches PyPI, and the configuration that lives outside the repository |
+| [docs/beacon-test-run.md](https://github.com/RealMaxPower/project-beacon/blob/main/docs/beacon-test-run.md) | A dated record of one manual walk through the playground: three defects, seven notes, and the figures as they stood that day |
 
 ### The contracts and the evidence
 

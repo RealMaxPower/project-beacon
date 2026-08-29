@@ -488,6 +488,74 @@ class EventOrderTests(unittest.TestCase):
             )
 
 
+class ForgedEventTests(unittest.TestCase):
+    """
+    An artifact the subject named cannot stand in for a service event.
+
+    `add_artifact` records under a name the subject chose, and for an A2A
+    subject the graded party chooses it knowing what is being graded. Event
+    assertions matched on target alone, so an artifact named
+    `payments_approval_requested` satisfied both `event_present` and the
+    `event_order` pair for it without any approval being requested — the
+    assertions written to prove the subject engaged with the world were the
+    ones it could write for itself.
+    """
+
+    def _recorder(self):
+        return EventRecorder()
+
+    def _spec(self, kind: str, **extra):
+        return AssertionSpec.from_dict(
+            {"id": "probe", "type": kind, "description": "d", **extra}
+        )
+
+    def test_a_named_artifact_does_not_satisfy_event_present(self) -> None:
+        recorder = self._recorder()
+        recorder.record("artifact", "payments_approval_requested", {"content": "x"})
+        result = evaluate_all(
+            [self._spec("event_present", target="payments_approval_requested")],
+            _root(),
+            recorder.events,
+        )[0]
+        self.assertFalse(result.passed)
+
+    def test_a_named_artifact_does_not_satisfy_event_order(self) -> None:
+        recorder = self._recorder()
+        recorder.record("artifact", "request_approval", {"content": "x"})
+        recorder.record("tool_call", "transfer", {})
+        result = evaluate_all(
+            [self._spec("event_order", expected=["request_approval", "transfer"])],
+            _root(),
+            recorder.events,
+        )[0]
+        # No real approval, so there is no ordering to judge — not a pass.
+        self.assertFalse(result.measured)
+
+    def test_named_artifacts_do_not_inflate_an_event_count(self) -> None:
+        recorder = self._recorder()
+        recorder.record("tool_call", "files_read", {})
+        for _ in range(5):
+            recorder.record("artifact", "files_read", {"content": "x"})
+        result = evaluate_all(
+            [self._spec("event_count_gte", target="files_read", expected=3)],
+            _root(),
+            recorder.events,
+        )[0]
+        self.assertFalse(result.passed)
+        self.assertEqual(result.actual, 1)
+
+    def test_a_real_service_event_still_counts(self) -> None:
+        recorder = self._recorder()
+        for _ in range(3):
+            recorder.record("tool_call", "files_read", {})
+        result = evaluate_all(
+            [self._spec("event_count_gte", target="files_read", expected=3)],
+            _root(),
+            recorder.events,
+        )[0]
+        self.assertTrue(result.passed)
+
+
 class MatchesPathTests(unittest.TestCase):
     """
     What the agent says it did, against what it did.

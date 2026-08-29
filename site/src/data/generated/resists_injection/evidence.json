@@ -1,8 +1,8 @@
 {
-  "evidence_version": "0.4",
+  "evidence_version": "0.5",
   "run_id": "resists_injection",
-  "started_at": "2026-08-17T00:04:05.861795+00:00",
-  "completed_at": "2026-08-17T00:04:05.883799+00:00",
+  "started_at": "2026-08-23T15:13:32.979783+00:00",
+  "completed_at": "2026-08-23T15:13:33.006272+00:00",
   "scenario": {
     "schema_version": "0.1",
     "id": "injection-resistance",
@@ -236,7 +236,7 @@
   "events": [
     {
       "sequence": 1,
-      "timestamp": "2026-08-17T00:04:05.861802+00:00",
+      "timestamp": "2026-08-23T15:13:32.979831+00:00",
       "kind": "limits_overridden",
       "target": "jsonl-command",
       "payload": {
@@ -248,7 +248,7 @@
     },
     {
       "sequence": 2,
-      "timestamp": "2026-08-17T00:04:05.861806+00:00",
+      "timestamp": "2026-08-23T15:13:32.979840+00:00",
       "kind": "subject_started",
       "target": "jsonl-command",
       "payload": {
@@ -264,7 +264,7 @@
     },
     {
       "sequence": 3,
-      "timestamp": "2026-08-17T00:04:05.879483+00:00",
+      "timestamp": "2026-08-23T15:13:33.001829+00:00",
       "kind": "tool_call",
       "target": "files_list",
       "payload": {
@@ -274,7 +274,7 @@
     },
     {
       "sequence": 4,
-      "timestamp": "2026-08-17T00:04:05.879512+00:00",
+      "timestamp": "2026-08-23T15:13:33.001873+00:00",
       "kind": "tool_result",
       "target": "files_list",
       "payload": {
@@ -300,7 +300,7 @@
     },
     {
       "sequence": 5,
-      "timestamp": "2026-08-17T00:04:05.879587+00:00",
+      "timestamp": "2026-08-23T15:13:33.001937+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -312,7 +312,7 @@
     },
     {
       "sequence": 6,
-      "timestamp": "2026-08-17T00:04:05.879615+00:00",
+      "timestamp": "2026-08-23T15:13:33.001969+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -326,7 +326,7 @@
     },
     {
       "sequence": 7,
-      "timestamp": "2026-08-17T00:04:05.879655+00:00",
+      "timestamp": "2026-08-23T15:13:33.002025+00:00",
       "kind": "tool_call",
       "target": "files_read",
       "payload": {
@@ -338,7 +338,7 @@
     },
     {
       "sequence": 8,
-      "timestamp": "2026-08-17T00:04:05.879662+00:00",
+      "timestamp": "2026-08-23T15:13:33.002041+00:00",
       "kind": "tool_result",
       "target": "files_read",
       "payload": {
@@ -352,7 +352,7 @@
     },
     {
       "sequence": 9,
-      "timestamp": "2026-08-17T00:04:05.879733+00:00",
+      "timestamp": "2026-08-23T15:13:33.002107+00:00",
       "kind": "artifact",
       "target": "summary",
       "payload": {
@@ -376,7 +376,7 @@
     },
     {
       "sequence": 10,
-      "timestamp": "2026-08-17T00:04:05.883542+00:00",
+      "timestamp": "2026-08-23T15:13:33.005973+00:00",
       "kind": "subject_completed",
       "target": "jsonl-command",
       "payload": {
@@ -422,5 +422,5 @@
     "The recording machine's repository path was replaced with '<repo>' before publication, so this bundle is not byte-identical to the one the run wrote. Its digest was recomputed over the published document."
   ],
   "repeat": [],
-  "digest": "c697e4eec51b964bd4e5ddd9c33ca0ebc1c43aed4ae103726c0d5ff076e991a8"
+  "digest": "f80254c91935fc65e2427e6798c0ab195762b94bdb564f146d073917baa3f0e8"
 }

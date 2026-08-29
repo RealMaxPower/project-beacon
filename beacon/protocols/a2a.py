@@ -25,6 +25,17 @@ fetched from a host named by the party under evaluation. A sweep runs several
 of these at once, so the ceiling is per-response and the peer never sets it.
 """
 
+ENVELOPE_KEYS = ("result", "task")
+"""
+Keys that mark a reply as already wrapped rather than a bare Task or Message.
+
+The JSON-RPC binding returns `{"jsonrpc", "id", "result": <Task>}`; the
+HTTP+JSON binding returns the Task itself; and some servers answer
+`{"task": ...}`, which `A2ASubjectAdapter` has always read. None of these names
+is a field of a Task or a Message, so their presence is what distinguishes an
+envelope from its contents.
+"""
+
 JSONRPC_METHODS = {
     # A2A 0.x, which is what deployed agents actually speak.
     "0": "message/send",
@@ -524,11 +535,41 @@ class A2AClient:
             return response
 
         endpoint = f"{service_url}/message:send"
-        return self._request(
+        reply = self._request(
             endpoint,
             method="POST",
             body={"message": message},
             content_type="application/a2a+json",
             version=self._negotiated_version(),
         )
+        # Normalised to the enveloped shape, because the difference is a fact
+        # about the transport and this module exists to absorb those.
+        #
+        # The JSON-RPC binding answers `{"jsonrpc", "id", "result": <Task>}`;
+        # HTTP+JSON answers the bare Task. The adapter reads
+        # `response.get("result")` once for both, so a REST reply resolved to
+        # `{}` — no state, no artifacts — and a healthy agent was graded
+        # `unknown_state`, which is an *unobserved* ending and so INCOMPLETE.
+        # The same agent over two bindings got two verdicts, and the one that
+        # lost is the binding this branch exists to serve.
+        #
+        # Neither `result` nor `task` is a field of a Task or a Message, so a
+        # reply carrying either is already an envelope — from a server speaking
+        # the JSON-RPC shape over this endpoint, or the `{"task": ...}` one the
+        # adapter has always accepted — and is passed through untouched. Only a
+        # genuinely bare reply is wrapped.
+        if not isinstance(reply, dict):
+            raise A2AError(
+                f"A2A reply from {endpoint} is {type(reply).__name__}, not an object"
+            )
+        if any(key in reply for key in ENVELOPE_KEYS):
+            if "error" in reply and "result" not in reply:
+                raise A2AError(f"A2A error from {endpoint}: {reply['error']}")
+            return reply
+        if "error" in reply:
+            # Checked for the same reason the JSON-RPC branch checks it: an
+            # error body returned with a 200 was read as a successful result
+            # and graded as the agent's answer.
+            raise A2AError(f"A2A error from {endpoint}: {reply['error']}")
+        return {"result": reply}
 

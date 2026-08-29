@@ -98,7 +98,7 @@ OK                        # some checks skip until §6 has built the site
 ```
 
 ```
-417/417 verdicts correct.
+420/420 verdicts correct.
 ```
 
 Together they take about two and a half minutes — roughly 2m05 for the suite
@@ -109,9 +109,17 @@ is the one that matters.
 with `-W error::ResourceWarning` on purpose — a leaked subprocess or file
 handle fails the suite rather than printing a warning nobody reads.
 
-**It is a bug if** `run_suite.py` prints anything under "Open defects" or
-"Manifest drift". Both mean the recorded expectation and the observed verdict
-have parted company, which is the one thing that suite exists to catch.
+**It is a bug if** `run_suite.py` prints anything under "Manifest drift", and
+it exits non-zero when it does. That section means a subject's verdict today is
+not the one the manifest recorded, so the two have parted company and one of
+them is stale — which is the thing that suite exists to catch.
+
+"Open defects" is a different section and is not a bug in your checkout. It
+lists subjects whose recorded verdict is not the verdict they *should* get:
+known Beacon defects, each printed with a note saying what is wrong. The suite
+exits zero with them listed, because the manifest's `should_be`/`currently`
+split exists to keep a known-wrong verdict visible while it is being closed.
+The tally above counts them, so it drops below `420/420` while one is open.
 
 ---
 
@@ -123,7 +131,7 @@ worth apologising for.
 
 ```bash
 # The core imports with nothing installed
-python3 -c "import beacon; print(beacon.__version__)"        # 0.2.0
+python3 -c "import beacon; print(beacon.__version__)"        # 0.3.0
 
 # The CLI vertical slice
 python3 -m beacon validate scenarios/inbox-briefing/scenario.json
@@ -184,7 +192,7 @@ python3 -m venv /tmp/fresh
 /tmp/fresh/bin/pip install dist/*.whl
 mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 
-/tmp/fresh/bin/project-beacon --version      # 0.2.0
+/tmp/fresh/bin/project-beacon --version      # 0.3.0
 /tmp/fresh/bin/project-beacon scenarios      # 83 of them
 /tmp/fresh/bin/project-beacon taxonomy       # 131 of 131
 /tmp/fresh/bin/project-beacon run inbox-briefing
