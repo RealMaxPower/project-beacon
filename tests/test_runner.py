@@ -746,6 +746,28 @@ class ReportInjectionTests(unittest.TestCase):
                 )
                 self.assertNotIn("<h2>", "\n".join(lines))
 
+    def test_a_hostile_limitation_cannot_become_a_link(self) -> None:
+        """
+        The smaller half of the same forgery, and the one the first fix missed.
+
+        A subject-chosen artifact name reaches the bullet through the
+        depth-truncation note. Escaping `<` stops it rendering as structure but
+        leaves markdown's own link syntax intact, so the name still became
+        something to click in a document people are asked to read and share.
+        """
+        hostile = "[click here](https://collector.invalid)"
+        report = self._report(
+            "The briefing is complete.",
+            limitations=[f"The artifact {hostile!r} was truncated."],
+        )
+        live = self._outside_code(report)
+        self.assertNotIn("[click here](", live, "the name became a link")
+        self.assertIn(
+            "collector.invalid",
+            live,
+            "the destination is inert, not hidden — a reader still sees it",
+        )
+
     def test_an_ordinary_limitation_is_still_readable(self) -> None:
         from beacon.secrets import REDACTION_NOTICE
 
