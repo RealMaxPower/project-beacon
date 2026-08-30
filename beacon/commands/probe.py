@@ -16,16 +16,17 @@ def mcp_inspect(args: argparse.Namespace) -> int:
     # mutually-exclusive group guarantees one of the two was passed; it does not
     # guarantee the value is useful, and the branch has to be chosen on which
     # flag was given rather than on what it was given.
+    #
+    # `--timeout` is passed only when given, so an unset one leaves each client
+    # on its own default rather than imposing the one that suited the transport
+    # this command happened to speak first.
+    timeout = {} if args.timeout is None else {"timeout_seconds": args.timeout}
     if args.url is not None:
         client_context = MCPHTTPClient(
-            args.url,
-            timeout_seconds=args.timeout,
-            authorization=args.authorization,
+            args.url, authorization=args.authorization, **timeout
         )
     else:
-        client_context = MCPStdioClient(
-            split_command(args.command), timeout_seconds=args.timeout
-        )
+        client_context = MCPStdioClient(split_command(args.command), **timeout)
     with client_context as client:
         tools = client.list_tools()
         output = {
