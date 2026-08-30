@@ -13,6 +13,51 @@ statements it cannot back.
 
 ## [Unreleased]
 
+### Changed
+
+- **A probe now releases the session it opened.** Streamable HTTP says a client
+  that no longer needs a session SHOULD delete it, and Beacon did not — so every
+  `mcp-inspect --url` and every `mcp-tool` run left a session allocated on a
+  server belonging to someone who did not ask to be measured.
+  `MCPStdioClient.__exit__` reaps its child, so the two clients looked
+  symmetric inside a `with` and were not. Each run now sends one `DELETE` on the
+  way out. Best effort: `DELETE` is a SHOULD, a server keeping no session state
+  answers 405 — Beacon's own façade among them — and teardown never raises,
+  because it runs while an exception the caller cares about more may be
+  unwinding.
+
+- **`mcp-inspect --timeout` left unset now means each transport's own default.**
+  It was 10 seconds for both, chosen when the command could only speak stdio, so
+  `--url` inherited it: a hosted server reached across the internet got half the
+  20 seconds `MCPHTTPClient` asks for, while a local process that spawns in
+  milliseconds got the larger share. Unset now leaves each client on its own
+  default. An explicit `--timeout` still applies to either.
+
+### Fixed
+
+- **The run's bearer token could be written through a symlink.** The MCP host
+  config is 0600 because that token is the only thing between another local
+  account and the scenario's tool façade, `beacon_submit` included — but the
+  open had no `O_NOFOLLOW`, and the account that mode defends against is exactly
+  the one that can plant a symlink at the path first. The token landed on a
+  target of their choosing, and `chmod` by path set 0600 there rather than on
+  anything Beacon owned.
+
+- **Two handshakes could erase a run.** Artifacts, events and completion
+  metadata were bounded because a structure nested past what
+  `dataclasses.asdict` can walk takes `RecursionError` out through the evidence
+  write — after the subject has acted, taking the record of what it did with it.
+  `serverInfo` from a server being conformance-tested and `clientInfo` from the
+  host under evaluation were not, and both feed `SubjectResult.metadata`;
+  `dict(...)` copies only the top level, which is what made them look guarded.
+  The runner's walk is guarded too, since that line is where every adapter's
+  metadata lands.
+
+- **A truncated artifact's name could become a link in `report.md`.** The
+  limitations list already neutralised line endings and raw HTML; markdown's own
+  link syntax passed through, so a subject-chosen name rendered as something to
+  click in a document people are asked to read and share.
+
 ## [0.3.0] — 2026-08-30
 
 A minor rather than a patch, because `evidence_version` moved to 0.5: the
