@@ -9,6 +9,7 @@ from unittest import mock
 
 import beacon.adapters as adapters_module
 from beacon.cli import ADAPTERS, RUN_ADAPTERS, _adapters, adapter_rows, build_parser
+from beacon.commands.probe import mcp_inspect
 
 
 # Every adapter exported from `beacon.adapters` has to be reachable from the
@@ -189,6 +190,87 @@ class McpInspectTargetTests(unittest.TestCase):
             self._parse(
                 ["mcp-inspect", "--command", "x", "--url", "https://agent.example/mcp"]
             )
+
+
+class McpInspectHandlerTests(unittest.TestCase):
+    """
+    The parser tests above all stop at `parse_args`, so none of them reaches
+    `mcp_inspect`. Nothing in the suite did, which is how a truthiness test on
+    `args.url` got as far as review instead of going red here.
+
+    No socket is opened by any of these: two patch the client out, and the
+    third is refused before a client is built.
+    """
+
+    def _args(self, argv: list[str]) -> Any:
+        return build_parser().parse_args(argv)
+
+    def _client(self) -> Any:
+        """A stand-in whose attributes survive `json.dumps`."""
+        client = mock.MagicMock()
+        entered = client.__enter__.return_value
+        entered.protocol_version = "2025-06-18"
+        entered.server_info = {"name": "fixture"}
+        entered.capabilities = {}
+        entered.list_tools.return_value = []
+        return client
+
+    def test_an_empty_url_is_refused_as_a_url_not_as_a_command(self) -> None:
+        """
+        `--url ""` is falsy. Under a truthiness test it fell through to the
+        stdio branch, where `args.command` is None and `shlex.split(None)`
+        answers — `ValueError: s argument must not be None` on 3.12+, naming an
+        internal argument the caller never passed. Before 3.12 that call read
+        from *stdin* instead of raising, so on 3.11 the command hung rather than
+        failed. This repository supports 3.11 and CI runs it.
+
+        The fix routes on which flag was given, so an empty URL is now judged
+        as a URL, by the client that knows what one looks like.
+        """
+        with mock.patch("beacon.commands.probe.MCPStdioClient") as stdio:
+            with self.assertRaises(ValueError) as caught:
+                mcp_inspect(self._args(["mcp-inspect", "--url", ""]))
+        stdio.assert_not_called()
+        message = str(caught.exception)
+        self.assertIn("http", message)
+        self.assertNotIn("s argument", message)
+
+    def test_a_url_binds_the_http_client_and_carries_the_credential(self) -> None:
+        with mock.patch("beacon.commands.probe.MCPHTTPClient") as http:
+            http.return_value = self._client()
+            with redirect_stdout(io.StringIO()):
+                code = mcp_inspect(
+                    self._args(
+                        [
+                            "mcp-inspect",
+                            "--url",
+                            "https://agent.example/mcp",
+                            "--authorization",
+                            "Bearer fixture-token-DO-NOT-SHIP",
+                            "--timeout",
+                            "3",
+                        ]
+                    )
+                )
+        self.assertEqual(code, 0)
+        http.assert_called_once_with(
+            "https://agent.example/mcp",
+            timeout_seconds=3.0,
+            authorization="Bearer fixture-token-DO-NOT-SHIP",
+        )
+
+    def test_a_command_still_binds_the_stdio_client(self) -> None:
+        """The path that worked before must keep working, and unchanged."""
+        with mock.patch("beacon.commands.probe.MCPStdioClient") as stdio:
+            stdio.return_value = self._client()
+            with redirect_stdout(io.StringIO()):
+                code = mcp_inspect(
+                    self._args(["mcp-inspect", "--command", "my-server --flag"])
+                )
+        self.assertEqual(code, 0)
+        stdio.assert_called_once_with(
+            ["my-server", "--flag"], timeout_seconds=10.0
+        )
 
 
 if __name__ == "__main__":

@@ -10,7 +10,13 @@ from beacon.protocols import A2AClient, MCPHTTPClient, MCPStdioClient
 
 
 def mcp_inspect(args: argparse.Namespace) -> int:
-    if args.url:
+    # `is not None` rather than truthiness: `--url ""` is falsy, and reading it
+    # as "no URL given" sent an empty string down the stdio branch, where
+    # `args.command` is None and `shlex.split(None)` is what answers. The
+    # mutually-exclusive group guarantees one of the two was passed; it does not
+    # guarantee the value is useful, and the branch has to be chosen on which
+    # flag was given rather than on what it was given.
+    if args.url is not None:
         client_context = MCPHTTPClient(
             args.url,
             timeout_seconds=args.timeout,
