@@ -13,6 +13,18 @@ statements it cannot back.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-08-30
+
+A patch rather than a minor: nothing here changes what a bundle means, and the
+two behaviour changes below correct a feature that shipped in 0.3.0 hours
+earlier.
+
+It exists because the fixes under **Fixed** were sitting in `main` and not in
+the version anyone could install — the same gap 0.3.0 was cut to close, on a
+scale of hours rather than a week. Three of them are places a subject could act
+on the evidence about itself, which is the defect this project treats as the
+worst it can ship.
+
 ### Changed
 
 - **A probe now releases the session it opened.** Streamable HTTP says a client

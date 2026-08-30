@@ -13,6 +13,29 @@ VERSION_HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\]", re.M)
 UNRELEASED_HEADING = "## [Unreleased]"
 
 
+def unreleased_account(text: str, tags: set[str]) -> str:
+    """
+    Everything said about work that has not shipped yet.
+
+    That is `## [Unreleased]` **plus any version section with no tag**, because
+    cutting a release renames the first into the second and the tag arrives in a
+    later commit. Between those two moments `## [Unreleased]` is empty and the
+    account lives under a version heading — which is a described change, not an
+    undescribed one.
+
+    This was found by the first release after the check was written: 0.3.1's
+    section was complete, `[Unreleased]` had just been emptied into it, and the
+    check called the work undescribed. `tools/check_release_drift.py` was given
+    a grace window for the same window; this had none. A check that fires during
+    the ordinary way of doing the thing is one people learn to route around.
+    """
+    accounts = [unreleased_body(text)]
+    for version in VERSION_HEADING.findall(text):
+        if f"v{version}" not in tags:
+            accounts.append(_section_body(text, f"## [{version}]"))
+    return "\n".join(part for part in accounts if part).strip()
+
+
 def unreleased_body(text: str) -> str:
     """
     What has actually been said under `## [Unreleased]`, up to the next version
@@ -28,10 +51,15 @@ def unreleased_body(text: str) -> str:
     Bounded at the next version heading, or a released entry would satisfy the
     check forever.
     """
-    start = text.find(UNRELEASED_HEADING)
+    return _section_body(text, UNRELEASED_HEADING)
+
+
+def _section_body(text: str, heading: str) -> str:
+    """The content under `heading`, up to the next version heading."""
+    start = text.find(heading)
     if start == -1:
         return ""
-    rest = text[start + len(UNRELEASED_HEADING) :]
+    rest = text[start + len(heading) :]
     match = VERSION_HEADING.search(rest)
     body = rest[: match.start()] if match else rest
     said = [
@@ -113,8 +141,9 @@ class ChangelogCurrencyTests(unittest.TestCase):
         commits = _commits_since_last_release()
         if commits is None:
             self.skipTest("no tags or no git history to read")
+        tags = set((_git("tag", "-l") or "").split())
         missing = undescribed(
-            unreleased_body(CHANGELOG.read_text(encoding="utf-8")), commits
+            unreleased_account(CHANGELOG.read_text(encoding="utf-8"), tags), commits
         )
         self.assertEqual(
             missing,
@@ -152,6 +181,36 @@ class ChangelogCurrencyTests(unittest.TestCase):
         """
         commits = [("Change how a probe closes", ["beacon/protocols/mcp_http.py"])]
         self.assertEqual(undescribed("### Changed\n\n- It closes.", commits), [])
+
+    def test_a_cut_but_untagged_release_counts_as_an_account(self) -> None:
+        """
+        The release-prep window, and the case that made this rule wrong once.
+
+        Cutting a release renames `[Unreleased]` to a version heading, and the
+        tag lands in a later commit. In between, `[Unreleased]` is empty and the
+        account sits under `## [0.3.1]` — described work, not undescribed. The
+        drift check was given a grace window for this same gap; this had none,
+        and failed on the first release after it was written.
+        """
+        text = (
+            "## [Unreleased]\n\n## [0.3.1] — 2026-08-30\n\n"
+            "### Fixed\n\n- a real thing\n\n## [0.3.0] — 2026-08-30\n\n- older\n"
+        )
+        # v0.3.1 not tagged yet, v0.3.0 is
+        self.assertIn("a real thing", unreleased_account(text, {"v0.3.0"}))
+        # and once it is tagged, that section stops counting as unreleased
+        self.assertEqual(unreleased_account(text, {"v0.3.0", "v0.3.1"}), "")
+
+    def test_a_released_section_never_satisfies_it(self) -> None:
+        """
+        Otherwise the newest shipped entry would answer for every future change
+        and the check would pass forever.
+        """
+        text = "## [Unreleased]\n\n## [0.3.0] — 2026-08-30\n\n- shipped already\n"
+        account = unreleased_account(text, {"v0.3.0"})
+        self.assertEqual(account, "")
+        commits = [("Change the package", ["beacon/runner.py"])]
+        self.assertEqual(undescribed(account, commits), ["Change the package"])
 
     def test_the_unreleased_section_is_found_and_bounded(self) -> None:
         """
