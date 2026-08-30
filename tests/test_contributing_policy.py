@@ -81,8 +81,31 @@ def unsigned_commits(log: str) -> list[str]:
     return [
         f"{sha[:9]} {subject}"
         for sha, _, subject, trailer in commits[: boundary + 1]
-        if not re.fullmatch(r".+ <.+@.+>", trailer.strip())
+        if not _is_signed(trailer)
     ]
+
+
+def _is_signed(trailer: str) -> bool:
+    """
+    Whether a commit's sign-off trailers include at least one usable one.
+
+    Judged per line. `%(trailers:...,valueonly)` returns *every* `Signed-off-by`
+    value, newline-separated, and `.` does not match a newline — so a commit with
+    two of them failed `fullmatch` against the whole block and was reported as
+    carrying none. A squash of work by two people is exactly where that arises,
+    and it is where the DCO most wants a trailer each: one certifies the code
+    they wrote, the other certifies what the maintainer added on top. GitHub's
+    own DCO app accepts more than one for the same reason.
+
+    The first commit to carry two turned this repository's `main` red, and the
+    check said the commit was unsigned when it was signed twice — a check
+    failing on the honest thing is worse than one that does not fail at all,
+    because it teaches you to strip the second sign-off to get green.
+    """
+    return any(
+        re.fullmatch(r".+ <.+@.+>", line.strip())
+        for line in trailer.splitlines()
+    )
 
 
 def _git(*args: str) -> str | None:
@@ -220,6 +243,46 @@ class SignOffPolicyTests(unittest.TestCase):
             + self._boundary()
         )
         self.assertEqual(unsigned_commits(log), [])
+
+    SECOND_SIGNED = "A Maintainer <maintainer@example.com>"
+
+    def test_two_sign_offs_are_two_certifications_not_none(self) -> None:
+        """
+        A squash of two people's work carries a trailer each, and that is the
+        case the DCO cares about most: one certifies the code they wrote, the
+        other certifies what the maintainer added on top.
+
+        `valueonly` returns both values newline-separated, and `.` does not
+        match a newline, so matching the whole block reported a commit signed
+        twice as signed not at all. It turned `main` red on the first commit
+        that did the honest thing, which is the worst way for this to fail —
+        the quickest way back to green is to delete a sign-off.
+        """
+        log = (
+            self._record(
+                "a" * 40,
+                "b" * 40,
+                "Work by two people, squashed",
+                f"{self.SIGNED}\n{self.SECOND_SIGNED}",
+            )
+            + self._boundary()
+        )
+        self.assertEqual(unsigned_commits(log), [])
+
+    def test_a_commit_with_only_junk_trailers_is_still_caught(self) -> None:
+        """
+        Rules out the opposite error. Reading per line rather than per block
+        widens what counts, and `any()` over an empty or malformed set must
+        still be a failure — otherwise the fix trades one blind spot for a
+        larger one.
+        """
+        log = (
+            self._record("a" * 40, "b" * 40, "Not really signed", "nobody\nnothing")
+            + self._boundary()
+        )
+        self.assertEqual(
+            unsigned_commits(log), ["aaaaaaaaa Not really signed"]
+        )
 
     CI = ROOT / ".github" / "workflows" / "ci.yml"
 
