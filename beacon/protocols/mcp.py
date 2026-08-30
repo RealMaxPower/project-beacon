@@ -8,6 +8,8 @@ import threading
 import time
 from typing import Any, Sequence, TextIO
 
+from beacon.models import bound_depth
+
 from beacon import __version__
 
 
@@ -121,8 +123,13 @@ class MCPStdioClient:
             if not negotiated:
                 raise MCPError("MCP initialize response omitted protocolVersion")
             self.protocol_version = str(negotiated)
-            self.server_info = dict(response.get("serverInfo", {}))
-            self.capabilities = dict(response.get("capabilities", {}))
+            # Bounded at the door, like every other structure the peer
+            # chose. `dict(...)` copies only the top level, so the nesting
+            # underneath survives it — and `server_info` is handed straight
+            # to `SubjectResult.metadata`, which the runner walks with
+            # `asdict` before any evidence is written.
+            self.server_info, _ = bound_depth(dict(response.get("serverInfo", {})))
+            self.capabilities, _ = bound_depth(dict(response.get("capabilities", {})))
             self.notify("notifications/initialized")
         except BaseException:
             self.close()

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from beacon.adapters import MCPHostAdapter
-from beacon.models import EventRecorder, Scenario
+from beacon.models import EventRecorder, Scenario, SubjectResult
 from beacon.protocols import (
     MINIMUM_TOKEN_LENGTH,
     SUBMIT_TOOL,
@@ -872,3 +872,56 @@ class ConfigSymlinkTests(unittest.TestCase):
             self._write(path)
             self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
             self.assertNotIn("stale", path.read_text(encoding="utf-8"))
+
+
+class DeepClientInfoTests(unittest.TestCase):
+    """
+    `clientInfo` is written by the host under evaluation, and both MCP host
+    adapters put `server.client_info` into `SubjectResult.metadata`, which the
+    runner walks with `asdict` before writing anything.
+
+    The same door as `serverInfo` on the client side, facing the other way: a
+    host could complete the work, then hand back a handshake deep enough to
+    take `RecursionError` out through the evidence write and leave an empty run
+    directory behind it.
+    """
+
+    DEPTH = min(1500, sys.getrecursionlimit() - 100)
+
+    def _nested(self) -> Any:
+        value: Any = "floor"
+        for _ in range(self.DEPTH):
+            value = {"n": value}
+        return value
+
+    def _initialize(self, server, detail: Any = None) -> None:
+        info: dict[str, Any] = {"name": "hostile-host"}
+        if detail is not None:
+            info["detail"] = detail
+        _call(
+            server,
+            "initialize",
+            {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": info},
+        )
+
+    def setUp(self) -> None:
+        self.server, _ = _server()
+
+    def test_the_handshake_bounds_what_the_host_declares(self) -> None:
+        self._initialize(self.server, self._nested())
+        self.assertEqual(self.server.client_info["name"], "hostile-host")
+        self.assertIn("truncated by Beacon", json.dumps(self.server.client_info))
+
+    def test_the_result_it_lands_in_can_still_be_serialised(self) -> None:
+        self._initialize(self.server, self._nested())
+        result = SubjectResult(
+            status="completed",
+            summary="s",
+            metadata={"client_info": self.server.client_info},
+        )
+        self.assertIn("truncated by Beacon", json.dumps(result.to_dict()))
+
+    def test_an_ordinary_handshake_is_untouched(self) -> None:
+        """A bound that fired on every host would pass the cases above too."""
+        self._initialize(self.server)
+        self.assertEqual(self.server.client_info, {"name": "hostile-host"})

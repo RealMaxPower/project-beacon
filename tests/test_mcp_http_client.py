@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+
+from beacon.models import SubjectResult
 
 from beacon.protocols import MCPError, MCPHTTPClient
 from beacon.protocols import mcp_server
@@ -19,12 +22,24 @@ from beacon.protocols.mcp_http import (
 )
 
 
-def _rpc_result(request_id: Any, method: str) -> dict[str, Any]:
+def _nested(depth: int) -> Any:
+    """A structure the C decoder accepts and `dataclasses.asdict` cannot walk."""
+    value: Any = "floor"
+    for _ in range(depth):
+        value = {"n": value}
+    return value
+
+
+def _rpc_result(request_id: Any, method: str, deep: int = 0) -> dict[str, Any]:
     if method == "initialize":
         return {
             "protocolVersion": "2025-06-18",
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "fixture", "version": "1"},
+            "serverInfo": (
+                {"name": "fixture", "version": "1", "detail": _nested(deep)}
+                if deep
+                else {"name": "fixture", "version": "1"}
+            ),
         }
     return {"tools": [{"name": "do_thing", "description": "d", "inputSchema": {}}]}
 
@@ -38,10 +53,12 @@ class _Server:
         *,
         location: str = "/mcp",
         declared: str | None = None,
+        deep: int = 0,
     ) -> None:
         self.mode = mode
         self.location = location
         self.declared = declared
+        self.deep = deep
         self.paths: list[str] = []
         self.seen: list[dict[str, str | None]] = []
         handler = self._handler()
@@ -128,7 +145,9 @@ class _Server:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": message["id"],
-                    "result": _rpc_result(message["id"], message["method"]),
+                    "result": _rpc_result(
+                        message["id"], message["method"], outer.deep
+                    ),
                 }
                 if outer.mode == "sse":
                     body = f"event: message\ndata: {json.dumps(payload)}\n\n".encode()
@@ -458,3 +477,52 @@ class InternalAddressTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DeepServerInfoTests(unittest.TestCase):
+    """
+    `serverInfo` is written by the server being conformance-tested, and
+    `mcp_tool_subject` hands it straight to `SubjectResult.metadata`, which the
+    runner walks with `dataclasses.asdict` before any evidence is written.
+
+    Artifacts, events and JSONL completion metadata were bounded for exactly
+    this reason; this door was left open, so the same structure that could not
+    erase a run through an artifact could still erase one through a handshake.
+    `dict(result.get("serverInfo", {}))` copies only the top level, which is
+    what made it look guarded.
+    """
+
+    # Past the depth where `asdict` gives out on 3.13, and under the
+    # interpreter's own limit so the fixture server can still serialise what it
+    # sends. See the note in `test_runner.DeepStructureTests`.
+    DEPTH = min(1500, sys.getrecursionlimit() - 100)
+
+    def setUp(self) -> None:
+        self.server = _Server("json", deep=self.DEPTH)
+        self.addCleanup(self.server.stop)
+
+    def test_the_handshake_bounds_what_the_server_declares(self) -> None:
+        with MCPHTTPClient(self.server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.server_info["name"], "fixture")
+            self.assertIn("truncated by Beacon", json.dumps(client.server_info))
+
+    def test_the_result_it_lands_in_can_still_be_serialised(self) -> None:
+        """The failure was never in the client — it was one `asdict` later."""
+        with MCPHTTPClient(self.server.url, timeout_seconds=5) as client:
+            result = SubjectResult(
+                status="completed",
+                summary="s",
+                metadata={"server": client.server_info},
+            )
+            self.assertIn("truncated by Beacon", json.dumps(result.to_dict()))
+
+    def test_an_ordinary_handshake_is_untouched(self) -> None:
+        """
+        Rules out the opposite error. A bound that fired on every server would
+        pass the cases above and mean nothing, and would put a truncation
+        notice in the bundle of every run that never needed one.
+        """
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.server_info, {"name": "fixture", "version": "1"})

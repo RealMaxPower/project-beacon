@@ -10,6 +10,7 @@ import urllib.request
 import uuid
 from typing import Any
 
+from beacon.models import bound_depth
 from beacon.protocols.mcp import MCPError
 
 from beacon import __version__
@@ -388,8 +389,10 @@ class MCPHTTPClient:
         if not negotiated:
             raise MCPError("MCP initialize response omitted protocolVersion")
         self.protocol_version = str(negotiated)
-        self.server_info = dict(result.get("serverInfo", {}))
-        self.capabilities = dict(result.get("capabilities", {}))
+        # See the note in `mcp.py`: `dict(...)` is a top-level copy, and
+        # `server_info` reaches `asdict` through `SubjectResult.metadata`.
+        self.server_info, _ = bound_depth(dict(result.get("serverInfo", {})))
+        self.capabilities, _ = bound_depth(dict(result.get("capabilities", {})))
         try:
             self.notify("notifications/initialized")
         except MCPError:
