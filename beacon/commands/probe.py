@@ -6,12 +6,21 @@ import argparse
 import json
 
 from beacon.cliargs import split_command
-from beacon.protocols import A2AClient, MCPStdioClient
+from beacon.protocols import A2AClient, MCPHTTPClient, MCPStdioClient
 
 
 def mcp_inspect(args: argparse.Namespace) -> int:
-    command = split_command(args.command)
-    with MCPStdioClient(command, timeout_seconds=args.timeout) as client:
+    if args.url:
+        client_context = MCPHTTPClient(
+            args.url,
+            timeout_seconds=args.timeout,
+            authorization=args.authorization,
+        )
+    else:
+        client_context = MCPStdioClient(
+            split_command(args.command), timeout_seconds=args.timeout
+        )
+    with client_context as client:
         tools = client.list_tools()
         output = {
             "protocol_version": client.protocol_version,

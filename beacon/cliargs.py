@@ -391,12 +391,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     mcp = subparsers.add_parser(
         "mcp-inspect",
-        help="Initialize an MCP stdio server and list its tools.",
+        help=(
+            "Initialize an MCP server and list its tools. Use --command for a "
+            "stdio server or --url for a hosted Streamable-HTTP server."
+        ),
     )
-    mcp.add_argument("--command", required=True)
+    # Required and mutually exclusive: neither leaves nothing to inspect, both
+    # is ambiguous. `--command` was `required=True` before `--url` existed, and
+    # the group keeps every invocation that relied on that working.
+    mcp_target = mcp.add_mutually_exclusive_group(required=True)
+    mcp_target.add_argument(
+        "--command", help="Command to launch a stdio MCP server."
+    )
+    mcp_target.add_argument(
+        "--url", help="Base URL of a hosted Streamable-HTTP MCP server."
+    )
     mcp.add_argument("--call", help="Optional MCP tool name to call.")
     mcp.add_argument("--arguments", type=_json_object, default={})
     mcp.add_argument("--timeout", type=float, default=10)
+    mcp.add_argument(
+        "--authorization",
+        help=(
+            "Complete Authorization header value for --url, such as "
+            "'Bearer ...'. Ignored for --command."
+        ),
+    )
 
     a2a = subparsers.add_parser(
         "a2a-inspect",
