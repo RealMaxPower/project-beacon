@@ -4,7 +4,15 @@
 
 ## Checks
 
-<!-- Delete what does not apply. -->
+Run against `<commit>`:
+
+<!-- The commit you actually ran them on, not the branch name. A branch moves:
+     rebased, amended, brought up to date with main, a fix pushed after the run.
+     A box ticked against a tree that has since moved is a claim with nothing
+     behind it, which is the failure this project exists to name — and it is
+     easy to do by accident, because nothing about the box changes when the
+     branch does. `git rev-parse --short HEAD` after the last run. Delete what
+     does not apply. -->
 
 - [ ] `python3 -W error::ResourceWarning -m unittest discover -s tests` passes
 - [ ] `python3 examples/subjects/run_suite.py` still reports every verdict correct

@@ -59,6 +59,12 @@ include .github/CODEOWNERS
 # download other people's servers, which is not what a `pip install` is for.
 recursive-include conformance *.md *.py *.json
 
+# `tests/test_release_drift.py` reads `tools/check_release_drift.py`. Shipping
+# the test without the script it exercises would leave it skipping in every
+# sdist — a test that passes because it found nothing, which is the failure
+# `test_every_directory_the_suite_reads_is_packaged` exists to catch, and did.
+recursive-include tools *.py
+
 prune conformance/a2a-js/node_modules
 prune conformance/a2a-java/target
 prune conformance/a2a-dotnet/bin

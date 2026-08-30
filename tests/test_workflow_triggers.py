@@ -21,6 +21,12 @@ ALLOWED_TRIGGERS = {
     "ci.yml": {"workflow_dispatch", "push", "pull_request"},
     "release.yml": {"workflow_dispatch", "push"},
     "conformance.yml": {"workflow_dispatch"},
+    # Reads `pyproject.toml`, the tags, and this project's own PyPI metadata.
+    # It calls nobody else's service, which is what makes a schedule acceptable
+    # here and not in `conformance.yml`, and the gap it looks for is measured
+    # in days — so a weekly run would take up to a week to see a week-long
+    # stall.
+    "release-drift.yml": {"workflow_dispatch", "schedule"},
 }
 
 # Triggers no workflow here may carry. `pull_request_target` runs the base
