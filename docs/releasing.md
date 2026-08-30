@@ -75,10 +75,11 @@ deliberate act even when a tag is pushed by accident.
 overrides the trigger blocks in the YAML — and a tag pushed while `release` is
 disabled runs nothing at all, silently.
 
-As of 0.3.0, CI and `release` are `active` and Conformance is
+As of 0.3.0, CI, `release` and `Release drift` are `active` and Conformance is
 `disabled_manually`, which is the state this section is asking you to reach.
-That is not something a clone can confirm, so read it rather than trusting this
-paragraph:
+That is not something a clone can confirm, and this paragraph has already been
+wrong once — it named three workflows the day after a fourth was added — so
+read the state rather than trusting the sentence:
 
 Workflow ids are per-repository, so read them rather than copying them from
 anywhere — including from an earlier version of this file, which carried three

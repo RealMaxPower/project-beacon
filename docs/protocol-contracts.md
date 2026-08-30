@@ -163,6 +163,16 @@ own network, is refused rather than followed — `Location: file:///…` and
 leaves the origin the credentials were issued for drops the bearer token and
 the session id before continuing.
 
+It also releases the session it opened, with a `DELETE` carrying the
+`Mcp-Session-Id` when the client is closed. Inspecting a stranger's server
+should cost them one metadata request and not a side effect, and a session left
+allocated on a server belonging to somebody who did not ask to be measured is a
+side effect. This is best effort by design: `DELETE` is a SHOULD rather than a
+MUST, a server keeping no session state answers 405 or 404 — the façade below
+implements no `DELETE` at all — and nothing in teardown raises, because it runs
+on the way out of a `with` block that may be unwinding an exception the caller
+cares about far more.
+
 Neither client implements resources, prompts, roots, sampling, elicitation,
 OAuth, experimental MCP tasks, or server-originated requests.
 
