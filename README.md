@@ -133,7 +133,13 @@ python3 -m beacon prove scenarios/<your-scenario>/scenario.json
 `validate` checks a scenario without running it, `adapters` lists the subject
 kinds and their integration levels, and `verify` recomputes a bundle's digest.
 `mcp-inspect` and `a2a-inspect` probe a server or a hosted agent before you
-grade it.
+grade it. `mcp-inspect` reaches either transport — `--command` launches a stdio
+server, `--url` speaks Streamable HTTP to one somebody else is already running,
+with `--authorization` if it needs a credential:
+
+```bash
+python3 -m beacon mcp-inspect --url https://mcp.example/mcp
+```
 
 `init` writes a scenario that runs immediately plus two subjects: one that
 satisfies every assertion, and one that violates exactly one. **The second is

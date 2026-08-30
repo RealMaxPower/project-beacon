@@ -13,6 +13,20 @@ statements it cannot back.
 
 ## [Unreleased]
 
+### Added
+
+- **`mcp-inspect --url`, for the servers most people actually publish.** The
+  command could only reach a stdio server it launched itself, so a hosted
+  Streamable-HTTP server — the majority of what is deployed — could be reached
+  only through the `mcp-tool` adapter during a graded `run`, never by a quick
+  standalone probe. `MCPHTTPClient` already existed and already matched
+  `MCPStdioClient`'s surface; this binds one of the two and leaves the output
+  alone. `--command` and `--url` are now a required, mutually exclusive pair,
+  and `--url` takes an optional `--authorization`. Every existing
+  `mcp-inspect --command` invocation still works.
+
+  Contributed by @scourtney-godaddy.
+
 ## [0.3.0] — 2026-08-24
 
 A minor rather than a patch, because `evidence_version` moved to 0.5: the
