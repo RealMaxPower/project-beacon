@@ -3,10 +3,18 @@
 How `project-beacon` reaches PyPI, and the three pieces of state that live
 outside the repository and cannot be checked from a clone.
 
-0.1.0, 0.1.1, 0.1.2 and 0.2.0 have been released. The three pieces of external
-state below are configured; they are kept here because they cannot be checked
-from a clone, so the only way to know they are still right is to have written
-down what they were set to.
+0.1.0, 0.1.1, 0.1.2, 0.2.0 and 0.3.0 have been released. The three pieces of
+external state below are configured; they are kept here because they cannot be
+checked from a clone, so the only way to know they are still right is to have
+written down what they were set to.
+
+0.3.0 is also the release that shows why the list above is worth keeping. The
+version was bumped and its changelog section written a week before anything
+shipped, and the tag was never pushed — so `pyproject.toml` announced a version
+that existed nowhere, `docs/production-readiness.md` said it was on PyPI, and
+nothing in the suite could contradict either, because no test compares the
+declared version against the tags or against PyPI. Cutting a release and
+publishing one are separate acts, and only the second leaves evidence.
 
 ## What already works
 
@@ -34,9 +42,10 @@ whoever can move a branch can publish as this project.
 
 ### 1. Register the trusted publisher on PyPI
 
-At <https://pypi.org/manage/account/publishing/>, add a **pending publisher**
-(the project does not exist on PyPI yet, so it must be pending rather than
-attached to an existing project):
+At <https://pypi.org/manage/account/publishing/>. The project now exists on
+PyPI, so this is a publisher attached to it; it was registered as a **pending**
+publisher before 0.1.0, which is what you need if you are setting this up for a
+project that has never published:
 
 | Field | Value |
 |---|---|
@@ -61,10 +70,15 @@ deliberate act even when a tag is pushed by accident.
 
 ### 3. Enable the workflows
 
-**This is the one that is invisible from a checkout.** All three workflows are
+**This is the one that is invisible from a checkout.** A workflow can be
 `disabled_manually` at the GitHub level — a switch in the Actions tab that
-overrides the trigger blocks in the YAML. A tag pushed today runs nothing at
-all, silently.
+overrides the trigger blocks in the YAML — and a tag pushed while `release` is
+disabled runs nothing at all, silently.
+
+As of 0.3.0, CI and `release` are `active` and Conformance is
+`disabled_manually`, which is the state this section is asking you to reach.
+That is not something a clone can confirm, so read it rather than trusting this
+paragraph:
 
 Workflow ids are per-repository, so read them rather than copying them from
 anywhere — including from an earlier version of this file, which carried three
@@ -112,10 +126,13 @@ mkdir -p /tmp/elsewhere && cd /tmp/elsewhere
 /tmp/fresh/bin/project-beacon run inbox-briefing
 ```
 
-**The version is typed in three places and derived everywhere else.**
-`pyproject.toml`, `beacon/__init__.py`, and the two `# <version>` comments in
+**The version is typed in four places and derived everywhere else.**
+`pyproject.toml`, `beacon/__init__.py`, the two `# <version>` comments in
 `docs/verifying-a-checkout.md` that annotate a `--version` command a reader is
-asked to compare against. (Written without a literal version, because a
+asked to compare against, and the bolded status line in
+`docs/production-readiness.md`, which `ReadinessLedgerTests` holds to
+`__version__`. It said three until 0.3.0, which is how a checklist becomes the
+place a fourth is forgotten. (Written without a literal version, because a
 checklist that names one is a fourth place to forget.) `tests/test_builtins.py` asserts the first two agree
 and `VerificationTranscriptTests` pins the third, and `release.yml` asserts the
 tag matches `pyproject.toml` — so the tag is tied to the rest only through
@@ -185,10 +202,40 @@ Then:
 
 ```bash
 git tag v0.1.0
-git push origin v0.1.0
+git push public v0.1.0
 ```
 
-The tag triggers `release.yml`, which builds, verifies, and publishes.
+**`public`, not `origin`.** A clone of this project may carry two remotes:
+`public` is `RealMaxPower/project-beacon`, the repository this releases, and
+`origin` may be a private archive. This line said `origin` until 0.3.0, which
+would have pushed the tag to the archive — where no workflow is enabled, so it
+would have published nothing and said nothing about it. Check before pushing:
+
+```bash
+git remote -v
+git ls-remote --tags public | tail -3
+```
+
+The tag triggers `release.yml`, which builds, verifies, and publishes. The
+`publish` job then waits on the `pypi` environment's required reviewer, so the
+tag is not the point of no return — approving that deployment is. Until then a
+tag can be deleted and re-pushed.
+
+Then create the GitHub Release, which is a separate act from tagging and which
+`release.yml` does not do:
+
+```bash
+gh release create v0.1.0 --repo RealMaxPower/project-beacon \
+  --title v0.1.0 --notes-from-tag --verify-tag
+```
+
+This is not decoration. `pyproject.toml` sets
+`Changelog = ".../releases"`, and project-URL metadata is frozen per version
+alongside the long description — so a version published while that page is
+empty links to "there are no releases" from its PyPI sidebar permanently.
+0.1.0 through 0.2.0 are already wrong that way, because the URL was pointed at
+`/releases` before any release existed. The link is only true if this step
+happens, so it happens every time.
 
 ## If something goes wrong
 
