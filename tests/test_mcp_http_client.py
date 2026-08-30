@@ -61,6 +61,7 @@ class _Server:
         self.deep = deep
         self.paths: list[str] = []
         self.seen: list[dict[str, str | None]] = []
+        self.deletes: list[dict[str, str | None]] = []
         handler = self._handler()
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
@@ -177,6 +178,20 @@ class _Server:
                 self.send_header("Mcp-Session-Id", "sess-1")
                 self.end_headers()
                 self.wfile.write(body)
+
+            def do_DELETE(self) -> None:  # noqa: N802
+                outer.deletes.append(
+                    {
+                        "path": self.path,
+                        "session": self.headers.get("Mcp-Session-Id"),
+                        "authorization": self.headers.get("Authorization"),
+                    }
+                )
+                # `stateless` stands in for a server that keeps no session and
+                # answers the way Beacon's own facade would: a refusal.
+                self.send_response(405 if outer.mode == "stateless" else 204)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
 
             def do_GET(self) -> None:  # noqa: N802
                 # Where a 301/302/303 lands, so the headers it carried can be
@@ -526,3 +541,59 @@ class DeepServerInfoTests(unittest.TestCase):
         self.addCleanup(server.stop)
         with MCPHTTPClient(server.url, timeout_seconds=5) as client:
             self.assertEqual(client.server_info, {"name": "fixture", "version": "1"})
+
+
+class SessionTeardownTests(unittest.TestCase):
+    """
+    Streamable HTTP says a client that no longer needs a session SHOULD delete
+    it. Beacon did not, so every probe left one allocated on a server belonging
+    to someone who did not ask to be measured — while `MCPStdioClient.__exit__`
+    reaped its child, so the two looked symmetric inside a `with` and were not.
+    """
+
+    def test_leaving_the_context_releases_the_session(self) -> None:
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.session_id, "sess-1")
+        self.assertEqual(
+            [d["session"] for d in server.deletes],
+            ["sess-1"],
+            "the session Beacon opened was left open",
+        )
+
+    def test_a_server_that_refuses_delete_is_not_an_error(self) -> None:
+        """
+        `DELETE` is a SHOULD, not a MUST. A server keeping no session state
+        answers 405 — Beacon's own facade among them — and that is a correct
+        answer, not a failure to propagate out of a `with` that has finished.
+        """
+        server = _Server("stateless")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual([t["name"] for t in client.list_tools()], ["do_thing"])
+        self.assertEqual(len(server.deletes), 1)
+
+    def test_teardown_does_not_swallow_the_caller_s_exception(self) -> None:
+        """Teardown runs while an exception is unwinding, and must not win."""
+        server = _Server("stateless")
+        self.addCleanup(server.stop)
+        with self.assertRaises(ZeroDivisionError):
+            with MCPHTTPClient(server.url, timeout_seconds=5):
+                raise ZeroDivisionError("the caller's problem")
+
+    def test_no_session_means_no_request(self) -> None:
+        """Nothing to release, so nothing is sent — not a DELETE with no id."""
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        client = MCPHTTPClient(server.url, timeout_seconds=5)
+        client.close()
+        self.assertEqual(server.deletes, [])
+
+    def test_the_session_is_released_only_once(self) -> None:
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            pass
+        client.close()
+        self.assertEqual(len(server.deletes), 1)

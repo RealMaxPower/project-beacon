@@ -238,7 +238,50 @@ class MCPHTTPClient:
         return self
 
     def __exit__(self, *_: Any) -> None:
-        return None
+        self.close()
+
+    #: How long teardown may take. Short on purpose: releasing a session is
+    #: courtesy, and a server that hangs on `DELETE` must not hold a graded run
+    #: open behind it.
+    CLOSE_TIMEOUT_SECONDS = 5.0
+
+    def close(self) -> None:
+        """
+        Release the session this client opened, if it opened one.
+
+        Streamable HTTP says a client that no longer needs a session SHOULD
+        `DELETE` it. Beacon did not, so every probe left a session allocated on
+        a server belonging to someone who did not ask to be measured — and
+        `MCPStdioClient.__exit__` reaps its child, so the two clients looked
+        symmetric inside a `with` and were not. The class docstring says
+        inspecting a stranger's server should cost them one metadata request
+        and not a side effect; a session left open is a side effect.
+
+        Best effort, and deliberately so. `DELETE` is a SHOULD, not a MUST:
+        servers that keep no session state answer 405 or 404, Beacon's own
+        façade among them, and that is a correct answer rather than a failure.
+        Nothing here may raise — teardown runs on the way out of a `with`,
+        including the one unwinding an exception the caller cares about far
+        more than this.
+        """
+        session, self.session_id = self.session_id, None
+        if not session:
+            return
+        headers = {"Mcp-Session-Id": session, "User-Agent": USER_AGENT}
+        # Same rule as every other request: the credential travels only to the
+        # origin the caller was pointed at.
+        if self.authorization and _origin(self.url) == self._base_origin:
+            headers["Authorization"] = self.authorization
+        request = urllib.request.Request(self.url, headers=headers, method="DELETE")
+        setattr(request, BASE_ORIGIN_ATTRIBUTE, self._base_origin)
+        try:
+            with self._opener.open(request, timeout=self.CLOSE_TIMEOUT_SECONDS):
+                pass
+        except Exception:
+            # Includes the 405/404 a stateless server answers with, a refused
+            # redirect, and a connection already gone. None of them is worth
+            # failing a run that has otherwise finished.
+            pass
 
     def _follow(self, location: str) -> None:
         """
