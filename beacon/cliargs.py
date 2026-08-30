@@ -408,7 +408,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mcp.add_argument("--call", help="Optional MCP tool name to call.")
     mcp.add_argument("--arguments", type=_json_object, default={})
-    mcp.add_argument("--timeout", type=float, default=10)
+    # No default: each client keeps its own. This was 10 when the command only
+    # spoke stdio, and `--url` inherited it — so a hosted server, reached across
+    # the internet, got half the 20s `MCPHTTPClient` was written for, while a
+    # local process that spawns in milliseconds got the larger share of the two.
+    # Unset now means "whatever this transport considers reasonable"; a number
+    # given still applies to either.
+    mcp.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help=(
+            "Seconds to wait on the server. Defaults to 10 for --command and "
+            "20 for --url, which is what each client asks for."
+        ),
+    )
     mcp.add_argument(
         "--authorization",
         help=(

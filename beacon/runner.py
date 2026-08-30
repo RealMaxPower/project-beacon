@@ -322,11 +322,36 @@ def run_scenario(
 
     repeats = _repeat_passes(scenario, adapter, run_dir, recorder)
 
+    # Bounding at each adapter's door is the fix; this is the backstop, because
+    # this line is where *every* adapter's metadata lands and it sat outside any
+    # guard. An adapter that builds metadata from something the subject sent —
+    # an MCP server's `serverInfo`, a host's `clientInfo` — could take a
+    # `RecursionError` out through here, before a single file was written,
+    # which is the erasure the bound exists to deny.
+    try:
+        subject_payload = subject_result.to_dict()
+    except Exception as exc:
+        recorder.record(
+            "subject_result_unserialisable",
+            adapter.descriptor.get("id", "unknown-subject"),
+            {"error_type": type(exc).__name__, "message": str(exc)},
+        )
+        subject_payload = {
+            "status": subject_result.status,
+            "summary": subject_result.summary,
+            "metadata": {},
+            "error": subject_result.error,
+        }
+        context.limitations.append(
+            "Beacon could not serialise this subject's own result metadata, so "
+            f"the bundle records it as empty: {type(exc).__name__}: {exc}"
+        )
+
     evaluation_root = {
         "before": before,
         "after": after,
         "artifacts": context.artifacts,
-        "subject": subject_result.to_dict(),
+        "subject": subject_payload,
         # Reachable so an assertion can compare what the subject claimed
         # against the source the scenario pinned for it.
         "fixtures": scenario.fixtures,
@@ -430,7 +455,8 @@ def run_scenario(
         scenario=scenario.recorded_dict(),
         subject={
             **adapter.descriptor,
-            "execution": subject_result.to_dict(),
+            # The same payload the evaluator saw, already guarded above.
+            "execution": subject_payload,
         },
         result=result,
         assertions=[item.to_dict() for item in assertion_results],

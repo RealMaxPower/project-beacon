@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+
+from beacon.models import SubjectResult
 
 from beacon.protocols import MCPError, MCPHTTPClient
 from beacon.protocols import mcp_server
@@ -19,12 +22,24 @@ from beacon.protocols.mcp_http import (
 )
 
 
-def _rpc_result(request_id: Any, method: str) -> dict[str, Any]:
+def _nested(depth: int) -> Any:
+    """A structure the C decoder accepts and `dataclasses.asdict` cannot walk."""
+    value: Any = "floor"
+    for _ in range(depth):
+        value = {"n": value}
+    return value
+
+
+def _rpc_result(request_id: Any, method: str, deep: int = 0) -> dict[str, Any]:
     if method == "initialize":
         return {
             "protocolVersion": "2025-06-18",
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "fixture", "version": "1"},
+            "serverInfo": (
+                {"name": "fixture", "version": "1", "detail": _nested(deep)}
+                if deep
+                else {"name": "fixture", "version": "1"}
+            ),
         }
     return {"tools": [{"name": "do_thing", "description": "d", "inputSchema": {}}]}
 
@@ -38,12 +53,15 @@ class _Server:
         *,
         location: str = "/mcp",
         declared: str | None = None,
+        deep: int = 0,
     ) -> None:
         self.mode = mode
         self.location = location
         self.declared = declared
+        self.deep = deep
         self.paths: list[str] = []
         self.seen: list[dict[str, str | None]] = []
+        self.deletes: list[dict[str, str | None]] = []
         handler = self._handler()
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
@@ -128,7 +146,9 @@ class _Server:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": message["id"],
-                    "result": _rpc_result(message["id"], message["method"]),
+                    "result": _rpc_result(
+                        message["id"], message["method"], outer.deep
+                    ),
                 }
                 if outer.mode == "sse":
                     body = f"event: message\ndata: {json.dumps(payload)}\n\n".encode()
@@ -158,6 +178,20 @@ class _Server:
                 self.send_header("Mcp-Session-Id", "sess-1")
                 self.end_headers()
                 self.wfile.write(body)
+
+            def do_DELETE(self) -> None:  # noqa: N802
+                outer.deletes.append(
+                    {
+                        "path": self.path,
+                        "session": self.headers.get("Mcp-Session-Id"),
+                        "authorization": self.headers.get("Authorization"),
+                    }
+                )
+                # `stateless` stands in for a server that keeps no session and
+                # answers the way Beacon's own facade would: a refusal.
+                self.send_response(405 if outer.mode == "stateless" else 204)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
 
             def do_GET(self) -> None:  # noqa: N802
                 # Where a 301/302/303 lands, so the headers it carried can be
@@ -458,3 +492,108 @@ class InternalAddressTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DeepServerInfoTests(unittest.TestCase):
+    """
+    `serverInfo` is written by the server being conformance-tested, and
+    `mcp_tool_subject` hands it straight to `SubjectResult.metadata`, which the
+    runner walks with `dataclasses.asdict` before any evidence is written.
+
+    Artifacts, events and JSONL completion metadata were bounded for exactly
+    this reason; this door was left open, so the same structure that could not
+    erase a run through an artifact could still erase one through a handshake.
+    `dict(result.get("serverInfo", {}))` copies only the top level, which is
+    what made it look guarded.
+    """
+
+    # Past the depth where `asdict` gives out on 3.13, and under the
+    # interpreter's own limit so the fixture server can still serialise what it
+    # sends. See the note in `test_runner.DeepStructureTests`.
+    DEPTH = min(1500, sys.getrecursionlimit() - 100)
+
+    def setUp(self) -> None:
+        self.server = _Server("json", deep=self.DEPTH)
+        self.addCleanup(self.server.stop)
+
+    def test_the_handshake_bounds_what_the_server_declares(self) -> None:
+        with MCPHTTPClient(self.server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.server_info["name"], "fixture")
+            self.assertIn("truncated by Beacon", json.dumps(client.server_info))
+
+    def test_the_result_it_lands_in_can_still_be_serialised(self) -> None:
+        """The failure was never in the client — it was one `asdict` later."""
+        with MCPHTTPClient(self.server.url, timeout_seconds=5) as client:
+            result = SubjectResult(
+                status="completed",
+                summary="s",
+                metadata={"server": client.server_info},
+            )
+            self.assertIn("truncated by Beacon", json.dumps(result.to_dict()))
+
+    def test_an_ordinary_handshake_is_untouched(self) -> None:
+        """
+        Rules out the opposite error. A bound that fired on every server would
+        pass the cases above and mean nothing, and would put a truncation
+        notice in the bundle of every run that never needed one.
+        """
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.server_info, {"name": "fixture", "version": "1"})
+
+
+class SessionTeardownTests(unittest.TestCase):
+    """
+    Streamable HTTP says a client that no longer needs a session SHOULD delete
+    it. Beacon did not, so every probe left one allocated on a server belonging
+    to someone who did not ask to be measured — while `MCPStdioClient.__exit__`
+    reaped its child, so the two looked symmetric inside a `with` and were not.
+    """
+
+    def test_leaving_the_context_releases_the_session(self) -> None:
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual(client.session_id, "sess-1")
+        self.assertEqual(
+            [d["session"] for d in server.deletes],
+            ["sess-1"],
+            "the session Beacon opened was left open",
+        )
+
+    def test_a_server_that_refuses_delete_is_not_an_error(self) -> None:
+        """
+        `DELETE` is a SHOULD, not a MUST. A server keeping no session state
+        answers 405 — Beacon's own facade among them — and that is a correct
+        answer, not a failure to propagate out of a `with` that has finished.
+        """
+        server = _Server("stateless")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            self.assertEqual([t["name"] for t in client.list_tools()], ["do_thing"])
+        self.assertEqual(len(server.deletes), 1)
+
+    def test_teardown_does_not_swallow_the_caller_s_exception(self) -> None:
+        """Teardown runs while an exception is unwinding, and must not win."""
+        server = _Server("stateless")
+        self.addCleanup(server.stop)
+        with self.assertRaises(ZeroDivisionError):
+            with MCPHTTPClient(server.url, timeout_seconds=5):
+                raise ZeroDivisionError("the caller's problem")
+
+    def test_no_session_means_no_request(self) -> None:
+        """Nothing to release, so nothing is sent — not a DELETE with no id."""
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        client = MCPHTTPClient(server.url, timeout_seconds=5)
+        client.close()
+        self.assertEqual(server.deletes, [])
+
+    def test_the_session_is_released_only_once(self) -> None:
+        server = _Server("json")
+        self.addCleanup(server.stop)
+        with MCPHTTPClient(server.url, timeout_seconds=5) as client:
+            pass
+        client.close()
+        self.assertEqual(len(server.deletes), 1)

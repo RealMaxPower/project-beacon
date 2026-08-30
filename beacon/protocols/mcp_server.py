@@ -7,7 +7,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from beacon.models import EventRecorder, Scenario
+from beacon.models import EventRecorder, Scenario, bound_depth
 from beacon.services.router import ToolRouter
 from beacon.toolschema import ToolArgumentError, validate_arguments
 
@@ -139,7 +139,10 @@ class ScenarioMCPServer:
 
         if method == "initialize":
             with self._lock:
-                self._client_info = dict(params.get("clientInfo", {}))
+                # The host under evaluation writes this, and it reaches
+                # `asdict` through `SubjectResult.metadata`. `dict(...)`
+                # copies only the top level.
+                self._client_info, _ = bound_depth(dict(params.get("clientInfo", {})))
             self._recorder.record(
                 "mcp_initialize",
                 "mcp-server",

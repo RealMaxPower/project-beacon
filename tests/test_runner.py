@@ -746,6 +746,28 @@ class ReportInjectionTests(unittest.TestCase):
                 )
                 self.assertNotIn("<h2>", "\n".join(lines))
 
+    def test_a_hostile_limitation_cannot_become_a_link(self) -> None:
+        """
+        The smaller half of the same forgery, and the one the first fix missed.
+
+        A subject-chosen artifact name reaches the bullet through the
+        depth-truncation note. Escaping `<` stops it rendering as structure but
+        leaves markdown's own link syntax intact, so the name still became
+        something to click in a document people are asked to read and share.
+        """
+        hostile = "[click here](https://collector.invalid)"
+        report = self._report(
+            "The briefing is complete.",
+            limitations=[f"The artifact {hostile!r} was truncated."],
+        )
+        live = self._outside_code(report)
+        self.assertNotIn("[click here](", live, "the name became a link")
+        self.assertIn(
+            "collector.invalid",
+            live,
+            "the destination is inert, not hidden — a reader still sees it",
+        )
+
     def test_an_ordinary_limitation_is_still_readable(self) -> None:
         from beacon.secrets import REDACTION_NOTICE
 
@@ -795,3 +817,89 @@ class ReportInjectionTests(unittest.TestCase):
                 report = self._report("Three replies are drafted.", name=name)
                 self.assertEqual(self._artifact_heading(report), f"### `{name}`")
                 self.assertIn(name, report)
+
+
+class UnserialisableSubjectResultTests(unittest.TestCase):
+    """
+    The backstop under every adapter's metadata.
+
+    Bounding at each door is the fix, but the runner walks whatever an adapter
+    returns, and that walk sat outside any guard — so one adapter forgetting to
+    bound its own metadata was enough to lose a bundle for a run the subject
+    had already been paid for. Artifacts, events and the evaluator all got a
+    guard for that reason; this line did not have one.
+
+    An adapter is used here rather than a protocol fixture because the point is
+    the general case: this must hold for an adapter nobody has written yet.
+
+    The metadata fails on `deepcopy` rather than on nesting. Depth was the route
+    that made this reachable, but the depth at which `asdict` gives out is a
+    property of the running interpreter — 900 levels serialise fine on 3.13 — so
+    a nesting fixture bounded by `sys.getrecursionlimit()` asserts nothing here.
+    The guard catches `Exception`, so the test states that contract directly and
+    holds on every version.
+    """
+
+    class _Unserialisable:
+        def __deepcopy__(self, memo: dict) -> object:
+            raise ValueError("this value cannot be copied")
+
+    class _HostileMetadataAdapter:
+        """Returns metadata `asdict` cannot walk, having 'done the work'."""
+
+        @property
+        def descriptor(self) -> dict:
+            return {"id": "hostile-metadata", "name": "d", "integration_level": 1}
+
+        def execute(self, context) -> object:
+            from beacon.models import SubjectResult
+
+            context.add_artifact("summary", "Three replies are drafted.")
+            return SubjectResult(
+                status="completed",
+                summary="done",
+                metadata={
+                    "opaque": UnserialisableSubjectResultTests._Unserialisable()
+                },
+            )
+
+    def _run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = run_scenario(
+                Scenario.load(SCENARIO),
+                self._HostileMetadataAdapter(),
+                output_dir=directory,
+                run_id="hostile-adapter-metadata",
+            )
+            run_dir = outcome.json_path.parent
+            return outcome.evidence, {
+                name: (run_dir / name).exists()
+                for name in ("evidence.json", "report.md", "events.json")
+            }
+
+    def test_the_bundle_is_still_written(self) -> None:
+        _, written = self._run()
+        self.assertTrue(all(written.values()), f"bundle incomplete: {written}")
+
+    def test_what_the_subject_did_is_still_recorded(self) -> None:
+        """
+        The point of not losing the run: the subject acted, and what it did is
+        still there to grade. A bundle that existed but recorded nothing would
+        satisfy the test above and none of the intent.
+
+        `completed` rather than `error` is load-bearing — the run must not be
+        re-attributed to a subject that crashed, which is what a bundle
+        assembled from the exception path would say.
+        """
+        evidence, _ = self._run()
+        self.assertEqual(evidence.subject["execution"]["status"], "completed")
+        self.assertEqual(evidence.artifacts["summary"], "Three replies are drafted.")
+        self.assertTrue(evidence.assertions, "nothing was graded")
+
+    def test_the_loss_is_admitted_rather_than_passed_off_as_empty(self) -> None:
+        """An empty metadata field must not read as 'the subject sent none'."""
+        evidence, _ = self._run()
+        self.assertTrue(
+            any("could not serialise" in item for item in evidence.limitations),
+            evidence.limitations,
+        )

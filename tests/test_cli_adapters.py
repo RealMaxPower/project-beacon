@@ -259,6 +259,46 @@ class McpInspectHandlerTests(unittest.TestCase):
             authorization="Bearer fixture-token-DO-NOT-SHIP",
         )
 
+    def test_each_transport_keeps_its_own_timeout_when_none_is_given(self) -> None:
+        """
+        `--timeout` defaulted to 10 because this command only spoke stdio.
+        `--url` inherited it, so a hosted server reached across the internet got
+        half the 20s `MCPHTTPClient` asks for, while a local process that spawns
+        in milliseconds got the larger share of the two.
+
+        Unset now means "whatever this transport considers reasonable", which is
+        checked by the client receiving no `timeout_seconds` at all rather than
+        by asserting a number this test would have to keep in step.
+        """
+        with mock.patch("beacon.commands.probe.MCPHTTPClient") as http:
+            http.return_value = self._client()
+            with redirect_stdout(io.StringIO()):
+                mcp_inspect(self._args(["mcp-inspect", "--url", "https://a.example/mcp"]))
+        self.assertNotIn("timeout_seconds", http.call_args.kwargs)
+
+        with mock.patch("beacon.commands.probe.MCPStdioClient") as stdio:
+            stdio.return_value = self._client()
+            with redirect_stdout(io.StringIO()):
+                mcp_inspect(self._args(["mcp-inspect", "--command", "srv"]))
+        self.assertNotIn("timeout_seconds", stdio.call_args.kwargs)
+
+    def test_an_explicit_timeout_still_reaches_either_client(self) -> None:
+        """The flag has to keep working, or the default has just been removed."""
+        for flag, value, target in (
+            ("--url", "https://a.example/mcp", "MCPHTTPClient"),
+            ("--command", "srv", "MCPStdioClient"),
+        ):
+            with self.subTest(transport=flag):
+                with mock.patch(f"beacon.commands.probe.{target}") as client:
+                    client.return_value = self._client()
+                    with redirect_stdout(io.StringIO()):
+                        mcp_inspect(
+                            self._args(
+                                ["mcp-inspect", flag, value, "--timeout", "3"]
+                            )
+                        )
+                self.assertEqual(client.call_args.kwargs["timeout_seconds"], 3.0)
+
     def test_a_command_still_binds_the_stdio_client(self) -> None:
         """The path that worked before must keep working, and unchanged."""
         with mock.patch("beacon.commands.probe.MCPStdioClient") as stdio:
@@ -268,9 +308,7 @@ class McpInspectHandlerTests(unittest.TestCase):
                     self._args(["mcp-inspect", "--command", "my-server --flag"])
                 )
         self.assertEqual(code, 0)
-        stdio.assert_called_once_with(
-            ["my-server", "--flag"], timeout_seconds=10.0
-        )
+        stdio.assert_called_once_with(["my-server", "--flag"])
 
 
 if __name__ == "__main__":

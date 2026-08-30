@@ -100,10 +100,20 @@ def _bullet(value: Any) -> str:
     headings, one bullet list along.
 
     The prose is left readable rather than wrapped in a code span, so only the
-    two things that carry structure are neutralised.
+    things that carry structure are neutralised: a line ending, raw HTML, and
+    link syntax. The last was missed the first time — a name of
+    `[click here](https://collector.invalid)` still rendered as something to
+    click in a document people are asked to read and share, which is a smaller
+    forgery than a passing assertion row but the same mechanism.
+
+    Backticks are deliberately left alone. `usage.reported` in the
+    reported-usage notice is Beacon's own code span, and the worst a subject
+    does with a backtick here is make part of one sentence render as code — a
+    code span cannot forge a heading or a table.
     """
     text = re.sub(r"\r\n|[\r\n]", " ", str(value))
-    return text.replace("<", "&lt;")
+    text = text.replace("<", "&lt;")
+    return text.replace("[", "\\[").replace("]", "\\]")
 
 
 def render_markdown(evidence: Evidence) -> str:
