@@ -58,15 +58,29 @@ def _write_config(path: Path, config: dict[str, Any]) -> None:
     creates the file 0644 under the usual umask, and the redaction that
     protects evidence.json does not reach a sibling file.
 
-    POSIX only, in effect: on Windows the mode is not expressible and the file
-    is left to the ACLs it inherits from the run directory.
+    `O_NOFOLLOW` because the threat here is another local account, and that is
+    exactly who can plant a symlink at this path before Beacon opens it.
+    Without it the open follows the link and writes the token wherever the link
+    points, then sets 0600 on that target rather than on anything Beacon owns —
+    so the file believed to be protected is one somebody else can already read.
+    Refusing is right rather than harsh: the path is inside a run directory
+    Beacon created, so a symlink there is never a configuration to honour.
+
+    The mode is set through the descriptor rather than the path, because
+    `O_CREAT` leaves the mode alone on a file that already existed and
+    re-opening by name would look the path up a second time.
+
+    POSIX only, in effect: on Windows `O_NOFOLLOW` is absent and the mode is
+    not expressible, so the file is left to the ACLs it inherits from the run
+    directory.
     """
     body = json.dumps(config, indent=2, ensure_ascii=False) + "\n"
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        if hasattr(os, "fchmod"):
+            os.fchmod(handle.fileno(), 0o600)
         handle.write(body)
-    # O_CREAT leaves the mode alone on a file that already existed.
-    os.chmod(path, 0o600)
 
 
 class MCPHostAdapter:

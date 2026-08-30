@@ -810,3 +810,65 @@ class PinnedFacadeTests(unittest.TestCase):
                 ["serve-mcp", str(pack / "scenario.json"), "--output", directory]
             )
         self.assertEqual(code, 2)
+
+
+@unittest.skipIf(
+    os.name == "nt",
+    "O_NOFOLLOW does not exist on Windows and the mode is not expressible; "
+    "the file is left to the ACLs it inherits from the run directory.",
+)
+class ConfigSymlinkTests(unittest.TestCase):
+    """
+    0600 stops a second local account reading the token. This stops that same
+    account choosing where it gets written.
+
+    The threat the mode defends against is another user on the machine, and
+    that is exactly who can create a symlink at this path before Beacon opens
+    it. Without `O_NOFOLLOW` the open follows the link: the token is written to
+    a target of their choosing, and the mode lands there rather than on
+    anything Beacon owns — so the file believed to be protected is one they can
+    already read.
+    """
+
+    def _write(self, path: Path) -> None:
+        from beacon.adapters.mcp_host import _write_config
+
+        _write_config(path, {"mcpServers": {"beacon": {"headers": {}}}})
+
+    def test_a_symlinked_config_path_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "planted.json"
+            target.write_text("original\n", encoding="utf-8")
+            link = root / "mcp-config.json"
+            link.symlink_to(target)
+
+            with self.assertRaises(OSError):
+                self._write(link)
+            self.assertEqual(
+                target.read_text(encoding="utf-8"),
+                "original\n",
+                "the token was written through the symlink",
+            )
+
+    def test_an_ordinary_path_is_still_written_at_0600(self) -> None:
+        """A refusal that fired on every path would pass the case above too."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mcp-config.json"
+            self._write(path)
+            self.assertFalse(path.is_symlink())
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            self.assertIn("mcpServers", json.loads(path.read_text(encoding="utf-8")))
+
+    def test_an_existing_file_is_rewritten_and_re_moded(self) -> None:
+        """
+        `O_CREAT` leaves the mode alone on a file that already exists, so a
+        config left 0644 by an earlier version must not stay that way.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mcp-config.json"
+            path.write_text("stale\n", encoding="utf-8")
+            os.chmod(path, 0o644)
+            self._write(path)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            self.assertNotIn("stale", path.read_text(encoding="utf-8"))
