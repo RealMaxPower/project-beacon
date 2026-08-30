@@ -202,18 +202,23 @@ Then:
 
 ```bash
 git tag v0.1.0
-git push public v0.1.0
+git push origin v0.1.0
 ```
 
-**`public`, not `origin`.** A clone of this project may carry two remotes:
-`public` is `RealMaxPower/project-beacon`, the repository this releases, and
-`origin` may be a private archive. This line said `origin` until 0.3.0, which
-would have pushed the tag to the archive — where no workflow is enabled, so it
-would have published nothing and said nothing about it. Check before pushing:
+**Check what `origin` is before you push it.** During 0.3.0 this working copy
+carried two remotes — `origin` pointed at a private archive and the real
+repository was called `public` — and this line said `origin`, which would have
+pushed the tag to the archive. No workflow is enabled there, so it would have
+published nothing and reported nothing: the tag would exist, the release would
+not, and the difference is invisible until somebody checks PyPI. The second
+remote is gone now and `origin` is the repository this releases, which is why
+the line reads that way again.
+
+A misdirected tag is silent, so the check is cheap next to the failure:
 
 ```bash
 git remote -v
-git ls-remote --tags public | tail -3
+git ls-remote --tags origin | tail -3
 ```
 
 The tag triggers `release.yml`, which builds, verifies, and publishes. The

@@ -1,0 +1,51 @@
+name: Release drift
+
+# Asks, once a day, whether the version this repository declares is a version
+# anyone actually has.
+#
+# 0.3.0 is why this exists. It was cut on 2026-08-23 — version bumped in
+# `pyproject.toml` and `beacon/__init__.py`, changelog section written,
+# `docs/production-readiness.md` updated to say "Released on PyPI" — and the
+# tag was never pushed. For a week the package announced a version that existed
+# nowhere, the readiness ledger asserted a release that had not happened, and
+# the whole suite stayed green, because nothing in it was looking. It was found
+# by a person asking whether a release was needed, which is not a mechanism.
+#
+# The suite cannot do this job. The version is bumped in one commit and tagged
+# in another, so a unit test demanding a tag would be red through every
+# release; and the suite is hermetic by rule, so it cannot ask PyPI at all.
+# Both facts live outside a clone, which is where `docs/releasing.md` says the
+# three unverifiable pieces of release state live. This is the fourth.
+#
+# It fails rather than warns. A daily notification nobody has to act on is one
+# people learn to close, and the failure it is reporting — a release that
+# stalled — is exactly the kind that stays invisible until somebody checks by
+# hand.
+
+on:
+  schedule:
+    # Daily. The gap this catches is measured in days, so a weekly run would
+    # take up to a week to notice a week-long stall.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: declared version, tag and release agree
+    runs-on: ubuntu-latest
+    steps:
+      # Tags are the evidence being checked, and `actions/checkout` fetches
+      # none of them at its default depth.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Compare pyproject, the tags, and PyPI
+        run: python tools/check_release_drift.py
